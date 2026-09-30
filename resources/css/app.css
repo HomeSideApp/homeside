@@ -1,0 +1,258 @@
+@import 'tailwindcss';
+
+@import 'tw-animate-css';
+
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+@source '../../storage/framework/views/*.php';
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+    --font-brand:
+        'Nunito Sans', ui-rounded, system-ui, sans-serif;
+
+    --font-sans:
+        'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+        'Segoe UI', sans-serif;
+
+    --font-mono:
+        'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco,
+        Consolas, monospace;
+
+    --radius-lg: var(--radius);
+    --radius-md: calc(var(--radius) - 2px);
+    --radius-sm: calc(var(--radius) - 4px);
+
+    --color-background: var(--background);
+    --color-foreground: var(--foreground);
+
+    --color-card: var(--card);
+    --color-card-foreground: var(--card-foreground);
+
+    --color-popover: var(--popover);
+    --color-popover-foreground: var(--popover-foreground);
+
+    --color-primary: var(--primary);
+    --color-primary-foreground: var(--primary-foreground);
+
+    --color-secondary: var(--secondary);
+    --color-secondary-foreground: var(--secondary-foreground);
+
+    --color-muted: var(--muted);
+    --color-muted-foreground: var(--muted-foreground);
+
+    --color-accent: var(--accent);
+    --color-accent-foreground: var(--accent-foreground);
+
+    --color-destructive: var(--destructive);
+    --color-destructive-foreground: var(--destructive-foreground);
+
+    --color-border: var(--border);
+    --color-input: var(--input);
+    --color-ring: var(--ring);
+
+    --color-success: var(--success);
+    --color-success-foreground: var(--success-foreground);
+
+    --color-warning: var(--warning);
+    --color-warning-foreground: var(--warning-foreground);
+
+    --color-info: var(--info);
+    --color-info-foreground: var(--info-foreground);
+
+    --color-chart-1: var(--chart-1);
+    --color-chart-2: var(--chart-2);
+    --color-chart-3: var(--chart-3);
+    --color-chart-4: var(--chart-4);
+    --color-chart-5: var(--chart-5);
+
+    --color-sidebar: var(--sidebar-background);
+    --color-sidebar-foreground: var(--sidebar-foreground);
+    --color-sidebar-primary: var(--sidebar-primary);
+    --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+    --color-sidebar-accent: var(--sidebar-accent);
+    --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+    --color-sidebar-border: var(--sidebar-border);
+    --color-sidebar-ring: var(--sidebar-ring);
+}
+
+/*
+  The default border color has changed to `currentColor` in Tailwind CSS v4,
+  so we've added these compatibility styles to make sure everything still
+  looks the same as it did with Tailwind CSS v3.
+
+  If we ever want to remove these styles, we need to add an explicit border
+  color utility to any element that depends on these defaults.
+*/
+@layer base {
+    *,
+    ::after,
+    ::before,
+    ::backdrop,
+    ::file-selector-button {
+        border-color: var(--color-border);
+    }
+}
+
+@layer utilities {
+    body,
+    html {
+        --font-sans:
+            'Inter', ui-sans-serif, system-ui, -apple-system,
+            BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    }
+}
+
+:root {
+    --background: #fbfcfa;
+    --foreground: #153c3a;
+    --card: #ffffff;
+    --card-foreground: #153c3a;
+    --popover: #ffffff;
+    --popover-foreground: #153c3a;
+    --primary: #1e6b63;
+    --primary-foreground: #ffffff;
+    --secondary: #f4f1e8;
+    --secondary-foreground: #1e6b63;
+    --muted: #e6ecef;
+    --muted-foreground: #5b6770;
+    --accent: #d9e8b6;
+    --accent-foreground: #1e6b63;
+    --destructive: #b42318;
+    --destructive-foreground: #ffffff;
+    --success: #1e6b63;
+    --success-foreground: #ffffff;
+    --warning: #fff2c7;
+    --warning-foreground: #654a00;
+    --info: #e9f2ff;
+    --info-foreground: #184e88;
+    --border: #e6ecef;
+    --input: #e6ecef;
+    --ring: #2fa090;
+    --chart-1: #1e6b63;
+    --chart-2: #2fa090;
+    --chart-3: #7ccba2;
+    --chart-4: #d9e8b6;
+    --chart-5: #f4f1e8;
+    --radius: 0.5rem;
+    --sidebar-background: #ffffff;
+    --sidebar-foreground: #153c3a;
+    --sidebar-primary: #1e6b63;
+    --sidebar-primary-foreground: #ffffff;
+    --sidebar-accent: #f4f1e8;
+    --sidebar-accent-foreground: #1e6b63;
+    --sidebar-border: #e6ecef;
+    --sidebar-ring: #2fa090;
+}
+
+.dark {
+    --background: #0b2f2f;
+    --foreground: #f4f1e8;
+    --card: #103b39;
+    --card-foreground: #f4f1e8;
+    --popover: #103b39;
+    --popover-foreground: #f4f1e8;
+    --primary: #7ccba2;
+    --primary-foreground: #0b2f2f;
+    --secondary: #164641;
+    --secondary-foreground: #f4f1e8;
+    --muted: #173f3d;
+    --muted-foreground: #b8c9c6;
+    --accent: #1e574f;
+    --accent-foreground: #d9e8b6;
+    --destructive: #ef6a60;
+    --destructive-foreground: #0b2f2f;
+    --border: #2b5a57;
+    --input: #2b5a57;
+    --ring: #7ccba2;
+    --chart-1: #7ccba2;
+    --chart-2: #2fa090;
+    --chart-3: #1e6b63;
+    --chart-4: #d9e8b6;
+    --chart-5: #f4f1e8;
+    --sidebar-background: #0b2f2f;
+    --sidebar-foreground: #f4f1e8;
+    --sidebar-primary: #7ccba2;
+    --sidebar-primary-foreground: #0b2f2f;
+    --sidebar-accent: #164641;
+    --sidebar-accent-foreground: #f4f1e8;
+    --sidebar-border: #2b5a57;
+    --sidebar-ring: #7ccba2;
+}
+
+@layer base {
+    * {
+        @apply border-border outline-ring/50;
+    }
+    body {
+        @apply bg-background text-foreground;
+    }
+
+    .markdown-body {
+        @apply text-sm leading-relaxed break-words;
+    }
+
+    .markdown-body p {
+        @apply mb-2 last:mb-0;
+    }
+
+    .markdown-body strong {
+        @apply font-semibold;
+    }
+
+    .markdown-body ul {
+        @apply mb-2 list-disc pl-5 space-y-1;
+    }
+
+    .markdown-body ol {
+        @apply mb-2 list-decimal pl-5 space-y-1;
+    }
+
+    .markdown-body li > p {
+        @apply mb-1;
+    }
+
+    .markdown-body h1,
+    .markdown-body h2,
+    .markdown-body h3,
+    .markdown-body h4 {
+        @apply mb-2 mt-3 font-semibold first:mt-0;
+    }
+
+    .markdown-body h1 {
+        @apply text-lg;
+    }
+
+    .markdown-body h2 {
+        @apply text-base;
+    }
+
+    .markdown-body h3,
+    .markdown-body h4 {
+        @apply text-sm;
+    }
+
+    .markdown-body code {
+        @apply rounded bg-foreground/10 px-1 py-0.5 font-mono text-xs;
+    }
+
+    .markdown-body pre {
+        @apply mb-2 overflow-x-auto rounded-lg bg-foreground/10 p-3;
+    }
+
+    .markdown-body pre code {
+        @apply bg-transparent p-0;
+    }
+
+    .markdown-body blockquote {
+        @apply mb-2 border-l-2 border-muted-foreground/30 pl-3 text-muted-foreground;
+    }
+
+    .markdown-body a {
+        @apply underline underline-offset-2;
+    }
+
+    .markdown-body hr {
+        @apply my-3 border-border;
+    }
+}
