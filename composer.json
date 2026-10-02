@@ -23,9 +23,10 @@
     ],
     "require": {
         "php": "^8.3",
+        "aws/aws-sdk-php": "^3.369.1",
         "dedoc/scramble": "^0.13.42",
         "google/auth": "^1.55",
-        "homeside/laravel-ai-agents": "@dev",
+        "homeside/laravel-ai-agents": "dev-develop",
         "inertiajs/inertia-laravel": "^3.0",
         "intervention/image": "^4.2",
         "laravel/ai": "^1.0.0",
@@ -38,16 +39,6 @@
         "mstilkerich/carddavclient": "dev-feat/discovery-options",
         "pragmarx/google2fa": "^9.0"
     },
-    "repositories": [
-        {
-            "type": "vcs",
-            "url": "https://github.com/HomeSideApp/laravel-ai-agents"
-        },
-        {
-            "type": "vcs",
-            "url": "https://github.com/HomeSideApp/carddavclient"
-        }
-    ],
     "require-dev": {
         "fakerphp/faker": "^1.24",
         "larastan/larastan": "^3.9",
@@ -144,8 +135,18 @@
         "allow-plugins": {
             "pestphp/pest-plugin": true,
             "php-http/discovery": true
-        }
+        },
+        "github-protocols": ["https"]
     },
     "minimum-stability": "stable",
-    "prefer-stable": true
+    "prefer-stable": true,
+    "repositories": [{
+        "name": "carddavclient",
+        "type": "git",
+        "url": "https://github.com/HomeSideApp/carddavclient.git"
+    },{
+        "name": "laravel-ai-agents",
+        "type": "git",
+        "url": "https://github.com/HomeSideApp/laravel-ai-agents.git"
+    }]
 }
