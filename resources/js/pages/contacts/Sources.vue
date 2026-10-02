@@ -8,12 +8,12 @@ import {
 } from '@inertiajs/vue3';
 import {
     ArrowLeft,
+    BookUser,
     ChevronDown,
     FolderSearch,
     Pencil,
     RefreshCw,
     Search,
-    Server,
     Trash2,
 } from '@lucide/vue';
 import { computed, ref } from 'vue';
@@ -88,6 +88,7 @@ import {
     connect as googleConnect,
     reconnect as googleReconnect,
     store as googleStore,
+    update as googleUpdate,
 } from '@/routes/contacts/sources/google';
 
 interface Collection {
@@ -142,6 +143,41 @@ function saveGoogleDraft() {
     googleForm.post(googleStore().url, {
         onSuccess: () => {
             googleDraftOpen.value = false;
+        },
+    });
+}
+
+const googleEditOpen = ref(false);
+const editingGoogleSource = ref<Source | null>(null);
+const googleEditForm = useForm({
+    name: '',
+    favorite_label: 'Starred',
+    enabled: true,
+    sync_enabled: true,
+});
+
+function openGoogleEdit(source: Source): void {
+    editingGoogleSource.value = source;
+    googleEditForm.reset();
+    googleEditForm.clearErrors();
+    googleEditForm.name = source.name;
+    googleEditForm.favorite_label =
+        source.provider_configuration.favorite_label ?? 'Starred';
+    googleEditForm.enabled = source.enabled;
+    googleEditForm.sync_enabled = source.sync_enabled;
+    googleEditOpen.value = true;
+}
+
+function saveGoogleSource(): void {
+    if (!editingGoogleSource.value) {
+        return;
+    }
+
+    googleEditForm.put(googleUpdate(editingGoogleSource.value.id).url, {
+        preserveScroll: true,
+        onSuccess: () => {
+            googleEditOpen.value = false;
+            editingGoogleSource.value = null;
         },
     });
 }
@@ -442,18 +478,46 @@ function confirmDelete(): void {
             </IconAction>
         </div>
 
-        <div v-if="can('contacts.sources.create')" class="flex flex-wrap gap-2">
+        <div
+            v-if="can('contacts.sources.create')"
+            class="flex flex-wrap items-center justify-start gap-2"
+            aria-label="Añadir fuente de contactos"
+        >
             <template v-for="provider in props.providers" :key="provider.key">
-                <Button v-if="provider.key === 'google'" as-child
-                    ><a :href="googleConnect().url"
-                        ><Server data-icon="inline-start" />Añadir
-                        {{ provider.name }}</a
-                    ></Button
+                <IconAction
+                    v-if="provider.key === 'google'"
+                    :label="'Añadir ' + provider.name"
+                    :href="googleConnect().url"
+                    external
+                    variant="outline"
                 >
-                <Button v-else type="button" @click="openCreate(provider.key)">
-                    <Server data-icon="inline-start" />
-                    Añadir {{ provider.name }}
-                </Button>
+                    <svg class="size-4" viewBox="0 0 24 24" aria-hidden="true">
+                        <path
+                            fill="#4285f4"
+                            d="M21.6 12.227c0-.709-.064-1.391-.182-2.045H12v3.868h5.382a4.6 4.6 0 0 1-1.995 3.018v2.509h3.232c1.891-1.741 2.981-4.305 2.981-7.35Z"
+                        />
+                        <path
+                            fill="#34a853"
+                            d="M12 22c2.7 0 4.968-.895 6.623-2.423l-3.232-2.509c-.895.6-2.041.955-3.391.955-2.605 0-4.809-1.759-5.6-4.123H3.059v2.591A10 10 0 0 0 12 22Z"
+                        />
+                        <path
+                            fill="#fbbc05"
+                            d="M6.4 13.9A6.01 6.01 0 0 1 6.086 12c0-.659.114-1.3.314-1.9V7.509H3.059A10 10 0 0 0 2 12c0 1.614.386 3.141 1.059 4.491L6.4 13.9Z"
+                        />
+                        <path
+                            fill="#ea4335"
+                            d="M12 5.977c1.468 0 2.786.505 3.823 1.496l2.868-2.868C16.964 2.991 14.695 2 12 2a10 10 0 0 0-8.941 5.509L6.4 10.1c.791-2.364 2.995-4.123 5.6-4.123Z"
+                        />
+                    </svg>
+                </IconAction>
+                <IconAction
+                    v-else
+                    :label="'Añadir ' + provider.name"
+                    variant="outline"
+                    @click="openCreate(provider.key)"
+                >
+                    <BookUser aria-hidden="true" />
+                </IconAction>
             </template>
         </div>
 
@@ -538,6 +602,14 @@ function confirmDelete(): void {
                                         permission="contacts.sources.update"
                                         variant="outline"
                                         ><RefreshCw aria-hidden="true"
+                                    /></IconAction>
+                                    <IconAction
+                                        v-if="source.provider === 'google'"
+                                        :label="'Editar ' + source.name"
+                                        permission="contacts.sources.update"
+                                        variant="outline"
+                                        @click="openGoogleEdit(source)"
+                                        ><Pencil aria-hidden="true"
                                     /></IconAction>
                                     <IconAction
                                         v-else
@@ -738,6 +810,91 @@ function confirmDelete(): void {
                         >Guardar e importar</Button
                     ></DialogFooter
                 >
+            </DialogContent>
+        </Dialog>
+
+        <Dialog v-model:open="googleEditOpen">
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Editar fuente de Google</DialogTitle>
+                    <DialogDescription>
+                        Ajusta cómo se muestra y sincroniza esta cuenta. Para
+                        cambiar el permiso de Google, usa Reconectar.
+                    </DialogDescription>
+                </DialogHeader>
+                <form
+                    id="google-source-edit-form"
+                    class="flex flex-col gap-4"
+                    @submit.prevent="saveGoogleSource"
+                >
+                    <FieldGroup>
+                        <Field>
+                            <FieldLabel for="google-edit-name"
+                                >Nombre de la fuente</FieldLabel
+                            >
+                            <Input
+                                id="google-edit-name"
+                                v-model="googleEditForm.name"
+                                required
+                            />
+                            <FieldError v-if="googleEditForm.errors.name">{{
+                                googleEditForm.errors.name
+                            }}</FieldError>
+                        </Field>
+                        <Field>
+                            <FieldLabel for="google-edit-favorite-label"
+                                >Etiqueta de favoritos</FieldLabel
+                            >
+                            <Input
+                                id="google-edit-favorite-label"
+                                v-model="googleEditForm.favorite_label"
+                                required
+                            />
+                            <FieldDescription>
+                                El grupo Favoritos de Google se mostrará con
+                                esta etiqueta.
+                            </FieldDescription>
+                            <FieldError
+                                v-if="googleEditForm.errors.favorite_label"
+                                >{{
+                                    googleEditForm.errors.favorite_label
+                                }}</FieldError
+                            >
+                        </Field>
+                        <Field orientation="horizontal">
+                            <FieldLabel for="google-edit-enabled"
+                                >Fuente activa</FieldLabel
+                            >
+                            <Switch
+                                id="google-edit-enabled"
+                                v-model:checked="googleEditForm.enabled"
+                            />
+                        </Field>
+                        <Field orientation="horizontal">
+                            <FieldLabel for="google-edit-sync-enabled"
+                                >Sincronización automática</FieldLabel
+                            >
+                            <Switch
+                                id="google-edit-sync-enabled"
+                                v-model:checked="googleEditForm.sync_enabled"
+                            />
+                        </Field>
+                    </FieldGroup>
+                </form>
+                <DialogFooter>
+                    <Button
+                        type="button"
+                        variant="outline"
+                        @click="googleEditOpen = false"
+                        >Cancelar</Button
+                    >
+                    <Button
+                        type="submit"
+                        form="google-source-edit-form"
+                        :disabled="googleEditForm.processing"
+                        >Guardar cambios</Button
+                    >
+                </DialogFooter>
             </DialogContent>
         </Dialog>
 

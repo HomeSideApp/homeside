@@ -155,6 +155,37 @@ class GoogleContactSourceController extends Controller
         return to_route('contacts.sources.index');
     }
 
+    public function update(Request $request, ContactSource $source): RedirectResponse
+    {
+        Gate::authorize('update', $source);
+        abort_unless($source->provider === 'google' && $source->user_id === $this->authenticatedUser($request)->id, 404);
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'favorite_label' => ['required', 'string', 'max:80'],
+            'enabled' => ['required', 'boolean'],
+            'sync_enabled' => ['required', 'boolean'],
+        ]);
+
+        $configuration = $source->provider_configuration ?? [];
+        $favoriteLabel = trim($validated['favorite_label']);
+        $requiresSync = $source->favoriteLabel() !== $favoriteLabel
+            || (! $source->enabled && $validated['enabled'])
+            || (! $source->sync_enabled && $validated['sync_enabled']);
+        $configuration['favorite_label'] = $favoriteLabel;
+        $source->update([
+            'name' => $validated['name'],
+            'provider_configuration' => $configuration,
+            'enabled' => $validated['enabled'],
+            'sync_enabled' => $validated['sync_enabled'],
+        ]);
+
+        if ($source->enabled && $source->sync_enabled && $requiresSync) {
+            SyncContactSourceJob::dispatch($source->id);
+        }
+
+        return to_route('contacts.sources.index');
+    }
+
     private function provider(): Provider
     {
         $provider = Socialite::driver('google');

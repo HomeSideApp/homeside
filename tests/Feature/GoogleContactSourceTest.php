@@ -7,10 +7,13 @@ use App\Jobs\SyncContactSourceJob;
 use App\Models\Contact;
 use App\Models\ContactRecord;
 use App\Models\ContactSource;
+use App\Models\Permission;
+use App\Models\Role;
 use App\Models\User;
 use App\Services\Contacts\Providers\GooglePeopleContactProvider;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Client\Request;
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
@@ -122,6 +125,70 @@ class GoogleContactSourceTest extends TestCase
         $this->assertSame('image-data', $result->contacts[0]->photoBytes);
         $this->assertSame('12-10', $result->contacts[0]->dates[0]['value']);
         $this->assertTrue($result->fullRunComplete);
+        Http::assertSent(function (Request $request): bool {
+            if (! str_contains($request->url(), 'people/me/connections')) {
+                return false;
+            }
+
+            parse_str((string) parse_url($request->url(), PHP_URL_QUERY), $query);
+
+            return ($query['sources'] ?? null) === 'READ_SOURCE_TYPE_CONTACT';
+        });
+    }
+
+    public function test_owner_can_edit_google_source_without_replacing_its_identity_or_tokens(): void
+    {
+        $this->seed(RolesAndPermissionsSeeder::class);
+        $source = $this->source();
+        $owner = User::query()->findOrFail($source->user_id);
+        $owner->assignRole('admin');
+        Queue::fake();
+
+        $this->actingAs($owner)->put(route('contacts.sources.google.update', $source), [
+            'name' => 'Agenda familiar',
+            'favorite_label' => 'Importantes',
+            'enabled' => true,
+            'sync_enabled' => true,
+        ])->assertRedirect(route('contacts.sources.index'));
+
+        $source->refresh();
+        $this->assertSame('Agenda familiar', $source->name);
+        $this->assertSame('Importantes', $source->favoriteLabel());
+        $this->assertSame('google-1', $source->provider_configuration['google_sub']);
+        $this->assertSame('owner@example.com', $source->provider_configuration['google_email']);
+        $this->assertSame('refresh-token', $source->encrypted_tokens['refresh_token']);
+        Queue::assertPushed(SyncContactSourceJob::class);
+    }
+
+    public function test_google_reconnection_callback_only_requires_update_permission(): void
+    {
+        $this->seed(RolesAndPermissionsSeeder::class);
+        $source = $this->source();
+        $owner = User::query()->findOrFail($source->user_id);
+        $role = Role::create(['name' => 'Editor de fuentes', 'slug' => 'contact-source-editor']);
+        $role->givePermissionTo([
+            Permission::query()->where('route_name', 'contacts.sources.update')->firstOrFail(),
+        ]);
+        $owner->assignRole($role);
+        Queue::fake();
+        Socialite::fake('google', SocialiteUser::fake([
+            'id' => 'google-1',
+            'email' => 'owner@example.com',
+            'email_verified' => true,
+            'token' => 'renewed-access-token',
+            'refreshToken' => 'renewed-refresh-token',
+        ]));
+
+        $this->assertFalse($owner->getPermissionRouteNames()->contains('contacts.sources.create'));
+        $this->actingAs($owner)
+            ->withSession(['google.contact_reconnect' => $source->id])
+            ->get(route('contacts.sources.google.callback'))
+            ->assertRedirect(route('contacts.sources.index'));
+
+        $source->refresh();
+        $this->assertSame('renewed-access-token', $source->encrypted_tokens['access_token']);
+        $this->assertSame('renewed-refresh-token', $source->encrypted_tokens['refresh_token']);
+        Queue::assertPushed(SyncContactSourceJob::class);
     }
 
     public function test_full_sync_finishes_after_all_pages_before_marking_missing_contacts_deleted(): void

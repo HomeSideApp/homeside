@@ -69,8 +69,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::prefix('sources')->name('sources.')->group(function () {
             Route::get('/', [ContactSourceController::class, 'index'])->middleware('permission:contacts.sources.view')->name('index');
             Route::get('google/connect', [GoogleContactSourceController::class, 'redirect'])->middleware(['permission:contacts.sources.create', 'throttle:6,1'])->name('google.connect');
-            Route::get('google/callback', [GoogleContactSourceController::class, 'callback'])->middleware(['permission:contacts.sources.create', 'throttle:6,1'])->name('google.callback');
+            Route::get('google/callback', [GoogleContactSourceController::class, 'callback'])->middleware('throttle:6,1')->name('google.callback');
             Route::post('google', [GoogleContactSourceController::class, 'store'])->middleware('permission:contacts.sources.create')->name('google.store');
+            Route::put('google/{source}', [GoogleContactSourceController::class, 'update'])->middleware('permission:contacts.sources.update')->name('google.update');
             Route::get('google/{source}/reconnect', [GoogleContactSourceController::class, 'reconnect'])->middleware(['permission:contacts.sources.update', 'throttle:6,1'])->name('google.reconnect');
             // Draft connection probe: verifies the typed credentials without persisting anything.
             Route::post('test-connection', [ContactSourceController::class, 'testConnection'])->middleware('permission:contacts.sources.create')->name('test-connection');

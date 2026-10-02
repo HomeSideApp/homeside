@@ -28,7 +28,7 @@ final class GooglePeopleContactProvider implements ContactProvider
         $this->client->get($source, 'people/me/connections', [
             'pageSize' => 1,
             'personFields' => 'names',
-            'sources[]' => 'READ_SOURCE_TYPE_CONTACT',
+            'sources' => 'READ_SOURCE_TYPE_CONTACT',
         ])->throw();
 
         return [new ExternalCollectionData('all', 'Todos los contactos', 'people/me/connections', true)];
@@ -48,7 +48,7 @@ final class GooglePeopleContactProvider implements ContactProvider
         $query = [
             'pageSize' => 25,
             'personFields' => 'names,nicknames,emailAddresses,phoneNumbers,addresses,urls,organizations,birthdays,events,biographies,relations,photos,memberships,metadata',
-            'sources[]' => 'READ_SOURCE_TYPE_CONTACT',
+            'sources' => 'READ_SOURCE_TYPE_CONTACT',
         ];
         if ($full) {
             $query['requestSyncToken'] = 'true';

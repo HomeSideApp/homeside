@@ -217,13 +217,20 @@ class ContactSourceController extends Controller
 
             Inertia::flash('toast', [
                 'type' => 'error',
-                'message' => 'No se pudo comprobar la conexión CardDAV. Revisa la URL, las credenciales y la conectividad.',
+                'message' => $source->provider === 'google'
+                    ? 'No se pudo comprobar la conexión con Google Contactos. Vuelve a conectar la cuenta y revisa sus permisos.'
+                    : 'No se pudo comprobar la conexión CardDAV. Revisa la URL, las credenciales y la conectividad.',
             ]);
 
             return back();
         }
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => 'Conexión CardDAV correcta.']);
+        Inertia::flash('toast', [
+            'type' => 'success',
+            'message' => $source->provider === 'google'
+                ? 'Conexión con Google Contactos correcta.'
+                : 'Conexión CardDAV correcta.',
+        ]);
 
         return back();
     }
@@ -239,17 +246,20 @@ class ContactSourceController extends Controller
 
             Inertia::flash('toast', [
                 'type' => 'error',
-                'message' => 'No se pudieron descubrir las libretas CardDAV. Comprueba la URL y las credenciales.',
+                'message' => $source->provider === 'google'
+                    ? 'No se pudo comprobar la colección de Google Contactos. Vuelve a conectar la cuenta y revisa sus permisos.'
+                    : 'No se pudieron descubrir las libretas CardDAV. Comprueba la URL y las credenciales.',
             ]);
 
             return back();
         }
 
+        $collectionName = $source->provider === 'google' ? 'colecciones de Google Contactos' : 'libretas CardDAV';
         Inertia::flash('toast', [
             'type' => $collections->isEmpty() ? 'info' : 'success',
             'message' => $collections->isEmpty()
-                ? 'La conexión funciona, pero no se encontraron libretas CardDAV.'
-                : 'Se encontraron '.$collections->count().' libretas CardDAV.',
+                ? 'La conexión funciona, pero no se encontraron '.$collectionName.'.'
+                : 'Se encontraron '.$collections->count().' '.$collectionName.'.',
         ]);
 
         return back();
