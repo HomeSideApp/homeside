@@ -53,6 +53,7 @@ export default {
             head: 'Log in',
             remember: 'Remember me',
             submit: 'Log in',
+            google: 'Continue with Google',
             forgotOtp: 'Forgot your OTP?',
             forgotPassword: 'Forgot your password?',
         },

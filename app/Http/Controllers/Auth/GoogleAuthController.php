@@ -42,7 +42,7 @@ class GoogleAuthController extends Controller
         }
         if ($result['status'] === 'pending' || $result['status'] === 'rejected') {
             return to_route('login')->with('status', $result['status'] === 'pending'
-                ? 'Tu solicitud está pendiente de aprobación.'
+                ? 'Tu cuenta se ha creado correctamente y está pendiente de aprobación por un administrador.'
                 : 'Tu solicitud de acceso ha sido rechazada.');
         }
 

@@ -54,6 +54,7 @@ export default {
             head: 'Iniciar sesión',
             remember: 'Recordarme',
             submit: 'Iniciar sesión',
+            google: 'Continuar con Google',
             forgotOtp: '¿Has olvidado tu OTP?',
             forgotPassword: '¿Has olvidado tu contraseña?',
         },

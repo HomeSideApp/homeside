@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
-import { ArrowUpDown, Check, Pencil, Plus, Trash2, X } from '@lucide/vue';
+import { ArrowUpDown, Pencil, Plus, Trash2, UserCheck } from '@lucide/vue';
 import { createColumnHelper } from '@tanstack/vue-table';
 import type { ColumnDef } from '@tanstack/vue-table';
 import { h, ref } from 'vue';
@@ -51,6 +51,7 @@ interface User {
     roles: Array<{ name: string }>;
     created_at: string;
     approval_status: string;
+    external_providers: string[];
     google_connected: boolean;
 }
 
@@ -101,6 +102,31 @@ const columns: ColumnDef<any, User, any>[] = [
             ),
         cell: ({ row }) =>
             h('div', { class: 'lowercase' }, row.getValue('email')),
+    }),
+    columnHelper.accessor('external_providers', {
+        header: 'Proveedor',
+        cell: ({ row }) => {
+            const providers = row.original.external_providers;
+
+            return h(
+                'div',
+                { class: 'flex flex-wrap gap-1' },
+                providers.length
+                    ? providers.map((provider) =>
+                          h(
+                              Badge,
+                              { variant: 'secondary', class: 'text-xs' },
+                              () =>
+                                  provider === 'google' ? 'Google' : provider,
+                          ),
+                      )
+                    : h(
+                          Badge,
+                          { variant: 'outline', class: 'text-xs' },
+                          () => 'Local',
+                      ),
+            );
+        },
     }),
     columnHelper.accessor('roles', {
         header: 'Roles',
@@ -178,24 +204,16 @@ const columns: ColumnDef<any, User, any>[] = [
                           h(
                               IconAction,
                               {
-                                  label: 'Aprobar: ' + user.name,
-                                  onClick: () => {
-                                      pendingApproval.value = user;
-                                      selectedRole.value = '';
-                                  },
+                                  label: 'Revisar solicitud: ' + user.name,
+                                  variant: 'default',
+                                  onClick: () => openReviewDialog(user),
                               },
-                              { default: () => h(Check) },
-                          ),
-                          h(
-                              IconAction,
                               {
-                                  label: 'Rechazar: ' + user.name,
-                                  variant: 'destructive',
-                                  onClick: () => {
-                                      pendingRejection.value = user;
-                                  },
+                                  default: () =>
+                                      h(UserCheck, {
+                                          'aria-hidden': 'true',
+                                      }),
                               },
-                              { default: () => h(X) },
                           ),
                       ]
                     : []),
@@ -222,37 +240,75 @@ const columns: ColumnDef<any, User, any>[] = [
 ];
 
 const pendingApproval = ref<User | null>(null);
-const pendingRejection = ref<User | null>(null);
 const selectedRole = ref('');
+const approvalProcessing = ref(false);
+const rejectionProcessing = ref(false);
+
+function openReviewDialog(user: User) {
+    pendingApproval.value = user;
+    selectedRole.value = '';
+}
+
+function formatRequestDate(date: string): string {
+    return new Intl.DateTimeFormat('es-ES', {
+        dateStyle: 'long',
+    }).format(new Date(date));
+}
+
+function closeReviewDialog() {
+    if (approvalProcessing.value || rejectionProcessing.value) {
+        return;
+    }
+
+    pendingApproval.value = null;
+    selectedRole.value = '';
+}
+
 function confirmApproval() {
     if (!pendingApproval.value || !selectedRole.value) {
         return;
     }
 
+    approvalProcessing.value = true;
     router.post(
         approveUser(pendingApproval.value.id).url,
         { role: selectedRole.value },
         {
             onSuccess: () => {
                 pendingApproval.value = null;
+                selectedRole.value = '';
+            },
+            onFinish: () => {
+                approvalProcessing.value = false;
             },
         },
     );
 }
 function confirmRejection() {
-    if (!pendingRejection.value) {
+    if (!pendingApproval.value) {
         return;
     }
 
+    rejectionProcessing.value = true;
     router.post(
-        rejectUser(pendingRejection.value.id).url,
+        rejectUser(pendingApproval.value.id).url,
         {},
         {
             onSuccess: () => {
-                pendingRejection.value = null;
+                pendingApproval.value = null;
+                selectedRole.value = '';
+            },
+            onFinish: () => {
+                rejectionProcessing.value = false;
             },
         },
     );
+}
+
+function userRowClass(user: User): string {
+    return user.approval_status === 'pending'
+        ? 'bg-primary/5 hover:bg-primary/10'
+        : '';
 }
 
 const showDeleteDialog = ref(false);
@@ -313,6 +369,7 @@ function confirmDelete() {
                 to: users.to,
             }"
             :filters="filters"
+            :row-class="userRowClass"
             search-placeholder="Buscar usuario..."
         />
     </div>
@@ -321,65 +378,110 @@ function confirmDelete() {
         :open="pendingApproval !== null"
         @update:open="
             (open) => {
-                if (!open) pendingApproval = null;
+                if (!open) closeReviewDialog();
             }
         "
     >
-        <DialogContent>
-            <DialogHeader
-                ><DialogTitle>Aprobar acceso Google</DialogTitle
-                ><DialogDescription
-                    >Asigna un rol a {{ pendingApproval?.name }} antes de
-                    permitir el acceso.</DialogDescription
-                ></DialogHeader
+        <DialogContent class="sm:max-w-lg">
+            <DialogHeader>
+                <DialogTitle>Revisar solicitud de acceso</DialogTitle>
+                <DialogDescription>
+                    Comprueba los datos y decide el acceso de esta cuenta.
+                </DialogDescription>
+            </DialogHeader>
+
+            <div
+                v-if="pendingApproval"
+                class="grid gap-3 rounded-lg border bg-muted/30 p-4 text-sm"
             >
-            <Select v-model="selectedRole">
-                <SelectTrigger
-                    ><SelectValue placeholder="Seleccionar rol"
-                /></SelectTrigger>
-                <SelectContent
-                    ><SelectGroup
-                        ><SelectItem
-                            v-for="role in roles"
-                            :key="role.slug"
-                            :value="role.slug"
-                            >{{ role.name }}</SelectItem
-                        ></SelectGroup
-                    ></SelectContent
+                <div class="grid gap-1">
+                    <span class="text-xs text-muted-foreground">Usuario</span>
+                    <span class="font-medium">{{ pendingApproval.name }}</span>
+                    <span class="text-muted-foreground">{{
+                        pendingApproval.email
+                    }}</span>
+                </div>
+                <div class="flex flex-wrap gap-2">
+                    <Badge variant="secondary">Google</Badge>
+                    <Badge variant="outline">
+                        {{
+                            pendingApproval.approval_status === 'rejected'
+                                ? 'Rechazado'
+                                : 'Pendiente'
+                        }}
+                    </Badge>
+                </div>
+                <div class="grid gap-1">
+                    <span class="text-xs text-muted-foreground">
+                        Solicitud recibida
+                    </span>
+                    <span>{{
+                        formatRequestDate(pendingApproval.created_at)
+                    }}</span>
+                </div>
+            </div>
+
+            <div class="grid gap-2">
+                <span class="text-sm font-medium">Rol de acceso</span>
+                <Select v-model="selectedRole">
+                    <SelectTrigger>
+                        <SelectValue placeholder="Seleccionar rol" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectGroup>
+                            <SelectItem
+                                v-for="role in roles"
+                                :key="role.slug"
+                                :value="role.slug"
+                            >
+                                {{ role.name }}
+                            </SelectItem>
+                        </SelectGroup>
+                    </SelectContent>
+                </Select>
+                <p class="text-xs text-muted-foreground">
+                    Es obligatorio asignar un rol para aprobar el acceso.
+                </p>
+            </div>
+
+            <DialogFooter class="gap-2 sm:justify-between">
+                <Button
+                    variant="outline"
+                    :disabled="approvalProcessing || rejectionProcessing"
+                    @click="closeReviewDialog"
                 >
-            </Select>
-            <DialogFooter
-                ><Button :disabled="!selectedRole" @click="confirmApproval"
-                    >Aprobar</Button
-                ></DialogFooter
-            >
+                    Cancelar
+                </Button>
+                <div class="flex flex-col-reverse gap-2 sm:flex-row">
+                    <Button
+                        v-if="pendingApproval?.approval_status === 'pending'"
+                        variant="outline"
+                        class="border-destructive/50 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                        :disabled="approvalProcessing || rejectionProcessing"
+                        @click="confirmRejection"
+                    >
+                        {{
+                            rejectionProcessing
+                                ? 'Rechazando…'
+                                : 'Rechazar solicitud'
+                        }}
+                    </Button>
+                    <Button
+                        :disabled="
+                            !selectedRole ||
+                            approvalProcessing ||
+                            rejectionProcessing
+                        "
+                        @click="confirmApproval"
+                    >
+                        {{
+                            approvalProcessing ? 'Aprobando…' : 'Aprobar acceso'
+                        }}
+                    </Button>
+                </div>
+            </DialogFooter>
         </DialogContent>
     </Dialog>
-    <AlertDialog
-        :open="pendingRejection !== null"
-        @update:open="
-            (open) => {
-                if (!open) pendingRejection = null;
-            }
-        "
-    >
-        <AlertDialogContent
-            ><AlertDialogHeader
-                ><AlertDialogTitle>Rechazar solicitud</AlertDialogTitle
-                ><AlertDialogDescription
-                    >{{ pendingRejection?.name }} no podrá
-                    acceder.</AlertDialogDescription
-                ></AlertDialogHeader
-            >
-            <AlertDialogFooter
-                ><AlertDialogCancel @click="pendingRejection = null"
-                    >Cancelar</AlertDialogCancel
-                ><AlertDialogAction @click="confirmRejection"
-                    >Rechazar</AlertDialogAction
-                ></AlertDialogFooter
-            ></AlertDialogContent
-        >
-    </AlertDialog>
 
     <AlertDialog v-model:open="showDeleteDialog">
         <AlertDialogContent>

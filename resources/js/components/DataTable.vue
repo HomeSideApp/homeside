@@ -61,6 +61,7 @@ const props = withDefaults(
         filters: Filters;
         searchPlaceholder?: string;
         routeUrl?: string;
+        rowClass?: (row: TData) => string;
     }>(),
     {
         searchPlaceholder: '',
@@ -220,6 +221,7 @@ const pageNumbers = computed(() => {
                         <TableRow
                             v-for="row in table.getRowModel().rows"
                             :key="row.id"
+                            :class="rowClass?.(row.original)"
                         >
                             <TableCell
                                 class="px-6 py-4"

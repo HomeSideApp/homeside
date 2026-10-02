@@ -49,6 +49,7 @@ class AdminUserController extends Controller
                 'email' => $user->email,
                 'roles' => $user->roles,
                 'approval_status' => $user->approval_status,
+                'external_providers' => $user->googleIdentity !== null ? ['google'] : [],
                 'google_connected' => $user->googleIdentity !== null,
                 'created_at' => $user->created_at,
             ]);

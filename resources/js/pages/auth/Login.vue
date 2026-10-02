@@ -42,11 +42,6 @@ defineProps<{
         {{ status }}
     </div>
 
-    <Button variant="outline" class="w-full" as-child>
-        <a :href="googleRedirect().url">Continuar con Google</a>
-    </Button>
-    <InputError v-if="pageGoogleError" :message="pageGoogleError" />
-
     <Form
         v-bind="store.form()"
         :reset-on-success="['password']"
@@ -120,4 +115,34 @@ defineProps<{
             </TextLink>
         </div>
     </Form>
+
+    <div class="mt-6 flex flex-col items-center gap-2">
+        <Button variant="outline" size="icon" as-child>
+            <a
+                :href="googleRedirect().url"
+                :aria-label="t('auth.login.google')"
+                :title="t('auth.login.google')"
+            >
+                <svg class="size-4" viewBox="0 0 24 24" aria-hidden="true">
+                    <path
+                        fill="#4285f4"
+                        d="M21.6 12.227c0-.709-.064-1.391-.182-2.045H12v3.868h5.382a4.6 4.6 0 0 1-1.995 3.018v2.509h3.232c1.891-1.741 2.981-4.305 2.981-7.35Z"
+                    />
+                    <path
+                        fill="#34a853"
+                        d="M12 22c2.7 0 4.968-.895 6.623-2.423l-3.232-2.509c-.895.6-2.041.955-3.391.955-2.605 0-4.809-1.759-5.6-4.123H3.059v2.591A10 10 0 0 0 12 22Z"
+                    />
+                    <path
+                        fill="#fbbc05"
+                        d="M6.4 13.9A6.01 6.01 0 0 1 6.086 12c0-.659.114-1.3.314-1.9V7.509H3.059A10 10 0 0 0 2 12c0 1.614.386 3.141 1.059 4.491L6.4 13.9Z"
+                    />
+                    <path
+                        fill="#ea4335"
+                        d="M12 5.977c1.468 0 2.786.505 3.823 1.496l2.868-2.868C16.964 2.991 14.695 2 12 2a10 10 0 0 0-8.941 5.509L6.4 10.1c.791-2.364 2.995-4.123 5.6-4.123Z"
+                    />
+                </svg>
+            </a>
+        </Button>
+        <InputError v-if="pageGoogleError" :message="pageGoogleError" />
+    </div>
 </template>

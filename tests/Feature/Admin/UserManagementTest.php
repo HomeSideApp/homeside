@@ -39,9 +39,16 @@ class UserManagementTest extends TestCase
         $role->syncPermissions(['view users']);
         $admin->assignRole($role);
 
-        $response = $this->actingAs($admin)->get(route('admin.users'));
+        $externalUser = User::factory()->create(['email' => 'external-provider@example.com']);
+        $externalUser->googleIdentity()->create(['google_sub' => 'external-provider-sub']);
 
-        $response->assertOk();
+        $response = $this->actingAs($admin)->get(route('admin.users', [
+            'search' => $externalUser->email,
+        ]));
+
+        $response->assertOk()->assertInertia(fn ($page) => $page
+            ->where('users.data.0.external_providers', ['google'])
+            ->where('users.data.0.google_connected', true));
     }
 
     public function test_user_can_be_created_with_role()

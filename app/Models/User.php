@@ -50,7 +50,7 @@ use Laravel\Sanctum\HasApiTokens;
  *
  * @mixin Model
  */
-#[Fillable(['name', 'email', 'locale', 'password', 'two_factor_secret', 'two_factor_confirmed_at', 'two_factor_recovery_codes', 'active_household_id', 'households_enabled', 'shares_personal_products', 'approval_status', 'approved_at'])]
+#[Fillable(['name', 'email', 'email_verified_at', 'locale', 'password', 'two_factor_secret', 'two_factor_confirmed_at', 'two_factor_recovery_codes', 'active_household_id', 'households_enabled', 'shares_personal_products', 'approval_status', 'approved_at'])]
 #[Hidden(['password', 'remember_token', 'two_factor_secret', 'two_factor_confirmed_at', 'two_factor_recovery_codes'])]
 class User extends Authenticatable implements HasLocalePreference, MustVerifyEmail
 {

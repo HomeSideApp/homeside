@@ -20,9 +20,11 @@ class LoginController extends Controller
      *
      * @return Response The HTTP response.
      */
-    public function show(): Response
+    public function show(Request $request): Response
     {
-        return Inertia::render('auth/Login');
+        return Inertia::render('auth/Login', [
+            'status' => $request->session()->get('status'),
+        ]);
     }
 
     /**

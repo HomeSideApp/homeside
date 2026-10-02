@@ -37,18 +37,28 @@ class GoogleAuthenticationTest extends TestCase
         ]));
 
         $admin = User::factory()->admin()->create();
-        $this->get(route('google.callback'))->assertRedirect(route('login'));
+        $message = 'Tu cuenta se ha creado correctamente y está pendiente de aprobación por un administrador.';
+        $this->get(route('google.callback'))
+            ->assertRedirect(route('login'))
+            ->assertSessionHas('status', $message);
+        $this->get(route('login'))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->component('auth/Login')
+                ->where('status', $message));
         $user = User::query()->where('email', 'google@example.com')->firstOrFail();
         Notification::assertSentTo($admin, GoogleAccessRequested::class);
         $this->assertSame('pending', $user->approval_status);
+        $this->assertNotNull($user->email_verified_at);
         $this->assertFalse($user->roles()->exists());
         $this->assertGuest();
 
         $this->actingAs($admin)->post(route('admin.users.approve', $user), ['role' => 'user'])->assertRedirect();
+        $this->post(route('admin.users.approve', $user), ['role' => 'user'])->assertRedirect();
         $user->refresh();
         $this->assertSame('approved', $user->approval_status);
         $this->assertTrue($user->hasRole('user'));
-        Notification::assertSentTo($user, GoogleAccessResolved::class);
+        Notification::assertSentToTimes($user, GoogleAccessResolved::class, 1);
     }
 
     public function test_matching_email_requires_explicit_link(): void

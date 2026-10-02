@@ -12,15 +12,25 @@ final class ResolveGoogleApproval
     /** @param list<string> $roleSlugs */
     public function approve(User $user, array $roleSlugs): void
     {
-        abort_unless($user->googleIdentity()->exists() && $user->approval_status !== 'approved', 409);
+        abort_unless($user->googleIdentity()->exists(), 409);
         $roles = Role::query()->whereIn('slug', $roleSlugs)->pluck('id');
         abort_unless($roleSlugs !== [] && $roles->count() === count(array_unique($roleSlugs)), 422);
 
-        DB::transaction(function () use ($user, $roles): void {
-            $user->roles()->sync($roles);
-            $user->forceFill(['approval_status' => 'approved', 'approved_at' => now()])->save();
+        $wasResolved = DB::transaction(function () use ($user, $roles): bool {
+            $lockedUser = User::query()->lockForUpdate()->findOrFail($user->id);
+            if ($lockedUser->approval_status === 'approved') {
+                return false;
+            }
+
+            $lockedUser->roles()->sync($roles);
+            $lockedUser->forceFill(['approval_status' => 'approved', 'approved_at' => now()])->save();
+
+            return true;
         });
-        $this->notify($user, true);
+
+        if ($wasResolved) {
+            $this->notify($user, true);
+        }
     }
 
     private function notify(User $user, bool $approved): void
