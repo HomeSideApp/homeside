@@ -1,5 +1,12 @@
 <script setup lang="ts">
-import { Head, Link, router, setLayoutProps, useForm } from '@inertiajs/vue3';
+import {
+    Deferred,
+    Head,
+    Link,
+    router,
+    setLayoutProps,
+    useForm,
+} from '@inertiajs/vue3';
 import {
     ArrowLeft,
     Building2,
@@ -46,6 +53,7 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
+import { Skeleton } from '@/components/ui/skeleton';
 import { destroy, edit, index } from '@/routes/contacts';
 import { update as useRemoteFields } from '@/routes/contacts/remote-fields';
 import type {
@@ -59,14 +67,18 @@ interface Contact {
     display_name: string;
     household_id: string | null;
     avatar_url: string | null;
-    records: ContactRecordData[];
     labels: Array<{ id: string; name: string }>;
+}
+
+interface ContactDetails {
+    records: ContactRecordData[];
+    sources: Array<{ id: string; name: string }>;
 }
 
 const props = defineProps<{
     contact: Contact;
     household_name: string | null;
-    sources: Array<{ id: string; name: string }>;
+    details?: ContactDetails;
     can: { update: boolean; delete: boolean };
 }>();
 
@@ -116,16 +128,21 @@ const remoteFields: Array<{ key: RemoteField; label: string }> = [
     { key: 'relations', label: 'Relaciones' },
     { key: 'photo', label: 'Fotografía' },
 ];
+const records = computed(() => props.details?.records ?? []);
 const localRecord = computed(
-    () =>
-        props.contact.records.find((record) => record.source_id === null) ??
-        null,
+    () => records.value.find((record) => record.source_id === null) ?? null,
 );
 const externalRecords = computed(() =>
-    props.contact.records.filter((record) => record.source_id !== null),
+    records.value.filter((record) => record.source_id !== null),
 );
 const sourceNames = computed(
-    () => new Map(props.sources.map((source) => [source.id, source.name])),
+    () =>
+        new Map(
+            (props.details?.sources ?? []).map((source) => [
+                source.id,
+                source.name,
+            ]),
+        ),
 );
 function fieldValue(
     record: ContactRecordData | null,
@@ -426,273 +443,334 @@ function confirmDelete(): void {
             </div>
         </section>
 
-        <div class="grid gap-6 lg:grid-cols-[minmax(0,3fr)_minmax(17rem,2fr)]">
-            <div class="flex min-w-0 flex-col gap-6">
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Datos de contacto</CardTitle>
-                        <CardDescription
-                            >Información disponible en sus registros locales y
-                            externos.</CardDescription
-                        >
-                    </CardHeader>
-                    <CardContent class="flex flex-col gap-5">
-                        <p
-                            v-if="!hasDetails"
-                            class="text-sm text-muted-foreground"
-                        >
-                            Aún no hay más datos para este contacto.
-                        </p>
-                        <div
-                            v-if="emails.length"
-                            class="flex items-start gap-3"
-                        >
-                            <Mail
-                                class="mt-0.5 size-4 shrink-0 text-muted-foreground"
-                                aria-hidden="true"
-                            />
-                            <div class="min-w-0">
-                                <p class="text-sm font-medium">
-                                    Correo electrónico
-                                </p>
-                                <p
-                                    v-for="email in emails"
-                                    :key="email.value"
-                                    class="text-sm break-all text-muted-foreground"
-                                >
-                                    {{ email.value }}
-                                </p>
-                            </div>
-                        </div>
-                        <div
-                            v-if="phones.length"
-                            class="flex items-start gap-3"
-                        >
-                            <Phone
-                                class="mt-0.5 size-4 shrink-0 text-muted-foreground"
-                                aria-hidden="true"
-                            />
-                            <div class="min-w-0">
-                                <p class="text-sm font-medium">
-                                    Número de teléfono
-                                </p>
-                                <p
-                                    v-for="phone in phones"
-                                    :key="phone.value"
-                                    class="text-sm text-muted-foreground"
-                                >
-                                    {{ phone.value }}
-                                </p>
-                            </div>
-                        </div>
-                        <div
-                            v-if="addresses.length"
-                            class="flex items-start gap-3"
-                        >
-                            <MapPin
-                                class="mt-0.5 size-4 shrink-0 text-muted-foreground"
-                                aria-hidden="true"
-                            />
-                            <div class="min-w-0">
-                                <p class="text-sm font-medium">Dirección</p>
-                                <p
-                                    v-for="address in addresses"
-                                    :key="address.value"
-                                    class="text-sm break-words whitespace-pre-line text-muted-foreground"
-                                >
-                                    {{ address.value }}
-                                </p>
-                            </div>
-                        </div>
-                        <div v-if="urls.length" class="flex items-start gap-3">
-                            <Link2
-                                class="mt-0.5 size-4 shrink-0 text-muted-foreground"
-                                aria-hidden="true"
-                            />
-                            <div class="min-w-0">
-                                <p class="text-sm font-medium">Sitios web</p>
-                                <p
-                                    v-for="url in urls"
-                                    :key="url.value"
-                                    class="text-sm break-all text-muted-foreground"
-                                >
-                                    {{ url.value }}
-                                </p>
-                            </div>
-                        </div>
-                        <div v-if="dates.length" class="flex items-start gap-3">
-                            <CalendarDays
-                                class="mt-0.5 size-4 shrink-0 text-muted-foreground"
-                                aria-hidden="true"
-                            />
-                            <div class="min-w-0">
-                                <p class="text-sm font-medium">Fechas</p>
-                                <p
-                                    v-for="date in dates"
-                                    :key="`${date.label}-${date.value}`"
-                                    class="text-sm text-muted-foreground"
-                                >
-                                    {{ date.label }} ·
-                                    {{ formatDate(date.value) }}
-                                </p>
-                            </div>
-                        </div>
-                        <div
-                            v-if="organization || jobTitle"
-                            class="flex items-start gap-3"
-                        >
-                            <Building2
-                                class="mt-0.5 size-4 shrink-0 text-muted-foreground"
-                                aria-hidden="true"
-                            />
-                            <div class="min-w-0">
-                                <p class="text-sm font-medium">Trabajo</p>
-                                <p class="text-sm text-muted-foreground">
-                                    {{
-                                        [jobTitle, organization]
-                                            .filter(Boolean)
-                                            .join(' · ')
-                                    }}
-                                </p>
-                            </div>
-                        </div>
-                        <div v-if="nickname" class="flex items-start gap-3">
-                            <UserRound
-                                class="mt-0.5 size-4 shrink-0 text-muted-foreground"
-                                aria-hidden="true"
-                            />
-                            <div class="min-w-0">
-                                <p class="text-sm font-medium">Apodo</p>
-                                <p class="text-sm text-muted-foreground">
-                                    {{ nickname }}
-                                </p>
-                            </div>
-                        </div>
-                        <div
-                            v-if="relations.length"
-                            class="flex items-start gap-3"
-                        >
-                            <UsersRound
-                                class="mt-0.5 size-4 shrink-0 text-muted-foreground"
-                                aria-hidden="true"
-                            />
-                            <div class="min-w-0">
-                                <p class="text-sm font-medium">Relaciones</p>
-                                <p
-                                    v-for="relation in relations"
-                                    :key="`${relation.type}-${relation.name}-${relation.external_value}`"
-                                    class="text-sm text-muted-foreground"
-                                >
-                                    {{ relationNames[relation.type] }} ·
-                                    {{
-                                        relation.name || relation.external_value
-                                    }}
-                                </p>
-                            </div>
-                        </div>
-                        <div v-if="notes" class="flex items-start gap-3">
-                            <StickyNote
-                                class="mt-0.5 size-4 shrink-0 text-muted-foreground"
-                                aria-hidden="true"
-                            />
-                            <div class="min-w-0">
-                                <p class="text-sm font-medium">Notas</p>
-                                <p
-                                    class="text-sm break-words whitespace-pre-wrap text-muted-foreground"
-                                >
-                                    {{ notes }}
-                                </p>
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
+        <Deferred data="details">
+            <template #fallback>
+                <div
+                    class="grid gap-6 lg:grid-cols-[minmax(0,3fr)_minmax(17rem,2fr)]"
+                    aria-busy="true"
+                    aria-label="Cargando datos del contacto"
+                >
+                    <div class="flex min-w-0 flex-col gap-6">
+                        <Card>
+                            <CardHeader>
+                                <Skeleton class="h-6 w-44" />
+                                <Skeleton class="h-4 w-72 max-w-full" />
+                            </CardHeader>
+                            <CardContent class="flex flex-col gap-5">
+                                <Skeleton class="h-12 w-full" />
+                                <Skeleton class="h-12 w-4/5" />
+                                <Skeleton class="h-12 w-3/5" />
+                            </CardContent>
+                        </Card>
+                        <Card>
+                            <CardHeader>
+                                <Skeleton class="h-6 w-24" />
+                                <Skeleton class="h-4 w-64 max-w-full" />
+                            </CardHeader>
+                            <CardContent>
+                                <Skeleton class="h-9 w-full" />
+                            </CardContent>
+                        </Card>
+                    </div>
+                    <div class="flex min-w-0 flex-col gap-6">
+                        <Card>
+                            <CardHeader>
+                                <Skeleton class="h-6 w-40" />
+                                <Skeleton class="h-4 w-56 max-w-full" />
+                            </CardHeader>
+                            <CardContent>
+                                <Skeleton class="h-12 w-full" />
+                            </CardContent>
+                        </Card>
+                    </div>
+                </div>
+            </template>
 
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Fuentes</CardTitle>
-                        <CardDescription
-                            >Origen de la información de este
-                            contacto.</CardDescription
-                        >
-                    </CardHeader>
-                    <CardContent class="flex flex-col gap-3">
-                        <div
-                            v-if="localRecord"
-                            class="flex items-center justify-between gap-3"
-                        >
-                            <Badge variant="outline">Contacto local</Badge>
-                            <span class="text-xs text-muted-foreground"
-                                >Tiene prioridad</span
+            <div
+                class="grid gap-6 lg:grid-cols-[minmax(0,3fr)_minmax(17rem,2fr)]"
+            >
+                <div class="flex min-w-0 flex-col gap-6">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Datos de contacto</CardTitle>
+                            <CardDescription
+                                >Información disponible en sus registros locales
+                                y externos.</CardDescription
                             >
-                        </div>
-                        <div
-                            v-for="record in externalRecords"
-                            :key="record.id"
-                            class="flex items-center justify-between gap-3"
-                        >
-                            <Badge variant="outline">
-                                {{
-                                    sourceNames.get(record.source_id ?? '') ||
-                                    'Fuente externa'
-                                }}
-                            </Badge>
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                @click="openRemote(record)"
+                        </CardHeader>
+                        <CardContent class="flex flex-col gap-5">
+                            <p
+                                v-if="!hasDetails"
+                                class="text-sm text-muted-foreground"
                             >
-                                Ver datos
-                            </Button>
-                        </div>
-                        <p
-                            v-if="!localRecord && !externalRecords.length"
-                            class="text-sm text-muted-foreground"
-                        >
-                            Sin fuentes disponibles.
-                        </p>
-                    </CardContent>
-                </Card>
-            </div>
+                                Aún no hay más datos para este contacto.
+                            </p>
+                            <div
+                                v-if="emails.length"
+                                class="flex items-start gap-3"
+                            >
+                                <Mail
+                                    class="mt-0.5 size-4 shrink-0 text-muted-foreground"
+                                    aria-hidden="true"
+                                />
+                                <div class="min-w-0">
+                                    <p class="text-sm font-medium">
+                                        Correo electrónico
+                                    </p>
+                                    <p
+                                        v-for="email in emails"
+                                        :key="email.value"
+                                        class="text-sm break-all text-muted-foreground"
+                                    >
+                                        {{ email.value }}
+                                    </p>
+                                </div>
+                            </div>
+                            <div
+                                v-if="phones.length"
+                                class="flex items-start gap-3"
+                            >
+                                <Phone
+                                    class="mt-0.5 size-4 shrink-0 text-muted-foreground"
+                                    aria-hidden="true"
+                                />
+                                <div class="min-w-0">
+                                    <p class="text-sm font-medium">
+                                        Número de teléfono
+                                    </p>
+                                    <p
+                                        v-for="phone in phones"
+                                        :key="phone.value"
+                                        class="text-sm text-muted-foreground"
+                                    >
+                                        {{ phone.value }}
+                                    </p>
+                                </div>
+                            </div>
+                            <div
+                                v-if="addresses.length"
+                                class="flex items-start gap-3"
+                            >
+                                <MapPin
+                                    class="mt-0.5 size-4 shrink-0 text-muted-foreground"
+                                    aria-hidden="true"
+                                />
+                                <div class="min-w-0">
+                                    <p class="text-sm font-medium">Dirección</p>
+                                    <p
+                                        v-for="address in addresses"
+                                        :key="address.value"
+                                        class="text-sm break-words whitespace-pre-line text-muted-foreground"
+                                    >
+                                        {{ address.value }}
+                                    </p>
+                                </div>
+                            </div>
+                            <div
+                                v-if="urls.length"
+                                class="flex items-start gap-3"
+                            >
+                                <Link2
+                                    class="mt-0.5 size-4 shrink-0 text-muted-foreground"
+                                    aria-hidden="true"
+                                />
+                                <div class="min-w-0">
+                                    <p class="text-sm font-medium">
+                                        Sitios web
+                                    </p>
+                                    <p
+                                        v-for="url in urls"
+                                        :key="url.value"
+                                        class="text-sm break-all text-muted-foreground"
+                                    >
+                                        {{ url.value }}
+                                    </p>
+                                </div>
+                            </div>
+                            <div
+                                v-if="dates.length"
+                                class="flex items-start gap-3"
+                            >
+                                <CalendarDays
+                                    class="mt-0.5 size-4 shrink-0 text-muted-foreground"
+                                    aria-hidden="true"
+                                />
+                                <div class="min-w-0">
+                                    <p class="text-sm font-medium">Fechas</p>
+                                    <p
+                                        v-for="date in dates"
+                                        :key="`${date.label}-${date.value}`"
+                                        class="text-sm text-muted-foreground"
+                                    >
+                                        {{ date.label }} ·
+                                        {{ formatDate(date.value) }}
+                                    </p>
+                                </div>
+                            </div>
+                            <div
+                                v-if="organization || jobTitle"
+                                class="flex items-start gap-3"
+                            >
+                                <Building2
+                                    class="mt-0.5 size-4 shrink-0 text-muted-foreground"
+                                    aria-hidden="true"
+                                />
+                                <div class="min-w-0">
+                                    <p class="text-sm font-medium">Trabajo</p>
+                                    <p class="text-sm text-muted-foreground">
+                                        {{
+                                            [jobTitle, organization]
+                                                .filter(Boolean)
+                                                .join(' · ')
+                                        }}
+                                    </p>
+                                </div>
+                            </div>
+                            <div v-if="nickname" class="flex items-start gap-3">
+                                <UserRound
+                                    class="mt-0.5 size-4 shrink-0 text-muted-foreground"
+                                    aria-hidden="true"
+                                />
+                                <div class="min-w-0">
+                                    <p class="text-sm font-medium">Apodo</p>
+                                    <p class="text-sm text-muted-foreground">
+                                        {{ nickname }}
+                                    </p>
+                                </div>
+                            </div>
+                            <div
+                                v-if="relations.length"
+                                class="flex items-start gap-3"
+                            >
+                                <UsersRound
+                                    class="mt-0.5 size-4 shrink-0 text-muted-foreground"
+                                    aria-hidden="true"
+                                />
+                                <div class="min-w-0">
+                                    <p class="text-sm font-medium">
+                                        Relaciones
+                                    </p>
+                                    <p
+                                        v-for="relation in relations"
+                                        :key="`${relation.type}-${relation.name}-${relation.external_value}`"
+                                        class="text-sm text-muted-foreground"
+                                    >
+                                        {{ relationNames[relation.type] }} ·
+                                        {{
+                                            relation.name ||
+                                            relation.external_value
+                                        }}
+                                    </p>
+                                </div>
+                            </div>
+                            <div v-if="notes" class="flex items-start gap-3">
+                                <StickyNote
+                                    class="mt-0.5 size-4 shrink-0 text-muted-foreground"
+                                    aria-hidden="true"
+                                />
+                                <div class="min-w-0">
+                                    <p class="text-sm font-medium">Notas</p>
+                                    <p
+                                        class="text-sm break-words whitespace-pre-wrap text-muted-foreground"
+                                    >
+                                        {{ notes }}
+                                    </p>
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
 
-            <div class="flex min-w-0 flex-col gap-6">
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Gastos vinculados</CardTitle>
-                        <CardDescription
-                            >Actividad económica relacionada con este
-                            contacto.</CardDescription
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Fuentes</CardTitle>
+                            <CardDescription
+                                >Origen de la información de este
+                                contacto.</CardDescription
+                            >
+                        </CardHeader>
+                        <CardContent class="flex flex-col gap-3">
+                            <div
+                                v-if="localRecord"
+                                class="flex items-center justify-between gap-3"
+                            >
+                                <Badge variant="outline">Contacto local</Badge>
+                                <span class="text-xs text-muted-foreground"
+                                    >Tiene prioridad</span
+                                >
+                            </div>
+                            <div
+                                v-for="record in externalRecords"
+                                :key="record.id"
+                                class="flex items-center justify-between gap-3"
+                            >
+                                <Badge variant="outline">
+                                    {{
+                                        sourceNames.get(
+                                            record.source_id ?? '',
+                                        ) || 'Fuente externa'
+                                    }}
+                                </Badge>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    @click="openRemote(record)"
+                                >
+                                    Ver datos
+                                </Button>
+                            </div>
+                            <p
+                                v-if="!localRecord && !externalRecords.length"
+                                class="text-sm text-muted-foreground"
+                            >
+                                Sin fuentes disponibles.
+                            </p>
+                        </CardContent>
+                    </Card>
+                </div>
+
+                <div class="flex min-w-0 flex-col gap-6">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Gastos vinculados</CardTitle>
+                            <CardDescription
+                                >Actividad económica relacionada con este
+                                contacto.</CardDescription
+                            >
+                        </CardHeader>
+                        <CardContent
+                            class="flex items-start gap-3 text-sm text-muted-foreground"
                         >
-                    </CardHeader>
-                    <CardContent
-                        class="flex items-start gap-3 text-sm text-muted-foreground"
-                    >
-                        <Wallet class="size-5 shrink-0" aria-hidden="true" />
-                        <p>
-                            La vinculación de gastos con contactos se añadirá
-                            aquí.
-                        </p>
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Más información vinculada</CardTitle>
-                        <CardDescription
-                            >Un espacio para futuras relaciones con otros
-                            módulos.</CardDescription
+                            <Wallet
+                                class="size-5 shrink-0"
+                                aria-hidden="true"
+                            />
+                            <p>
+                                La vinculación de gastos con contactos se
+                                añadirá aquí.
+                            </p>
+                        </CardContent>
+                    </Card>
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Más información vinculada</CardTitle>
+                            <CardDescription
+                                >Un espacio para futuras relaciones con otros
+                                módulos.</CardDescription
+                            >
+                        </CardHeader>
+                        <CardContent
+                            class="flex items-start gap-3 text-sm text-muted-foreground"
                         >
-                    </CardHeader>
-                    <CardContent
-                        class="flex items-start gap-3 text-sm text-muted-foreground"
-                    >
-                        <Link2 class="size-5 shrink-0" aria-hidden="true" />
-                        <p>
-                            Los datos que se relacionen con este contacto
-                            aparecerán aquí.
-                        </p>
-                    </CardContent>
-                </Card>
+                            <Link2 class="size-5 shrink-0" aria-hidden="true" />
+                            <p>
+                                Los datos que se relacionen con este contacto
+                                aparecerán aquí.
+                            </p>
+                        </CardContent>
+                    </Card>
+                </div>
             </div>
-        </div>
+        </Deferred>
 
         <Dialog v-model:open="remoteOpen">
             <DialogContent class="max-h-[85vh] overflow-y-auto sm:max-w-2xl">

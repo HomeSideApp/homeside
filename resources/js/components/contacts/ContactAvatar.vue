@@ -24,6 +24,8 @@ const initial = computed(
             v-if="avatarUrl"
             :src="avatarUrl"
             :alt="name"
+            loading="lazy"
+            decoding="async"
             class="object-cover"
         />
         <AvatarFallback

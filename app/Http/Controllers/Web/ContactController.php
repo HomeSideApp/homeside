@@ -22,6 +22,7 @@ use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
@@ -38,9 +39,24 @@ class ContactController extends Controller
 
         $user = $this->authenticatedUser($request);
         [$search, $labelId] = $this->resolveFilters($request, $user);
+        $favoriteContactIds = $favorites->idsFor($user);
 
         return Inertia::render('contacts/Index', [
-            'contacts' => fn (): array => $this->contactsPayload($request, $user, $search, $labelId, $favorites),
+            'contacts' => Inertia::scroll(
+                fn (): AnonymousResourceCollection => $this->contactsPage(
+                    $user,
+                    $search,
+                    $labelId,
+                    $favoriteContactIds,
+                ),
+            ),
+            'favorite_contacts' => fn (): array => $this->favoriteContactsPayload(
+                $request,
+                $user,
+                $search,
+                $labelId,
+                $favoriteContactIds,
+            ),
             'filters' => ['search' => $search, 'label' => $labelId],
             'duplicate_count' => fn (): int => count($duplicates->execute($user)),
             'labels' => fn (): Collection => $this->labelsQuery($user),
@@ -165,6 +181,44 @@ class ContactController extends Controller
     }
 
     /**
+     * Paginate the personal contact list for Inertia infinite scrolling.
+     */
+    private function contactsPage(
+        User $user,
+        string $search,
+        ?string $labelId,
+        Collection $favoriteContactIds,
+    ): AnonymousResourceCollection {
+        $contacts = $this->contactsQuery($user, $search, $labelId)
+            ->whereNotIn('contacts.id', $favoriteContactIds)
+            ->paginate(50)
+            ->withQueryString();
+        $contacts->getCollection()->each->setAttribute('is_favorite', false);
+
+        return ContactResource::collection($contacts);
+    }
+
+    /**
+     * Resolve every favorite separately so it is available with the first page.
+     *
+     * @return array<int, mixed>
+     */
+    private function favoriteContactsPayload(
+        Request $request,
+        User $user,
+        string $search,
+        ?string $labelId,
+        Collection $favoriteContactIds,
+    ): array {
+        $contacts = $this->contactsQuery($user, $search, $labelId)
+            ->whereIn('contacts.id', $favoriteContactIds)
+            ->get();
+        $contacts->each->setAttribute('is_favorite', true);
+
+        return ContactResource::collection($contacts)->resolve($request);
+    }
+
+    /**
      * Execute the contact listing query and serialize it for the page props.
      *
      * @param  Request  $request  Incoming web request resolving the resource URLs.
@@ -266,14 +320,30 @@ class ContactController extends Controller
         Gate::authorize('view', $contact);
 
         $user = $this->authenticatedUser($request);
-        $contact->load(['records' => fn ($records) => $records->orderBy('source_order')->orderBy('created_at')->orderBy('id'), 'household', 'labels' => fn (BelongsToMany $labels): BelongsToMany => $labels->visibleTo($user)->orderBy('name')]);
+        $contact->load([
+            'household',
+            'labels' => fn (BelongsToMany $labels): BelongsToMany => $labels->visibleTo($user)->orderBy('name'),
+        ]);
 
         return Inertia::render('contacts/Show', [
             'contact' => (new ContactResource($contact))->resolve($request),
             'household_name' => $contact->household?->name,
-            'sources' => ContactSource::query()->withTrashed()->visibleTo($user)
-                ->whereIn('id', $contact->records->pluck('contact_source_id')->filter()->unique())
-                ->get(['id', 'name']),
+            'details' => Inertia::defer(function () use ($contact, $request, $user): array {
+                $contact->load([
+                    'records' => fn ($records) => $records
+                        ->orderBy('source_order')
+                        ->orderBy('created_at')
+                        ->orderBy('id'),
+                ]);
+                $contactPayload = (new ContactResource($contact))->resolve($request);
+
+                return [
+                    'records' => $contactPayload['records'] ?? [],
+                    'sources' => ContactSource::query()->withTrashed()->visibleTo($user)
+                        ->whereIn('id', $contact->records->pluck('contact_source_id')->filter()->unique())
+                        ->get(['id', 'name']),
+                ];
+            }),
             'can' => [
                 'update' => Gate::allows('update', $contact),
                 'delete' => Gate::allows('delete', $contact),

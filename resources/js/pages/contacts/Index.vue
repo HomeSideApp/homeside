@@ -1,7 +1,16 @@
 <script setup lang="ts">
-import { Head, Link, router, setLayoutProps, useForm } from '@inertiajs/vue3';
-import { Plus, Server, Star, Trash2 } from '@lucide/vue';
-import { computed, onUnmounted, ref } from 'vue';
+import type { InfiniteScrollRef, PageProps } from '@inertiajs/core';
+import {
+    Head,
+    InfiniteScroll,
+    Link,
+    router,
+    setLayoutProps,
+    useForm,
+    usePage,
+} from '@inertiajs/vue3';
+import { LoaderCircle, Plus, Server, Star, Trash2 } from '@lucide/vue';
+import { computed, onMounted, onUnmounted, ref } from 'vue';
 import IconAction from '@/components/admin/IconAction.vue';
 import ContactAvatar from '@/components/contacts/ContactAvatar.vue';
 import ContactFormFields from '@/components/contacts/ContactFormFields.vue';
@@ -51,6 +60,7 @@ import {
     store as storeLabel,
 } from '@/routes/contacts/labels';
 import { index as sourcesIndex } from '@/routes/contacts/sources';
+import type { PaginationMeta } from '@/types';
 import type { ContactFormData } from '@/types/contacts';
 
 interface ContactLabel {
@@ -70,8 +80,17 @@ interface Contact {
     is_favorite: boolean;
     labels: ContactLabel[];
 }
+interface ContactPage {
+    data: Contact[];
+    meta: PaginationMeta;
+}
+interface ContactIndexPageProps extends PageProps {
+    contacts: ContactPage;
+    favorite_contacts: Contact[];
+}
 const props = defineProps<{
-    contacts: Contact[];
+    contacts: ContactPage;
+    favorite_contacts: Contact[];
     duplicate_count: number;
     households: Array<{ id: string; name: string }>;
     filters: { search: string; label: string | null };
@@ -80,10 +99,15 @@ const props = defineProps<{
 setLayoutProps({ breadcrumbs: [{ title: 'Contactos', href: index().url }] });
 
 const { can } = useAuthorization();
+const page = usePage<ContactIndexPageProps>();
+const currentContacts = computed(() => page.props.contacts ?? props.contacts);
+const currentFavoriteContacts = computed(
+    () => page.props.favorite_contacts ?? props.favorite_contacts,
+);
 const search = ref(props.filters.search);
 const contactGroups = computed(() => {
-    const favorites = props.contacts.filter((contact) => contact.is_favorite);
-    const others = props.contacts.filter((contact) => !contact.is_favorite);
+    const favorites = currentFavoriteContacts.value;
+    const others = currentContacts.value.data;
 
     return [
         ...(favorites.length
@@ -123,6 +147,7 @@ const form = useForm<ContactFormData>({
 const contactFields = ref(form);
 
 function reloadContacts(label: string | null = props.filters.label): void {
+    lastRequestedContactCount = -1;
     router.get(
         index({
             query: {
@@ -132,10 +157,11 @@ function reloadContacts(label: string | null = props.filters.label): void {
         }).url,
         {},
         {
-            only: ['contacts', 'filters'],
+            only: ['contacts', 'favorite_contacts', 'filters'],
             preserveState: true,
             preserveScroll: true,
             replace: true,
+            reset: ['contacts'],
         },
     );
 }
@@ -150,7 +176,177 @@ function selectLabel(label: string | null): void {
     reloadContacts(label);
 }
 
-onUnmounted(() => clearTimeout(searchTimeout));
+const contactsInfiniteScroll = ref<InfiniteScrollRef | null>(null);
+let lastRequestedContactCount = -1;
+const scrollIndicatorVisible = ref(false);
+const scrollIndicatorLabel = ref('-');
+const scrollIndicatorTop = ref(72);
+let scrollIndicatorTimeout: ReturnType<typeof setTimeout> | undefined;
+let scrollAnimationFrame: number | undefined;
+let draggingScrollbar = false;
+
+function contactScrollLabel(contact: Contact, favorite: boolean): string {
+    if (favorite) {
+        return '-';
+    }
+
+    return (
+        Array.from(contact.display_name.trim())[0]?.toLocaleUpperCase() ?? '#'
+    );
+}
+
+function updateScrollIndicator(pointerY?: number): void {
+    const rows = Array.from(
+        document.querySelectorAll<HTMLElement>(
+            '#contacts-table-body [data-contact-scroll-label]',
+        ),
+    );
+
+    if (rows.length === 0) {
+        return;
+    }
+
+    const anchor = Math.min(window.innerHeight * 0.35, 280);
+    const visibleRow =
+        [...rows]
+            .reverse()
+            .find((row) => row.getBoundingClientRect().top <= anchor) ??
+        rows.find((row) => row.getBoundingClientRect().bottom > 0) ??
+        rows[0];
+
+    scrollIndicatorLabel.value = visibleRow.dataset.contactScrollLabel ?? '#';
+
+    if (pointerY !== undefined) {
+        scrollIndicatorTop.value = Math.min(
+            window.innerHeight - 56,
+            Math.max(56, pointerY),
+        );
+    } else {
+        const documentHeight = document.documentElement.scrollHeight;
+        const maximumScroll = Math.max(1, documentHeight - window.innerHeight);
+        const progress = Math.min(
+            1,
+            Math.max(0, window.scrollY / maximumScroll),
+        );
+        scrollIndicatorTop.value =
+            56 + progress * Math.max(0, window.innerHeight - 112);
+    }
+}
+
+function scheduleScrollIndicatorHide(): void {
+    clearTimeout(scrollIndicatorTimeout);
+
+    if (draggingScrollbar) {
+        return;
+    }
+
+    scrollIndicatorTimeout = setTimeout(() => {
+        scrollIndicatorVisible.value = false;
+    }, 900);
+}
+
+function revealScrollIndicator(pointerY?: number): void {
+    if (
+        currentContacts.value.data.length === 0 &&
+        currentFavoriteContacts.value.length === 0
+    ) {
+        return;
+    }
+
+    updateScrollIndicator(pointerY);
+    scrollIndicatorVisible.value = true;
+    scheduleScrollIndicatorHide();
+}
+
+function requestNextContactPage(): void {
+    const loadedCount = currentContacts.value.data.length;
+
+    if (
+        loadedCount === lastRequestedContactCount ||
+        !contactsInfiniteScroll.value?.hasNext()
+    ) {
+        return;
+    }
+
+    lastRequestedContactCount = loadedCount;
+    contactsInfiniteScroll.value.fetchNext({
+        onFinish: () => {
+            if (currentContacts.value.data.length === loadedCount) {
+                lastRequestedContactCount = -1;
+            }
+        },
+    });
+}
+
+function onWindowScroll(): void {
+    requestNextContactPage();
+
+    if (scrollAnimationFrame !== undefined) {
+        cancelAnimationFrame(scrollAnimationFrame);
+    }
+
+    scrollAnimationFrame = requestAnimationFrame(() => {
+        scrollAnimationFrame = undefined;
+        revealScrollIndicator();
+    });
+}
+
+function pointerIsOnScrollbar(event: PointerEvent): boolean {
+    const scrollbarWidth = Math.max(
+        window.innerWidth - document.documentElement.clientWidth,
+        16,
+    );
+
+    return (
+        event.button === 0 &&
+        event.clientX >= window.innerWidth - scrollbarWidth
+    );
+}
+
+function onPointerDown(event: PointerEvent): void {
+    if (!pointerIsOnScrollbar(event)) {
+        return;
+    }
+
+    draggingScrollbar = true;
+    revealScrollIndicator(event.clientY);
+}
+
+function onPointerMove(event: PointerEvent): void {
+    if (draggingScrollbar) {
+        revealScrollIndicator(event.clientY);
+    }
+}
+
+function onPointerUp(): void {
+    if (!draggingScrollbar) {
+        return;
+    }
+
+    draggingScrollbar = false;
+    scheduleScrollIndicatorHide();
+}
+
+onMounted(() => {
+    window.addEventListener('scroll', onWindowScroll, { passive: true });
+    window.addEventListener('pointerdown', onPointerDown, { passive: true });
+    window.addEventListener('pointermove', onPointerMove, { passive: true });
+    window.addEventListener('pointerup', onPointerUp, { passive: true });
+});
+
+onUnmounted(() => {
+    clearTimeout(searchTimeout);
+    clearTimeout(scrollIndicatorTimeout);
+
+    if (scrollAnimationFrame !== undefined) {
+        cancelAnimationFrame(scrollAnimationFrame);
+    }
+
+    window.removeEventListener('scroll', onWindowScroll);
+    window.removeEventListener('pointerdown', onPointerDown);
+    window.removeEventListener('pointermove', onPointerMove);
+    window.removeEventListener('pointerup', onPointerUp);
+});
 
 function submitLabel(): void {
     labelForm.post(storeLabel().url, {
@@ -194,6 +390,25 @@ function submit(): void {
 
 <template>
     <Head title="Contactos" />
+
+    <Transition
+        enter-active-class="transition duration-150 ease-out"
+        enter-from-class="scale-75 opacity-0"
+        leave-active-class="transition duration-200 ease-in"
+        leave-to-class="scale-75 opacity-0"
+    >
+        <div
+            v-if="scrollIndicatorVisible"
+            class="pointer-events-none fixed right-6 z-50 flex size-12 -translate-y-1/2 items-center justify-center rounded-lg bg-primary text-xl font-semibold text-white shadow-lg"
+            :style="{ top: scrollIndicatorTop + 'px' }"
+            role="status"
+            aria-live="polite"
+            :aria-label="'Posición en contactos: ' + scrollIndicatorLabel"
+        >
+            {{ scrollIndicatorLabel }}
+        </div>
+    </Transition>
+
     <div class="px-4 py-6">
         <Heading
             title="Contactos"
@@ -290,122 +505,177 @@ function submit(): void {
                         </div>
                     </div>
                     <p class="text-sm text-muted-foreground">
-                        {{ contacts.length }}
-                        {{ contacts.length === 1 ? 'contacto' : 'contactos' }}
+                        {{
+                            currentContacts.meta.total +
+                            currentFavoriteContacts.length
+                        }}
+                        {{
+                            currentContacts.meta.total +
+                                currentFavoriteContacts.length ===
+                            1
+                                ? 'contacto'
+                                : 'contactos'
+                        }}
                     </p>
-                    <div class="rounded-md border">
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>Nombre</TableHead>
-                                    <TableHead>Correo electrónico</TableHead>
-                                    <TableHead>Número de teléfono</TableHead>
-                                    <TableHead>Etiquetas</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                <template
-                                    v-for="group in contactGroups"
-                                    :key="group.title"
-                                >
-                                    <TableRow
-                                        class="bg-muted/30 hover:bg-muted/30"
-                                    >
-                                        <TableCell
-                                            colspan="4"
-                                            class="py-3 font-medium"
+                    <InfiniteScroll
+                        ref="contactsInfiniteScroll"
+                        data="contacts"
+                        manual
+                    >
+                        <div class="rounded-md border">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Nombre</TableHead>
+                                        <TableHead
+                                            >Correo electrónico</TableHead
                                         >
-                                            <span
-                                                class="inline-flex items-center gap-2"
-                                            >
-                                                <Star
-                                                    v-if="group.favorite"
-                                                    class="size-4 fill-current"
-                                                    aria-hidden="true"
-                                                />
-                                                {{ group.title }} ({{
-                                                    group.contacts.length
-                                                }})
-                                            </span>
-                                        </TableCell>
+                                        <TableHead
+                                            >Número de teléfono</TableHead
+                                        >
+                                        <TableHead>Etiquetas</TableHead>
                                     </TableRow>
-                                    <TableRow
-                                        v-for="contact in group.contacts"
-                                        :key="contact.id"
-                                    >
-                                        <TableCell>
-                                            <Link
-                                                :href="show(contact.id).url"
-                                                class="flex items-center gap-3 font-medium hover:underline"
-                                            >
-                                                <ContactAvatar
-                                                    :id="contact.id"
-                                                    :name="contact.display_name"
-                                                    :avatar-url="
-                                                        contact.avatar_url
-                                                    "
-                                                />
-                                                <span
-                                                    class="min-w-0 truncate"
-                                                    >{{
-                                                        contact.display_name
-                                                    }}</span
-                                                >
-                                            </Link>
-                                        </TableCell>
-                                        <TableCell class="max-w-64 truncate">{{
-                                            contact.email || '—'
-                                        }}</TableCell>
-                                        <TableCell>{{
-                                            contact.phone || '—'
-                                        }}</TableCell>
-                                        <TableCell>
-                                            <div class="flex flex-wrap gap-1">
-                                                <Badge
-                                                    v-for="label in contact.labels"
-                                                    :key="label.id"
-                                                    as="button"
-                                                    type="button"
-                                                    variant="secondary"
-                                                    class="cursor-pointer"
-                                                    @click="
-                                                        selectLabel(label.id)
-                                                    "
-                                                    >{{ label.name }}</Badge
-                                                >
-                                                <span
-                                                    v-if="
-                                                        contact.labels
-                                                            .length === 0
-                                                    "
-                                                    class="text-muted-foreground"
-                                                    >—</span
-                                                >
-                                            </div>
-                                        </TableCell>
-                                    </TableRow>
-                                </template>
-                            </TableBody>
-                        </Table>
-                        <Empty v-if="contacts.length === 0">
-                            <EmptyHeader>
-                                <EmptyTitle>Sin contactos</EmptyTitle>
-                                <EmptyDescription
-                                    v-if="
-                                        props.filters.search ||
-                                        props.filters.label
-                                    "
+                                </TableHeader>
+                                <TableBody
+                                    id="contacts-table-body"
+                                    :key="currentContacts.data.length"
                                 >
-                                    No hay contactos que coincidan con los
-                                    filtros.
-                                </EmptyDescription>
-                                <EmptyDescription v-else>
-                                    Crea un contacto o conecta una fuente
-                                    CardDAV.
-                                </EmptyDescription>
-                            </EmptyHeader>
-                        </Empty>
-                    </div>
+                                    <template
+                                        v-for="group in contactGroups"
+                                        :key="group.title"
+                                    >
+                                        <TableRow
+                                            class="bg-muted/30 hover:bg-muted/30"
+                                        >
+                                            <TableCell
+                                                colspan="4"
+                                                class="py-3 font-medium"
+                                            >
+                                                <span
+                                                    class="inline-flex items-center gap-2"
+                                                >
+                                                    <Star
+                                                        v-if="group.favorite"
+                                                        class="size-4 fill-current"
+                                                        aria-hidden="true"
+                                                    />
+                                                    {{ group.title }} ({{
+                                                        group.contacts.length
+                                                    }})
+                                                </span>
+                                            </TableCell>
+                                        </TableRow>
+                                        <TableRow
+                                            v-for="contact in group.contacts"
+                                            :key="contact.id"
+                                            :data-contact-scroll-label="
+                                                contactScrollLabel(
+                                                    contact,
+                                                    group.favorite,
+                                                )
+                                            "
+                                        >
+                                            <TableCell>
+                                                <Link
+                                                    :href="show(contact.id).url"
+                                                    prefetch="hover"
+                                                    class="flex items-center gap-3 font-medium hover:underline"
+                                                >
+                                                    <ContactAvatar
+                                                        :id="contact.id"
+                                                        :name="
+                                                            contact.display_name
+                                                        "
+                                                        :avatar-url="
+                                                            contact.avatar_url
+                                                        "
+                                                    />
+                                                    <span
+                                                        class="min-w-0 truncate"
+                                                        >{{
+                                                            contact.display_name
+                                                        }}</span
+                                                    >
+                                                </Link>
+                                            </TableCell>
+                                            <TableCell
+                                                class="max-w-64 truncate"
+                                                >{{
+                                                    contact.email || '—'
+                                                }}</TableCell
+                                            >
+                                            <TableCell>{{
+                                                contact.phone || '—'
+                                            }}</TableCell>
+                                            <TableCell>
+                                                <div
+                                                    class="flex flex-wrap gap-1"
+                                                >
+                                                    <Badge
+                                                        v-for="label in contact.labels"
+                                                        :key="label.id"
+                                                        as="button"
+                                                        type="button"
+                                                        variant="secondary"
+                                                        class="cursor-pointer"
+                                                        @click="
+                                                            selectLabel(
+                                                                label.id,
+                                                            )
+                                                        "
+                                                        >{{ label.name }}</Badge
+                                                    >
+                                                    <span
+                                                        v-if="
+                                                            contact.labels
+                                                                .length === 0
+                                                        "
+                                                        class="text-muted-foreground"
+                                                        >—</span
+                                                    >
+                                                </div>
+                                            </TableCell>
+                                        </TableRow>
+                                    </template>
+                                </TableBody>
+                            </Table>
+                            <Empty
+                                v-if="
+                                    currentContacts.data.length === 0 &&
+                                    currentFavoriteContacts.length === 0
+                                "
+                            >
+                                <EmptyHeader>
+                                    <EmptyTitle>Sin contactos</EmptyTitle>
+                                    <EmptyDescription
+                                        v-if="
+                                            props.filters.search ||
+                                            props.filters.label
+                                        "
+                                    >
+                                        No hay contactos que coincidan con los
+                                        filtros.
+                                    </EmptyDescription>
+                                    <EmptyDescription v-else>
+                                        Crea un contacto o conecta una fuente
+                                        CardDAV.
+                                    </EmptyDescription>
+                                </EmptyHeader>
+                            </Empty>
+                        </div>
+                        <template #loading>
+                            <div
+                                class="flex items-center justify-center gap-2 py-4 text-sm text-muted-foreground"
+                                role="status"
+                            >
+                                <LoaderCircle
+                                    class="size-4 animate-spin"
+                                    aria-hidden="true"
+                                />
+                                Cargando más contactos…
+                            </div>
+                        </template>
+                    </InfiniteScroll>
                 </section>
             </div>
         </div>

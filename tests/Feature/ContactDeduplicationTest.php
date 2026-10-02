@@ -54,8 +54,10 @@ class ContactDeduplicationTest extends TestCase
         $this->assertSame('Ada Primera', $first->fresh()->display_name);
         $this->get(route('contacts.show', $first))
             ->assertInertia(fn ($page) => $page
-                ->has('contact.records', 2)
-                ->has('sources', 2)
+                ->loadDeferredProps(fn ($deferred) => $deferred
+                    ->has('details.records', 2)
+                    ->has('details.sources', 2)
+                )
             );
 
         $this->import($secondSource, 'second', 'Ada Segunda Actualizada', 'ada@example.com');
@@ -65,7 +67,11 @@ class ContactDeduplicationTest extends TestCase
 
         $secondSource->delete();
         $this->get(route('contacts.show', $first))
-            ->assertInertia(fn ($page) => $page->has('sources', 2));
+            ->assertInertia(fn ($page) => $page
+                ->loadDeferredProps(fn ($deferred) => $deferred
+                    ->has('details.sources', 2)
+                )
+            );
     }
 
     public function test_multiple_proposals_can_be_confirmed_together_and_references_are_relinked(): void
@@ -152,7 +158,7 @@ class ContactDeduplicationTest extends TestCase
         $this->assertSame('Ada Local', $contact->fresh()->display_name);
         $this->assertSame('Nota local', $local->fresh()->notes);
         $this->get(route('contacts.index'))->assertInertia(fn ($page) => $page
-            ->where('contacts.0.email', 'local@example.com')
+            ->where('contacts.data.0.email', 'local@example.com')
         );
 
         $this->put(route('contacts.remote-fields.update', $contact), [
@@ -163,8 +169,10 @@ class ContactDeduplicationTest extends TestCase
         $this->assertSame('Ada Local', $contact->fresh()->display_name);
         $this->assertSame('Nota local', $local->fresh()->notes);
         $this->get(route('contacts.show', $contact))->assertInertia(fn ($page) => $page
-            ->where('contact.records.0.source_id', null)
-            ->has('sources', 1)
+            ->loadDeferredProps(fn ($deferred) => $deferred
+                ->where('details.records.0.source_id', null)
+                ->has('details.sources', 1)
+            )
         );
 
         $this->putJson(route('contacts.remote-fields.update', $contact), [
@@ -179,7 +187,7 @@ class ContactDeduplicationTest extends TestCase
             'emails' => [],
         ])->assertRedirect();
         $this->get(route('contacts.index'))->assertInertia(fn ($page) => $page
-            ->where('contacts.0.email', null)
+            ->where('contacts.data.0.email', null)
         );
     }
 

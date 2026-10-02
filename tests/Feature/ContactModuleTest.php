@@ -109,9 +109,9 @@ class ContactModuleTest extends TestCase
             ->assertOk()->assertInertia(fn ($page) => $page
             ->component('contacts/Index')
             ->where('filters.search', 'Ada')
-            ->has('contacts', 2)
-            ->where('contacts.0.display_name', 'Ada Local')
-            ->where('contacts.1.display_name', 'Ada Shared')
+            ->has('contacts.data', 2)
+            ->where('contacts.data.0.display_name', 'Ada Local')
+            ->where('contacts.data.1.display_name', 'Ada Shared')
             );
     }
 
@@ -131,13 +131,13 @@ class ContactModuleTest extends TestCase
         ])->get(route('contacts.index', ['search' => 'Ada']))
             ->assertOk()
             ->assertJsonPath('props.filters.search', 'Ada')
-            ->assertJsonCount(1, 'props.contacts')
-            ->assertJsonPath('props.contacts.0.display_name', 'Ada')
+            ->assertJsonCount(1, 'props.contacts.data')
+            ->assertJsonPath('props.contacts.data.0.display_name', 'Ada')
             ->assertJsonMissingPath('props.households')
             ->assertJsonMissingPath('props.labels');
     }
 
-    public function test_contacts_page_loads_every_visible_contact_with_email_and_phone(): void
+    public function test_contacts_page_loads_visible_contacts_in_blocks_of_fifty_with_email_and_phone(): void
     {
         $this->seed(RolesAndPermissionsSeeder::class);
         $user = User::factory()->create();
@@ -146,17 +146,44 @@ class ContactModuleTest extends TestCase
         $record = $first->records()->create(['formatted_name' => 'A Contact']);
         DB::table('contact_emails')->insert(['contact_record_id' => $record->id, 'value' => 'ada@example.com', 'type' => 'work', 'preferred' => true]);
         DB::table('contact_phones')->insert(['contact_record_id' => $record->id, 'value' => '+34 600 123 456', 'type' => 'mobile', 'preferred' => true]);
-        for ($index = 1; $index <= 35; $index++) {
-            Contact::create(['user_id' => $user->id, 'type' => 'person', 'display_name' => 'Contact '.$index]);
+        $last = null;
+        for ($index = 1; $index <= 60; $index++) {
+            $last = Contact::create(['user_id' => $user->id, 'type' => 'person', 'display_name' => 'Contact '.$index]);
         }
+        $starred = ContactLabel::create(['user_id' => $user->id, 'name' => 'Starred']);
+        $last->labels()->attach($starred->id, ['manual' => true, 'imported' => false]);
 
         $this->actingAs($user)->get(route('contacts.index'))
             ->assertInertia(fn ($page) => $page
                 ->component('contacts/Index')
-                ->has('contacts', 36)
-                ->where('contacts.0.email', 'ada@example.com')
-                ->where('contacts.0.phone', '+34 600 123 456')
+                ->has('contacts.data', 50)
+                ->where('contacts.meta.total', 60)
+                ->has('favorite_contacts', 1)
+                ->where('favorite_contacts.0.display_name', 'Contact 60')
+                ->where('favorite_contacts.0.is_favorite', true)
+                ->where('contacts.data.0.email', 'ada@example.com')
+                ->where('contacts.data.0.phone', '+34 600 123 456')
             );
+
+        $this->get(route('contacts.index', ['page' => 2]))
+            ->assertInertia(fn ($page) => $page
+                ->has('contacts.data', 10)
+                ->where('contacts.meta.current_page', 2)
+                ->where('contacts.meta.total', 60)
+            );
+
+        $this->withHeaders([
+            'X-Inertia' => 'true',
+            'X-Inertia-Version' => app(HandleInertiaRequests::class)->version(request()),
+            'X-Inertia-Partial-Component' => 'contacts/Index',
+            'X-Inertia-Partial-Data' => 'contacts',
+            'X-Inertia-Infinite-Scroll-Merge-Intent' => 'append',
+        ])->get(route('contacts.index', ['page' => 2]))
+            ->assertOk()
+            ->assertJsonPath('mergeProps.0', 'contacts.data')
+            ->assertJsonCount(10, 'props.contacts.data')
+            ->assertJsonPath('scrollProps.contacts.currentPage', 2)
+            ->assertJsonPath('scrollProps.contacts.nextPage', null);
     }
 
     public function test_contacts_search_matches_email_and_phone(): void
@@ -170,9 +197,9 @@ class ContactModuleTest extends TestCase
         DB::table('contact_phones')->insert(['contact_record_id' => $record->id, 'value' => '+34 600 123 456', 'preferred' => false]);
 
         $this->actingAs($user)->get(route('contacts.index', ['search' => 'grace@example.com']))
-            ->assertInertia(fn ($page) => $page->has('contacts', 1)->where('contacts.0.display_name', 'Grace'));
+            ->assertInertia(fn ($page) => $page->has('contacts.data', 1)->where('contacts.data.0.display_name', 'Grace'));
         $this->actingAs($user)->get(route('contacts.index', ['search' => '600 123']))
-            ->assertInertia(fn ($page) => $page->has('contacts', 1)->where('contacts.0.display_name', 'Grace'));
+            ->assertInertia(fn ($page) => $page->has('contacts.data', 1)->where('contacts.data.0.display_name', 'Grace'));
     }
 
     public function test_contact_labels_can_be_created_assigned_and_used_to_filter_the_web_list(): void
@@ -200,9 +227,9 @@ class ContactModuleTest extends TestCase
             ->assertOk()
             ->assertInertia(fn ($page) => $page
                 ->where('filters.label', $label->id)
-                ->has('contacts', 1)
-                ->where('contacts.0.display_name', 'Ada')
-                ->where('contacts.0.labels.0.name', 'Familia')
+                ->has('contacts.data', 1)
+                ->where('contacts.data.0.display_name', 'Ada')
+                ->where('contacts.data.0.labels.0.name', 'Familia')
             );
     }
 
@@ -236,22 +263,24 @@ class ContactModuleTest extends TestCase
 
         $this->actingAs($user)->get(route('contacts.index'))
             ->assertOk()->assertInertia(fn ($page) => $page
-            ->has('contacts', 4)
-            ->where('contacts.0.display_name', 'Ada')
-            ->where('contacts.0.is_favorite', true)
-            ->where('contacts.1.display_name', 'Grace')
-            ->where('contacts.1.is_favorite', true)
-            ->where('contacts.2.display_name', 'Linus')
-            ->where('contacts.2.is_favorite', false)
-            ->where('contacts.3.display_name', 'Mary')
-            ->where('contacts.3.is_favorite', true)
+            ->has('favorite_contacts', 3)
+            ->where('favorite_contacts.0.display_name', 'Ada')
+            ->where('favorite_contacts.0.is_favorite', true)
+            ->where('favorite_contacts.1.display_name', 'Grace')
+            ->where('favorite_contacts.1.is_favorite', true)
+            ->where('favorite_contacts.2.display_name', 'Mary')
+            ->where('favorite_contacts.2.is_favorite', true)
+            ->has('contacts.data', 1)
+            ->where('contacts.data.0.display_name', 'Linus')
+            ->where('contacts.data.0.is_favorite', false)
             );
         $vip = ContactLabel::query()->where('user_id', $user->id)->where('name', 'VIP')->firstOrFail();
         $this->get(route('contacts.index', ['label' => $vip->id]))
             ->assertOk()->assertInertia(fn ($page) => $page
-            ->has('contacts', 1)
-            ->where('contacts.0.display_name', 'Grace')
-            ->where('contacts.0.is_favorite', true)
+            ->has('favorite_contacts', 1)
+            ->where('favorite_contacts.0.display_name', 'Grace')
+            ->where('favorite_contacts.0.is_favorite', true)
+            ->has('contacts.data', 0)
             );
     }
 
@@ -276,10 +305,12 @@ class ContactModuleTest extends TestCase
             ->assertOk()->assertInertia(fn ($page) => $page
             ->component('contacts/Show')
             ->where('contact.display_name', 'Ada')
-            ->where('contact.records.0.source_id', $source->id)
-            ->where('sources.0.name', 'Nextcloud')
             ->where('can.update', true)
             ->where('can.delete', true)
+            ->loadDeferredProps(fn ($deferred) => $deferred
+                ->where('details.records.0.source_id', $source->id)
+                ->where('details.sources.0.name', 'Nextcloud')
+            )
             );
         $this->get(route('contacts.edit', $contact))
             ->assertOk()->assertInertia(fn ($page) => $page
@@ -319,7 +350,7 @@ class ContactModuleTest extends TestCase
         $this->get(route('contacts.index', ['label' => $otherLabel->id]))
             ->assertInertia(fn ($page) => $page
                 ->where('filters.label', null)
-                ->has('contacts', 1)
+                ->has('contacts.data', 1)
                 ->has('labels', 1)
             );
     }
@@ -752,8 +783,8 @@ class ContactModuleTest extends TestCase
 
         $this->actingAs($user)->get(route('contacts.index', ['label' => $family->id]))
             ->assertOk()->assertInertia(fn ($page) => $page
-            ->has('contacts', 1)
-            ->where('contacts.0.labels.0.name', 'Familia')
+            ->has('contacts.data', 1)
+            ->where('contacts.data.0.labels.0.name', 'Familia')
             ->where('labels.0.imported', true)
             );
         $this->put(route('contacts.labels.update', $contact), ['label_ids' => [$family->id]])->assertRedirect();
@@ -785,7 +816,7 @@ class ContactModuleTest extends TestCase
 
         $this->actingAs($member)->get(route('contacts.index', ['label' => $label->id]))
             ->assertOk()->assertInertia(fn ($page) => $page
-            ->has('contacts', 1)
+            ->has('contacts.data', 1)
             ->where('labels.0.name', 'Familia')
             );
     }
