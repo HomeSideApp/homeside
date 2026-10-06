@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Settings\PasswordUpdateRequest;
 use App\Http\Requests\Settings\ProfileUpdateRequest;
@@ -64,8 +65,10 @@ final class MeAccountController extends Controller
     {
         $user = $this->authenticatedUser($request);
         SecurityConfirmation::authorize($request, $user);
-        $user->tokens()->delete();
-        $user->delete();
+        DB::transaction(function () use ($user): void {
+            $user->delete();
+            $user->tokens()->delete();
+        }, 3);
         SecurityConfirmation::consume($request);
 
         return response()->noContent();

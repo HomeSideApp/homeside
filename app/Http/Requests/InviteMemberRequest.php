@@ -16,7 +16,7 @@ class InviteMemberRequest extends FormRequest
      */
     public function rules(): array
     {
-        return [
+        return [...UpdateHouseholdMemberPermissionsRequest::accessRules(),
             'email' => ['required', 'email', 'max:255'],
         ];
     }

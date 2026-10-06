@@ -9,7 +9,9 @@ class StoreHouseholdRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return true;
+        $user = $this->user();
+
+        return $user !== null && $user->households_enabled && $user->can_create_households;
     }
 
     /**

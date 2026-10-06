@@ -2,6 +2,7 @@
 
 namespace App\Data\Households;
 
+use App\Enums\HouseholdAccessProfile;
 use Illuminate\Support\Carbon;
 
 /**
@@ -13,13 +14,16 @@ final readonly class CreateInviteLinkData
     public static function fromArray(array $data): self
     {
         return new self(
+            access: HouseholdAccessProfile::attributes($data),
             expiresAt: ! empty($data['expires_at']) ? Carbon::parse($data['expires_at']) : null,
             maxUses: ! empty($data['max_uses']) ? (int) $data['max_uses'] : null,
         );
     }
 
+    /** @param array{access_profile?: string, module_access?: array<string, string>} $access */
     public function __construct(
         public ?Carbon $expiresAt,
         public ?int $maxUses,
+        public array $access = [],
     ) {}
 }

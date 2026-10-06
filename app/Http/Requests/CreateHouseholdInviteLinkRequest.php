@@ -8,7 +8,7 @@ class CreateHouseholdInviteLinkRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return true;
+        return $this->user()?->can('update', $this->route('household')) ?? false;
     }
 
     /**
@@ -16,7 +16,7 @@ class CreateHouseholdInviteLinkRequest extends FormRequest
      */
     public function rules(): array
     {
-        return [
+        return [...UpdateHouseholdMemberPermissionsRequest::accessRules(),
             'expires_at' => ['nullable', 'date', 'after:now'],
             'max_uses' => ['nullable', 'integer', 'min:1', 'max:10000'],
         ];

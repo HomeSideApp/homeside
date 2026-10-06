@@ -3,6 +3,7 @@
 namespace App\Actions\Households;
 
 use App\Models\Household;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Deletes a household.
@@ -14,6 +15,10 @@ final class DeleteHousehold
      */
     public function execute(Household $household): void
     {
-        $household->delete();
+        DB::transaction(function () use ($household): void {
+            $locked = Household::query()->lockForUpdate()->findOrFail($household->id);
+            abort_unless(auth()->id() === $locked->owner_id, 403);
+            $locked->delete();
+        }, 3);
     }
 }

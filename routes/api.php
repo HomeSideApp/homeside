@@ -54,6 +54,8 @@ use App\Http\Controllers\Api\V1\ShoppingListController;
 use App\Http\Controllers\Api\V1\StoreController;
 use App\Http\Controllers\Api\V1\TwoFactorController;
 use App\Http\Controllers\Api\V1\UserAiProviderController;
+use App\Http\Controllers\HouseholdMemberPermissionController;
+use App\Http\Controllers\HouseholdOwnershipController;
 use Illuminate\Support\Facades\Route;
 
 // === Enlaces de invitación públicos (registro vía enlace) ===
@@ -290,6 +292,8 @@ Route::prefix('v1')->as('api.v1.')->middleware(['auth:sanctum', 'locale', 'api.p
     Route::put('households/{household}/settings', [HouseholdController::class, 'update'])->name('households.settings.update');
     Route::delete('households/{household}', [HouseholdController::class, 'destroy'])->name('households.destroy');
     Route::post('households/{household}/invite', [HouseholdController::class, 'invite'])->name('households.invite');
+    Route::patch('households/{household}/members/{member}/permissions', HouseholdMemberPermissionController::class)->name('households.members.permissions');
+    Route::post('households/{household}/ownership/transfer', HouseholdOwnershipController::class)->name('households.ownership.transfer');
     Route::delete('households/{household}/members/{member}', [HouseholdController::class, 'removeMember'])->name('households.remove');
     Route::post('households/{household}/members/{member}/link-contact', [HouseholdController::class, 'linkMemberContact'])->name('households.members.link-contact');
     Route::post('households/{household}/invite-links', [HouseholdController::class, 'storeInviteLink'])->name('households.invite-links.store');

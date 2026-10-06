@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Controllers\HouseholdOwnershipController;
+use App\Http\Controllers\HouseholdMemberPermissionController;
 use App\Http\Controllers\Admin\AdminAiProviderController;
 use App\Http\Controllers\Admin\AdminCategoryController;
 use App\Http\Controllers\Admin\AdminPersonalProductController;
@@ -299,6 +301,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('households/{household}', [HouseholdController::class, 'show'])->middleware('permission:households.show')->name('households.show');
         Route::delete('households/{household}', [HouseholdController::class, 'destroy'])->middleware('permission:households.destroy')->name('households.destroy');
         Route::post('households/{household}/invite', [HouseholdController::class, 'invite'])->middleware('permission:households.invite')->name('households.invite');
+        Route::patch('households/{household}/members/{member}/permissions', HouseholdMemberPermissionController::class)->name('households.members.permissions');
+        Route::post('households/{household}/ownership/transfer', HouseholdOwnershipController::class)->name('households.ownership.transfer');
         Route::delete('households/{household}/members/{member}', [HouseholdController::class, 'removeMember'])->middleware('permission:households.remove')->name('households.remove');
         Route::post('households/{household}/members/{member}/link-contact', [HouseholdController::class, 'linkMemberContact'])->name('households.members.link-contact');
         Route::post('households/{household}/invite-links', [HouseholdController::class, 'storeInviteLink'])->middleware('permission:households.edit')->name('households.invite-links.store');

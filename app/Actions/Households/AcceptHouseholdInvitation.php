@@ -2,7 +2,7 @@
 
 namespace App\Actions\Households;
 
-use App\Enums\HouseholdRole;
+use App\Enums\HouseholdAccessProfile;
 use App\Enums\InvitationStatus;
 use App\Models\Contact;
 use App\Models\Household;
@@ -26,35 +26,40 @@ final class AcceptHouseholdInvitation
      */
     public function execute(HouseholdInvitation $invitation, User $user): Household
     {
-        if ($invitation->email !== $user->email) {
-            abort(403, __('app.errors.invitation_not_for_you'));
-        }
-
-        if ($invitation->status !== InvitationStatus::Pending) {
-            abort(409, __('app.errors.invitation_already_processed'));
-        }
-
-        if ($invitation->expires_at->isPast()) {
-            abort(409, __('app.errors.invitation_expired'));
-        }
-
-        return DB::transaction(function () use ($invitation, $user) {
-            $household = $invitation->household()->firstOrFail();
-            $invitation->update(['status' => InvitationStatus::Accepted, 'accepted_at' => now()]);
-
-            $household->members()->create([
-                'user_id' => $user->id,
-                'role' => HouseholdRole::Member,
-                'joined_at' => now(),
-                'contact_id' => $this->resolveMemberContact($household, $invitation, $user),
-            ]);
-
-            // If this is the user's first household, activate it
-            if (! $user->active_household_id) {
-                $user->update(['active_household_id' => $invitation->household_id]);
+        return DB::transaction(function () use ($invitation, $user): Household {
+            $invitation = HouseholdInvitation::query()->lockForUpdate()->findOrFail($invitation->id);
+            if ($invitation->email !== $user->email) {
+                abort(403, __('app.errors.invitation_not_for_you'));
             }
 
-            return $household;
+            if ($invitation->status !== InvitationStatus::Pending) {
+                abort(409, __('app.errors.invitation_already_processed'));
+            }
+
+            if ($invitation->expires_at->isPast()) {
+                abort(409, __('app.errors.invitation_expired'));
+            }
+
+            return DB::transaction(function () use ($invitation, $user) {
+                $household = $invitation->household()->lockForUpdate()->firstOrFail();
+                abort_if($household->members()->where('user_id', $user->id)->exists(), 409, __('app.errors.invitation_already_processed'));
+                $invitation->update(['status' => InvitationStatus::Accepted, 'accepted_at' => now()]);
+
+                $household->members()->create([
+                    'user_id' => $user->id,
+                    'role' => ($invitation->access_profile ?? HouseholdAccessProfile::Member)->role(),
+                    ...HouseholdAccessProfile::attributes(['access_profile' => $invitation->access_profile?->value, 'module_access' => $invitation->module_access]),
+                    'joined_at' => now(),
+                    'contact_id' => $this->resolveMemberContact($household, $invitation, $user),
+                ]);
+
+                // If this is the user's first household, activate it
+                if (! $user->active_household_id) {
+                    $user->update(['active_household_id' => $invitation->household_id]);
+                }
+
+                return $household;
+            });
         });
     }
 

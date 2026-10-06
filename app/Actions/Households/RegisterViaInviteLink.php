@@ -3,7 +3,7 @@
 namespace App\Actions\Households;
 
 use App\Data\Households\RegisterViaInviteLinkData;
-use App\Enums\HouseholdRole;
+use App\Enums\HouseholdAccessProfile;
 use App\Models\Household;
 use App\Models\HouseholdInviteLink;
 use App\Models\User;
@@ -38,14 +38,16 @@ final class RegisterViaInviteLink
                 'name' => filled($data->name) ? $data->name : $data->email,
                 'email' => $data->email,
                 'password' => Hash::make($data->password),
+                'can_create_households' => false,
             ]);
             // email_verified_at is not mass assignable, set it explicitly
             $user->forceFill(['email_verified_at' => now()])->save();
-            $user->assignRole('user-invitation');
+            $user->assignRole('user');
 
             $household->members()->create([
                 'user_id' => $user->id,
-                'role' => HouseholdRole::Member,
+                'role' => ($link->access_profile ?? HouseholdAccessProfile::Member)->role(),
+                ...HouseholdAccessProfile::attributes(['access_profile' => $link->access_profile?->value, 'module_access' => $link->module_access]),
                 'joined_at' => now(),
                 'contact_id' => $this->contacts->findInMemberBooks($household, $user->email)?->id,
             ]);

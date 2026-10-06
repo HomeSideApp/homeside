@@ -44,6 +44,19 @@ class AccountSecurityApiTest extends TestCase
         $this->assertDatabaseMissing('users', ['id' => $user->id]);
     }
 
+    public function test_household_owner_cannot_delete_account_and_keeps_existing_tokens(): void
+    {
+        $user = User::factory()->create(['password' => 'password']);
+        $household = Household::factory()->create(['created_by' => $user->id]);
+        HouseholdMember::factory()->create(['household_id' => $household->id, 'user_id' => $user->id, 'role' => 'admin']);
+        $token = $user->createToken('existing');
+        Sanctum::actingAs($user);
+        $confirmation = $this->postJson(route('api.v1.me.security-confirmations.store'), ['password' => 'password'])->assertCreated()->json('data.token');
+        $this->deleteJson(route('api.v1.me.destroy'), [], ['X-Security-Confirmation' => $confirmation])->assertUnprocessable();
+        $this->assertDatabaseHas('users', ['id' => $user->id]);
+        $this->assertDatabaseHas('personal_access_tokens', ['id' => $token->accessToken->id]);
+    }
+
     public function test_profile_update_can_disable_households_and_clear_the_active_context(): void
     {
         $user = User::factory()->create();

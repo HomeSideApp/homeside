@@ -11,6 +11,11 @@ class RegisterViaInviteLinkRequest extends FormRequest
         return true;
     }
 
+    protected function passedValidation(): void
+    {
+        abort_unless($this->validated('token') === $this->route('token'), 422, __('app.errors.invite_link_unusable'));
+    }
+
     /**
      * @return array<string, mixed>
      */

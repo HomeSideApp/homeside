@@ -8,6 +8,8 @@ use App\Actions\Households\AcceptInvitation;
 use App\Actions\Households\DeleteHousehold;
 use App\Actions\Households\InviteMember;
 use App\Actions\Households\RemoveMember;
+use App\Actions\Households\TransferHouseholdOwnership;
+use App\Actions\Households\UpdateMemberPermissions;
 use App\Actions\Recipes\AddToShoppingList;
 use App\Actions\ShoppingLists\ListShoppingLists;
 use App\Ai\Tools\GetShoppingListsTool;
@@ -105,6 +107,81 @@ class HouseholdPermissionsTest extends TestCase
             ->has('recipe.households', 1)->where('recipe.households.0.id', $household->id));
         $member->update(['module_access' => array_replace($member->permissions(), ['recipes' => 'none'])]);
         $this->get(route('recipes.show', $recipe))->assertForbidden();
+    }
+
+    public function test_profiles_and_overrides_are_independent_in_each_household(): void
+    {
+        $user = User::factory()->create();
+        $first = Household::factory()->create();
+        $second = Household::factory()->create();
+        $member = HouseholdMember::factory()->create(['user_id' => $user->id, 'household_id' => $first->id, 'access_profile' => HouseholdAccessProfile::Reader]);
+        HouseholdMember::factory()->create(['user_id' => $user->id, 'household_id' => $second->id, 'access_profile' => HouseholdAccessProfile::Buyer]);
+        $access = app(HouseholdAccess::class);
+        foreach (['shopping_lists', 'recipes', 'economy', 'contacts'] as $area) {
+            $this->assertTrue($access->allows($user, $first, $area));
+            $this->assertFalse($access->allows($user, $first, $area, true));
+        }
+        $this->assertTrue($access->allows($user, $second, 'shopping_lists', true));
+        $this->assertFalse($access->allows($user, $second, 'economy'));
+        $member->update(['module_access' => array_replace($member->permissions(), ['economy' => 'none'])]);
+        $this->assertFalse($access->allows($user, $first, 'economy'));
+        $member->delete();
+        $this->assertFalse($access->allows($user, $first, 'shopping_lists'));
+    }
+
+    public function test_permissions_endpoint_rejects_other_households_and_unknown_access(): void
+    {
+        [$owner, $household, $admin] = $this->household();
+        $member = HouseholdMember::factory()->create(['household_id' => $household->id]);
+        $this->actingAs($owner)->patchJson(route('households.members.permissions', [$household, $member]), ['module_access' => ['bad' => 'write']])->assertUnprocessable();
+        $this->patchJson(route('households.members.permissions', [$household, $member]), ['access_profile' => 'reader', 'module_access' => ['economy' => 'none']])->assertOk()->assertJsonPath('data.role', 'member')->assertJsonPath('data.module_access.economy', 'none');
+        $this->assertSame('read', $member->refresh()->permissions()['shopping_lists']);
+        $alien = HouseholdMember::factory()->create();
+        $this->patchJson(route('households.members.permissions', [$household, $alien]), ['access_profile' => 'member'])->assertNotFound();
+        $this->actingAs($member->user)->patchJson(route('households.members.permissions', [$household, $admin]), ['access_profile' => 'member'])->assertForbidden();
+    }
+
+    public function test_administration_is_separate_from_content_and_owner_cannot_be_demoted(): void
+    {
+        [$owner, $household, $admin] = $this->household();
+        $action = app(UpdateMemberPermissions::class);
+        $action->execute($household, $admin, $owner, ['module_access' => ['economy' => 'none']]);
+        $this->assertTrue(app(HouseholdAccess::class)->manages($owner, $household));
+        $this->assertFalse(app(HouseholdAccess::class)->allows($owner, $household, 'economy'));
+        $this->expectException(ValidationException::class);
+        $this->expectExceptionMessage(__('app.permissions.owner_transfer_required'));
+        $action->execute($household, $admin, $owner, ['access_profile' => 'member']);
+    }
+
+    public function test_stale_owner_cannot_delete_or_transfer_a_household_after_another_transfer(): void
+    {
+        [$owner, $household] = $this->household();
+        $next = HouseholdMember::factory()->create(['household_id' => $household->id, 'role' => 'admin']);
+        $action = app(TransferHouseholdOwnership::class);
+        $action->execute($household, $owner, $next->id);
+        $this->actingAs($owner);
+        try {
+            app(DeleteHousehold::class)->execute($household);
+            $this->fail('A stale owner must not delete a transferred household.');
+        } catch (HttpException $exception) {
+            $this->assertSame(403, $exception->getStatusCode());
+        }
+        try {
+            $action->execute($household, $owner, $next->id);
+            $this->fail('A stale owner must not transfer ownership again.');
+        } catch (HttpException $exception) {
+            $this->assertSame(403, $exception->getStatusCode());
+        }
+        $this->assertDatabaseHas('households', ['id' => $household->id, 'owner_id' => $next->user_id]);
+    }
+
+    public function test_household_survives_former_creator_deletion_after_ownership_transfer(): void
+    {
+        [$owner, $household, $admin] = $this->household();
+        $next = HouseholdMember::factory()->create(['household_id' => $household->id, 'role' => HouseholdRole::Admin]);
+        app(TransferHouseholdOwnership::class)->execute($household, $owner, $next->id);
+        $owner->delete();
+        $this->assertDatabaseHas('households', ['id' => $household->id, 'owner_id' => $next->user_id, 'created_by' => null]);
     }
 
     public function test_reader_cannot_write_lists_and_personal_lists_remain_owned(): void
@@ -215,6 +292,32 @@ class HouseholdPermissionsTest extends TestCase
         $this->assertCount(0, Contact::query()->visibleTo($member->user)->get());
     }
 
+    public function test_profile_resets_defaults_and_partial_patch_preserves_other_areas(): void
+    {
+        [$owner, $household, $admin] = $this->household();
+        $member = HouseholdMember::factory()->create(['household_id' => $household->id]);
+        $action = app(UpdateMemberPermissions::class);
+        $action->execute($household, $member, $owner, ['access_profile' => 'buyer', 'module_access' => ['contacts' => 'read']]);
+        $action->execute($household, $member, $owner, ['module_access' => ['economy' => 'read']]);
+        $this->assertSame(['shopping_lists' => 'write', 'recipes' => 'read', 'economy' => 'read', 'contacts' => 'read'], $member->refresh()->permissions());
+        $action->execute($household, $member, $owner, ['access_profile' => 'reader']);
+        $this->assertSame(HouseholdAccessProfile::Reader->permissions(), $member->refresh()->permissions());
+    }
+
+    public function test_owner_cannot_leave_or_delete_account_before_transferring(): void
+    {
+        [$owner, $household, $admin] = $this->household();
+        $next = HouseholdMember::factory()->create(['household_id' => $household->id, 'role' => 'admin']);
+        try {
+            app(RemoveMember::class)->execute($household, $admin);
+            $this->fail('Owner membership must remain.');
+        } catch (ValidationException) {
+            $this->assertDatabaseHas('household_members', ['id' => $admin->id]);
+        }
+        $this->expectException(ValidationException::class);
+        $owner->delete();
+    }
+
     public function test_all_levels_are_enforced_independently_for_each_area(): void
     {
         $member = HouseholdMember::factory()->create(['module_access' => array_fill_keys(['shopping_lists', 'recipes', 'economy', 'contacts'], 'none')]);
@@ -237,6 +340,23 @@ class HouseholdPermissionsTest extends TestCase
         $this->assertFalse($administrator->can('view', $list));
         $this->assertFalse(app(HouseholdAccess::class)->allows($administrator, $household, 'economy'));
         $this->actingAs($administrator)->getJson(route('api.v1.households.show', $household))->assertForbidden();
+    }
+
+    public function test_custom_invitation_permissions_are_copied_atomically(): void
+    {
+        Notification::fake();
+        $this->seed(RolesAndPermissionsSeeder::class);
+        [$owner, $household] = $this->household();
+        $user = User::factory()->create();
+        $invitation = app(InviteMember::class)->execute(InviteMemberData::fromArray([
+            'email' => $user->email, 'access_profile' => 'reader', 'module_access' => ['recipes' => 'none'],
+        ]), $household, $owner);
+        app(AcceptInvitation::class)->execute($invitation->token, $user);
+        $member = $household->members()->where('user_id', $user->id)->firstOrFail();
+        $this->assertSame('read', $member->permissions()['economy']);
+        $this->assertSame('none', $member->permissions()['recipes']);
+        $this->actingAs($user)->postJson(route('api.v1.households.invitations.accept', $invitation))->assertConflict();
+        $this->assertSame(1, $household->members()->where('user_id', $user->id)->count());
     }
 
     /** @return array{User, Household, HouseholdMember} */

@@ -3,6 +3,7 @@
 namespace App\Actions\Households;
 
 use App\Data\Households\InviteMemberData;
+use App\Enums\HouseholdAccessProfile;
 use App\Enums\InvitationStatus;
 use App\Models\Household;
 use App\Models\HouseholdInvitation;
@@ -47,6 +48,7 @@ final class InviteMember
             ->update(['status' => InvitationStatus::Cancelled]);
 
         $invitation = HouseholdInvitation::create([
+            ...HouseholdAccessProfile::attributes($data->access),
             'household_id' => $household->id,
             'invited_by' => $inviter->id,
             'email' => $data->email,
@@ -65,8 +67,9 @@ final class InviteMember
                 'name' => $data->email,
                 'email' => $data->email,
                 'password' => Hash::make(Str::random(16)),
+                'can_create_households' => false,
             ]);
-            $newUser->assignRole('user-invitation');
+            $newUser->assignRole('user');
 
             $newUser->notify(new HouseholdInviteNewUserNotification($invitation));
         }
