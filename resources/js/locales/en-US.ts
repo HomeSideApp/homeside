@@ -193,6 +193,34 @@ export default {
         },
     },
     households: {
+        access: {
+            platformRoles: 'Platform roles',
+            canCreateHouseholds: 'Can create households',
+            profile: 'Household profile',
+            customized: 'Customized',
+            edit: 'Edit access',
+            owner: 'Owner',
+            transfer: 'Transfer ownership',
+            transferDescription:
+                'The new owner can delete the household. After confirmation, you will no longer own it.',
+            adminSummary:
+                'Can manage members, permissions, modules and AI providers, with the selected content access.',
+            memberSummary:
+                'Can access the selected content. Personal data and access in other households are preserved.',
+            profiles: {
+                admin: 'Administrator',
+                member: 'Member',
+                buyer: 'Shopping collaborator',
+                reader: 'Reader',
+            },
+            levels: { none: 'No access', read: 'Read', write: 'Collaborate' },
+            areas: {
+                shopping_lists: 'Lists',
+                recipes: 'Recipes',
+                economy: 'Economy',
+                contacts: 'Contacts',
+            },
+        },
         index: {
             title: 'My Households',
             description: 'Manage your households and shared households',

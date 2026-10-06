@@ -133,6 +133,9 @@ return [
         'published' => 'Published',
     ],
     'errors' => [
+        'system_role_cannot_update' => 'System roles cannot be modified.',
+        'system_role_cannot_delete' => 'System roles cannot be deleted.',
+        'assigned_role_cannot_delete' => 'A role assigned to users cannot be deleted.',
         'route_permission_not_configured' => 'This route does not have a configured permission.',
         'permission_denied' => 'You do not have permission to perform this action.',
         'translation_not_complete' => 'This translation cannot be published because it is not complete for all translatable fields.',

@@ -2,31 +2,23 @@
 
 namespace App\Http\Controllers\Api\V1;
 
-use App\Enums\AppLocale;
 use App\Http\Controllers\Controller;
-use App\Models\Role;
+use App\Http\Requests\IndexAdminUsersRequest;
+use App\Http\Requests\SaveAdminUserApiRequest;
 use App\Models\User;
 use App\Notifications\ResetPasswordNotification;
+use App\Support\PlatformAccess;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Str;
-use Illuminate\Validation\Rule;
 
 final class AdminUserController extends Controller
 {
-    public function index(Request $request): JsonResponse
+    public function index(IndexAdminUsersRequest $request): JsonResponse
     {
-        $validated = $request->validate([
-            'search' => ['sometimes', 'string', 'max:100'],
-            'role' => ['sometimes', 'string', 'exists:roles,slug'],
-            'approval' => ['sometimes', 'in:pending,approved,rejected'],
-            'page' => ['sometimes', 'integer', 'min:1'],
-            'perPage' => ['sometimes', 'integer', 'between:1,100'],
-            'sort' => ['sometimes', 'in:name,email,created_at,updated_at'],
-            'direction' => ['sometimes', 'in:asc,desc'],
-        ]);
+        $validated = $request->validated();
         $direction = $validated['direction'] ?? 'desc';
         $users = User::query()
             ->with(['roles:id,name,slug', 'googleIdentity'])
@@ -47,16 +39,16 @@ final class AdminUserController extends Controller
         ]);
     }
 
-    public function store(Request $request): JsonResponse
+    public function store(SaveAdminUserApiRequest $request): JsonResponse
     {
-        $validated = $this->validateUser($request);
+        $validated = $request->validated();
         $user = User::create([
             'name' => $validated['name'],
             'email' => $validated['email'],
             'locale' => $validated['locale'],
             'password' => Str::random(64),
         ]);
-        $this->syncRoles($user, $validated['roles']);
+        app(PlatformAccess::class)->assignRoles($this->authenticatedUser($request), $user, $validated['roles'] ?? [$validated['role']]);
         $token = Password::broker()->createToken($user);
         $url = rtrim((string) config('app.mobile_url'), '/').'/set-password?'.http_build_query([
             'token' => $token,
@@ -72,54 +64,31 @@ final class AdminUserController extends Controller
         return response()->json(['data' => $this->resource($user->load('roles'))]);
     }
 
-    public function update(Request $request, User $user): JsonResponse
+    public function update(SaveAdminUserApiRequest $request, User $user): JsonResponse
     {
-        $validated = $this->validateUser($request, $user);
-        $removesLastAdmin = $user->hasRole('admin')
-            && isset($validated['roles'])
-            && ! in_array('admin', $validated['roles'], true)
-            && User::query()->whereHas('roles', fn ($query) => $query->where('slug', 'admin'))->count() === 1;
-        abort_if($removesLastAdmin, 409, 'The final administrative access cannot be removed.');
-        $updates = collect($validated)->only(['name', 'email', 'locale'])->all();
+        $validated = $request->validated();
+        $updates = collect($validated)->only(['name', 'email', 'locale', 'can_create_households'])->all();
         $emailChanged = isset($validated['email']) && $validated['email'] !== $user->email;
         $user->fill($updates);
         if ($emailChanged) {
             $user->email_verified_at = null;
         }
-        $user->save();
-        if (isset($validated['roles'])) {
-            $this->syncRoles($user, $validated['roles']);
-        }
+        DB::transaction(function () use ($user, $request, $validated): void {
+            $user->save();
+            if (isset($validated['roles']) || isset($validated['role'])) {
+                app(PlatformAccess::class)->assignRoles($this->authenticatedUser($request), $user, $validated['roles'] ?? [$validated['role']]);
+            }
+
+        }, 3);
 
         return response()->json(['data' => $this->resource($user->load('roles'))]);
     }
 
     public function destroy(User $user): Response
     {
-        abort_if($user->hasRole('admin') && User::query()->whereHas('roles', fn ($query) => $query->where('slug', 'admin'))->count() === 1, 409, 'The final administrator cannot be deleted.');
-        $user->delete();
+        DB::transaction(fn () => $user->delete());
 
         return response()->noContent();
-    }
-
-    /** @return array<string, mixed> */
-    private function validateUser(Request $request, ?User $user = null): array
-    {
-        $presence = $user === null ? 'required' : 'sometimes';
-
-        return $request->validate([
-            'name' => [$presence, 'string', 'max:255'],
-            'email' => [$presence, 'email', 'max:255', Rule::unique('users', 'email')->ignore($user?->id)],
-            'locale' => [$presence, Rule::enum(AppLocale::class)],
-            'roles' => [$presence, 'array', 'min:1'],
-            'roles.*' => ['string', 'distinct', 'exists:roles,slug'],
-        ]);
-    }
-
-    /** @param list<string> $roleSlugs */
-    private function syncRoles(User $user, array $roleSlugs): void
-    {
-        $user->roles()->sync(Role::query()->whereIn('slug', $roleSlugs)->pluck('id'));
     }
 
     /** @return array<string, mixed> */
@@ -130,6 +99,7 @@ final class AdminUserController extends Controller
             'name' => $user->name,
             'email' => $user->email,
             'locale' => $user->locale,
+            'can_create_households' => $user->can_create_households,
             'roles' => $user->roles->pluck('slug')->values(),
             'approval_status' => $user->approval_status,
             'google_connected' => $user->googleIdentity !== null,

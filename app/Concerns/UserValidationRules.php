@@ -21,7 +21,10 @@ trait UserValidationRules
         return [
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', Rule::unique(User::class)],
-            'role' => ['required', 'exists:roles,slug'],
+            'role' => ['required_without:roles', 'exists:roles,slug'],
+            'roles' => ['sometimes', 'array', 'min:1'],
+            'roles.*' => ['string', 'distinct', 'exists:roles,slug'],
+            'can_create_households' => ['sometimes', 'boolean'],
         ];
     }
 
@@ -34,7 +37,10 @@ trait UserValidationRules
         return [
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', Rule::unique(User::class)->ignore($userId)],
-            'role' => ['required', 'exists:roles,slug'],
+            'role' => ['sometimes', 'exists:roles,slug'],
+            'roles' => ['sometimes', 'array', 'min:1'],
+            'roles.*' => ['string', 'distinct', 'exists:roles,slug'],
+            'can_create_households' => ['sometimes', 'boolean'],
         ];
     }
 }

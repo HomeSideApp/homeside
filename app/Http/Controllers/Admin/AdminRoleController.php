@@ -5,11 +5,13 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StoreRoleRequest;
 use App\Http\Requests\Admin\UpdateRoleRequest;
+use App\Http\Requests\DeleteAdminRoleRequest;
 use App\Models\Permission;
 use App\Models\PermissionGroup;
 use App\Models\Role;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -135,15 +137,13 @@ class AdminRoleController extends Controller
      */
     public function update(UpdateRoleRequest $request, Role $role): RedirectResponse
     {
-        if ($role->isSystem()) {
-            abort(403, 'No se puede modificar un rol del sistema.');
-        }
-
-        $role->update([
-            'name' => $request->validated('name'),
-            'slug' => Str::slug($request->validated('name')),
-        ]);
-        $role->syncPermissions($request->validated('permissions'));
+        DB::transaction(function () use ($request, $role): void {
+            $role->syncPermissions($request->validated('permissions'));
+            $role->update([
+                'name' => $request->validated('name'),
+                'slug' => Str::slug($request->validated('name')),
+            ]);
+        }, 3);
 
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Rol actualizado correctamente.']);
 
@@ -156,13 +156,9 @@ class AdminRoleController extends Controller
      * @param  Role  $role  The role model instance.
      * @return RedirectResponse The HTTP response.
      */
-    public function destroy(Role $role): RedirectResponse
+    public function destroy(DeleteAdminRoleRequest $request, Role $role): RedirectResponse
     {
-        if ($role->isSystem()) {
-            abort(403, 'No se puede eliminar un rol del sistema.');
-        }
-
-        $role->delete();
+        DB::transaction(fn () => $role->delete(), 3);
 
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Rol eliminado correctamente.']);
 

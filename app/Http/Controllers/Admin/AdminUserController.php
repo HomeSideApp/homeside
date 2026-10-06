@@ -7,9 +7,11 @@ use App\Http\Requests\Admin\StoreUserRequest;
 use App\Http\Requests\Admin\UpdateUserRequest;
 use App\Models\Role;
 use App\Models\User;
+use App\Support\PlatformAccess;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
@@ -87,7 +89,7 @@ class AdminUserController extends Controller
             'password' => Hash::make(Str::random(32)),
         ]);
 
-        $user->assignRole($request->validated('role'));
+        app(PlatformAccess::class)->assignRoles($this->authenticatedUser($request), $user, $request->validated('roles') ?? [$request->validated('role')]);
 
         event(new Registered($user));
 
@@ -119,8 +121,13 @@ class AdminUserController extends Controller
      */
     public function update(UpdateUserRequest $request, User $user): RedirectResponse
     {
-        $user->update($request->validated());
-        $user->syncRoles($request->validated('role'));
+        $attributes = $request->validated();
+        DB::transaction(function () use ($request, $user, $attributes): void {
+            if (isset($attributes['roles']) || isset($attributes['role'])) {
+                app(PlatformAccess::class)->assignRoles($this->authenticatedUser($request), $user, $attributes['roles'] ?? [$attributes['role']]);
+            }
+            $user->update(collect($attributes)->except(['role', 'roles'])->all());
+        });
 
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Usuario actualizado correctamente.']);
 
@@ -135,7 +142,7 @@ class AdminUserController extends Controller
      */
     public function destroy(User $user): RedirectResponse
     {
-        $user->delete();
+        DB::transaction(fn () => $user->delete());
 
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Usuario eliminado correctamente.']);
 

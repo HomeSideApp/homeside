@@ -72,6 +72,9 @@ class CreateUser extends Command
         ]);
 
         $user->assignRole($role);
+        if ($role !== 'user') {
+            $user->assignRole('user');
+        }
 
         event(new Registered($user));
 

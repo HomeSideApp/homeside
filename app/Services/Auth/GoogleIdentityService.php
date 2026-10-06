@@ -48,7 +48,7 @@ final class GoogleIdentityService
 
         try {
             Notification::send(
-                User::query()->whereHas('roles', fn ($query) => $query->where('slug', 'admin'))->get(),
+                User::query()->where('approval_status', 'approved')->whereHas('roles.permissions', fn ($query) => $query->where('route_name', 'admin.users.assign-roles'))->get(),
                 new GoogleAccessRequested($user),
             );
         } catch (\Throwable $exception) {

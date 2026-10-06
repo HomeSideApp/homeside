@@ -198,6 +198,38 @@ export default {
         },
     },
     households: {
+        access: {
+            platformRoles: 'Roles de plataforma',
+            canCreateHouseholds: 'Puede crear hogares',
+            profile: 'Perfil del hogar',
+            customized: 'Personalizado',
+            edit: 'Editar acceso',
+            owner: 'Titular',
+            transfer: 'Transferir titularidad',
+            transferDescription:
+                'El nuevo titular podrá eliminar el hogar. Tras confirmar, dejarás de ser su titular.',
+            adminSummary:
+                'Puede administrar miembros, permisos, módulos y proveedores IA, con los niveles de contenido indicados.',
+            memberSummary:
+                'Puede acceder al contenido indicado. Sus datos personales y permisos en otros hogares se conservan.',
+            profiles: {
+                admin: 'Administrador',
+                member: 'Miembro',
+                buyer: 'Colaborador de compras',
+                reader: 'Lector',
+            },
+            levels: {
+                none: 'Sin acceso',
+                read: 'Lectura',
+                write: 'Colaboración',
+            },
+            areas: {
+                shopping_lists: 'Listas',
+                recipes: 'Recetas',
+                economy: 'Economía',
+                contacts: 'Contactos',
+            },
+        },
         index: {
             title: 'Mis Hogares',
             description: 'Gestiona tus hogares y hogares compartidos',

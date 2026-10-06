@@ -133,6 +133,9 @@ return [
         'published' => 'Publicada',
     ],
     'errors' => [
+        'system_role_cannot_update' => 'No se puede modificar un rol del sistema.',
+        'system_role_cannot_delete' => 'No se puede eliminar un rol del sistema.',
+        'assigned_role_cannot_delete' => 'No se puede eliminar un rol asignado a usuarios.',
         'route_permission_not_configured' => 'Esta ruta no tiene un permiso configurado.',
         'permission_denied' => 'No tienes permiso para realizar esta acción.',
         'translation_not_complete' => 'No se puede publicar esta traducción porque no está completa para todos los campos traducibles.',

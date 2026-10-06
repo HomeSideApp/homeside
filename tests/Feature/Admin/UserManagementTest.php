@@ -20,6 +20,7 @@ class UserManagementTest extends TestCase
         parent::setUp();
 
         $adminGroup = PermissionGroup::create(['name' => 'Admin']);
+        Permission::create(['name' => 'assign roles', 'route_name' => 'admin.users.assign-roles', 'description' => 'Asignar roles', 'permission_group_id' => $adminGroup->id]);
         Permission::create(['name' => 'view users', 'route_name' => 'admin.users', 'description' => 'Ver usuarios', 'permission_group_id' => $adminGroup->id]);
         Permission::create(['name' => 'create user form', 'route_name' => 'admin.users.create', 'description' => 'Formulario crear usuario', 'permission_group_id' => $adminGroup->id]);
         Permission::create(['name' => 'store users', 'route_name' => 'admin.users.store', 'description' => 'Guardar usuarios', 'permission_group_id' => $adminGroup->id]);
@@ -55,7 +56,7 @@ class UserManagementTest extends TestCase
     {
         $admin = User::factory()->create();
         $role = Role::create(['name' => 'admin', 'slug' => 'admin']);
-        $role->syncPermissions(['view users', 'create user form', 'store users']);
+        $role->syncPermissions(['view users', 'create user form', 'store users', 'assign roles']);
         $admin->assignRole($role);
 
         Role::create(['name' => 'user', 'slug' => 'user']);
@@ -84,7 +85,7 @@ class UserManagementTest extends TestCase
     {
         $admin = User::factory()->create();
         $role = Role::create(['name' => 'admin', 'slug' => 'admin']);
-        $role->syncPermissions(['view users', 'edit users', 'update users']);
+        $role->syncPermissions(['view users', 'edit users', 'update users', 'assign roles']);
         $admin->assignRole($role);
 
         $user = User::factory()->create();
@@ -125,7 +126,7 @@ class UserManagementTest extends TestCase
     {
         $admin = User::factory()->create();
         $role = Role::create(['name' => 'admin', 'slug' => 'admin']);
-        $role->syncPermissions(['view users', 'create user form', 'store users']);
+        $role->syncPermissions(['view users', 'create user form', 'store users', 'assign roles']);
         $admin->assignRole($role);
 
         User::factory()->create(['email' => 'taken@example.com']);
