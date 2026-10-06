@@ -84,9 +84,9 @@ final class JobMonitoringController extends Controller
             ->map(fn (JobRun $job) => [
                 'id' => $job->id,
                 'job_class' => $job->short_job_class,
-                'exception' => $job->exception,
+                'exception' => null,
                 'queue' => $job->queue,
-                'user' => $job->user?->name,
+                'user' => null,
                 'created_at' => $job->created_at->diffForHumans(),
             ]);
 
@@ -128,7 +128,7 @@ final class JobMonitoringController extends Controller
             ]);
         } catch (\Throwable $e) {
             return response()->json([
-                'message' => 'Failed to retry job: '.$e->getMessage(),
+                'message' => 'Failed to retry job.',
             ], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
     }

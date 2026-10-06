@@ -62,7 +62,7 @@ class JobMonitoringController extends Controller
         return Inertia::render('jobs-monitor/Jobs', [
             'jobs' => $jobs,
             'queues' => fn () => JobRun::distinct()->pluck('queue'),
-            'tags' => fn (): array => $this->allTags(),
+            'tags' => [],
             'filters' => $filters,
         ]);
     }
@@ -91,11 +91,11 @@ class JobMonitoringController extends Controller
                 'memory_peak' => $job->memory_peak,
                 'cpu_user' => $job->cpu_user,
                 'cpu_system' => $job->cpu_system,
-                'user' => $job->user ? ['id' => $job->user->id, 'name' => $job->user->name] : null,
-                'tags' => $job->tags,
-                'payload' => $job->payload,
-                'exception' => $job->exception,
-                'stack_trace' => $job->stack_trace,
+                'user' => null,
+                'tags' => [],
+                'payload' => null,
+                'exception' => null,
+                'stack_trace' => null,
                 'attempts' => $job->attempts,
                 'started_at' => $job->started_at?->toDateTimeString(),
                 'finished_at' => $job->finished_at?->toDateTimeString(),
@@ -125,7 +125,7 @@ class JobMonitoringController extends Controller
 
             return redirect()->back()->with('success', 'Job queued for retry successfully');
         } catch (\Throwable $e) {
-            return redirect()->back()->with('error', 'Failed to retry job: '.$e->getMessage());
+            return redirect()->back()->with('error', 'Failed to retry job.');
         }
     }
 
@@ -160,8 +160,8 @@ class JobMonitoringController extends Controller
             'status' => $job->status,
             'duration' => $job->formatted_duration,
             'duration_ms' => $job->duration_ms,
-            'user' => $job->user ? ['id' => $job->user->id, 'name' => $job->user->name] : null,
-            'tags' => $job->tags,
+            'user' => null,
+            'tags' => null,
             'created_at' => $job->created_at->toDateTimeString(),
             'created_at_human' => $job->created_at->diffForHumans(),
         ];

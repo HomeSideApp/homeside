@@ -120,6 +120,18 @@ class PlatformRolesTest extends TestCase
         $this->assertSame('approved', $target->approval_status);
     }
 
+    public function test_retry_errors_do_not_expose_sensitive_exception_messages(): void
+    {
+        $operator = User::factory()->create();
+        $operator->assignRole('technical-operator');
+        $job = JobRun::factory()->failed()->create();
+        $this->mock(JobMonitor::class, function (MockInterface $mock): void {
+            $mock->shouldReceive('retryFailedJob')->twice()->andThrow(new \RuntimeException('private@example.test'));
+        });
+        $this->actingAs($operator)->postJson(route('api.v1.jobs-monitor.retry', $job->id))->assertUnprocessable()->assertJsonPath('message', 'Failed to retry job.');
+        $this->post(route('jobs-monitor.retry', $job->id))->assertRedirect()->assertSessionHas('error', 'Failed to retry job.');
+    }
+
     public function test_console_account_creation_also_assigns_the_user_base(): void
     {
         Notification::fake();
@@ -131,5 +143,13 @@ class PlatformRolesTest extends TestCase
             ->assertSuccessful();
         $user = User::query()->where('email', 'catalog@example.test')->firstOrFail();
         $this->assertSame(['catalog-manager', 'user'], $user->getRoleNames()->sort()->values()->all());
+    }
+
+    public function test_job_monitoring_does_not_serialize_sensitive_content(): void
+    {
+        $operator = User::factory()->create();
+        $operator->assignRole('technical-operator');
+        $job = JobRun::factory()->create(['payload' => ['email' => 'private@example.test'], 'exception' => 'private@example.test', 'stack_trace' => 'private trace', 'tags' => [['tag' => 'private@example.test']]]);
+        $this->actingAs($operator)->getJson(route('api.v1.jobs-monitor.show', $job))->assertOk()->assertJsonPath('data.payload', null)->assertJsonPath('data.exception', null)->assertJsonPath('data.stack_trace', null)->assertJsonPath('data.tags', []);
     }
 }
