@@ -27,7 +27,9 @@ const props = defineProps<{
 const { t } = useI18n();
 const { householdUrl, activeHousehold } = useHousehold();
 const listRoutes = useShoppingListRoutes(
-    computed(() => (props.canLists ? activeHousehold.value?.id ?? null : null)),
+    computed(() =>
+        props.canLists ? (activeHousehold.value?.id ?? null) : null,
+    ),
 );
 </script>
 
@@ -85,7 +87,12 @@ const listRoutes = useShoppingListRoutes(
                         {{ t('dashboard.myCookbook') }}
                     </Link>
                 </Button>
-                <Button as-child variant="outline" size="sm">
+                <Button
+                    v-can="'recipes.create'"
+                    as-child
+                    variant="outline"
+                    size="sm"
+                >
                     <Link :href="createRecipe()">
                         <Plus class="mr-2 size-4" />
                         {{ t('dashboard.createRecipe') }}

@@ -52,6 +52,8 @@ use App\Models\Household;
 use App\Models\HouseholdInvitation;
 use App\Models\HouseholdInviteLink;
 use App\Models\HouseholdMember;
+use App\Models\ListItem;
+use App\Models\ShoppingList;
 use App\Models\User;
 use App\Support\HouseholdAccess;
 use Illuminate\Http\RedirectResponse;
@@ -191,6 +193,7 @@ final class HouseholdController extends Controller
     {
         $permissions = $user->getPermissionRouteNames();
         $canViewPersonalEconomy = $permissions->contains('economy.me.index');
+        $canViewPersonalLists = $permissions->contains('households.lists.index');
 
         $props = [
             'dashboard' => null,
@@ -203,11 +206,18 @@ final class HouseholdController extends Controller
                 'createPersonalExpense' => $permissions->contains('economy.me.store'),
                 'importPersonalTicket' => $permissions->contains('economy.me.create'),
                 'accounts' => $permissions->contains('economy.me.accounts.index'),
-                'lists' => false,
-                'recipes' => false,
+                'lists' => $canViewPersonalLists,
+                'recipes' => $permissions->contains('recipes.index'),
                 'contacts' => $permissions->contains('contacts.view'),
             ],
         ];
+
+        if ($canViewPersonalLists) {
+            $props['personalLists'] = Inertia::defer(
+                fn (): array => $this->personalListsPayload($user),
+                'lists',
+            );
+        }
 
         if ($canViewPersonalEconomy) {
             $props['personalEconomy'] = Inertia::defer(
@@ -231,6 +241,18 @@ final class HouseholdController extends Controller
         }
 
         return Inertia::render('households/Dashboard', $props);
+    }
+
+    /** @return array{pending_items_count: int, active_lists_count: int} */
+    private function personalListsPayload(User $user): array
+    {
+        $lists = ShoppingList::query()->whereNull('household_id')->where('created_by', $user->id);
+
+        return [
+            'pending_items_count' => ListItem::query()->whereIn('list_id', (clone $lists)->select('id'))
+                ->where('is_checked', false)->count(),
+            'active_lists_count' => $lists->count(),
+        ];
     }
 
     /**

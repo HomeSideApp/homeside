@@ -14,7 +14,10 @@ import { Card } from '@/components/ui/card';
 import { useHousehold } from '@/composables/useHousehold';
 import { index as contactsIndex } from '@/routes/contacts';
 import { index as personalEconomyIndex } from '@/routes/economy/me';
+import { index as householdEconomyIndex } from '@/routes/households/economy';
+import { index as householdRecipesIndex } from '@/routes/households/recipes';
 import { index as listsIndex } from '@/routes/lists';
+import { index as recipesIndex } from '@/routes/recipes';
 
 const props = defineProps<{
     can: {
@@ -31,7 +34,7 @@ const props = defineProps<{
 }>();
 
 const { t } = useI18n();
-const { householdUrl, activeHousehold } = useHousehold();
+const { activeHousehold } = useHousehold();
 
 interface ModuleTile {
     key: string;
@@ -73,7 +76,9 @@ const tiles = computed<ModuleTile[]>(() => {
                           count: props.householdRecipesCount,
                       })
                     : '',
-            href: householdUrl('/recipes'),
+            href: activeHousehold.value
+                ? householdRecipesIndex.url(activeHousehold.value.id)
+                : recipesIndex.url(),
             icon: CookingPot,
             badge:
                 props.householdRecipesCount !== null
@@ -88,7 +93,7 @@ const tiles = computed<ModuleTile[]>(() => {
             key: 'household-economy',
             label: t('dashboard.moduleTiles.householdEconomy'),
             description: t('dashboard.moduleTiles.householdEconomyDescription'),
-            href: householdUrl('/economy'),
+            href: householdEconomyIndex.url(activeHousehold.value.id),
             icon: Receipt,
             badge: null,
             badgeLabel: null,
@@ -151,7 +156,9 @@ const tiles = computed<ModuleTile[]>(() => {
                             v-if="tile.badge"
                             class="flex flex-col items-center rounded-md bg-primary/10 px-2 py-1 text-center"
                         >
-                            <span class="text-lg leading-none font-semibold text-primary">
+                            <span
+                                class="text-lg leading-none font-semibold text-primary"
+                            >
                                 {{ tile.badge }}
                             </span>
                             <span

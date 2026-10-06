@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Enums\HouseholdModule as HouseholdModuleEnum;
+use App\Models\Household;
 use App\Models\HouseholdModule;
 use App\Models\ListItem;
 use App\Models\Permission;
@@ -10,14 +11,18 @@ use App\Models\PermissionGroup;
 use App\Models\Role;
 use App\Models\ShoppingList;
 use App\Models\User;
+use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
+use PHPUnit\Framework\Attributes\TestWith;
 use Tests\Concerns\WithHousehold;
 use Tests\TestCase;
 
 class DashboardTest extends TestCase
 {
     use RefreshDatabase, WithHousehold;
+
+    protected Role $role;
 
     protected function setUp(): void
     {
@@ -266,5 +271,48 @@ class DashboardTest extends TestCase
             ->where('household', null)
         );
         $this->assertNull($user->fresh()->active_household_id);
+    }
+
+    #[TestWith(['admin', true])]
+    #[TestWith(['user', true])]
+    #[TestWith(['user', false])]
+    public function test_personal_dashboard_exposes_module_cards_and_only_counts_own_private_lists(string $role, bool $householdsEnabled): void
+    {
+        $this->seed(RolesAndPermissionsSeeder::class);
+        $user = User::factory()->create(['households_enabled' => $householdsEnabled, 'active_household_id' => null]);
+        $user->assignRole($role);
+        $list = ShoppingList::factory()->create(['created_by' => $user->id, 'household_id' => null]);
+        ShoppingList::factory()->create(['created_by' => $user->id, 'household_id' => null]);
+        ListItem::factory()->count(3)->unchecked()->create(['list_id' => $list->id]);
+        ListItem::factory()->count(2)->checked()->create(['list_id' => $list->id]);
+        $foreign = ShoppingList::factory()->create(['household_id' => null]);
+        ListItem::factory()->unchecked()->create(['list_id' => $foreign->id]);
+        $shared = ShoppingList::factory()->create(['household_id' => Household::factory(), 'created_by' => $user->id]);
+        ListItem::factory()->unchecked()->create(['list_id' => $shared->id]);
+
+        $this->actingAs($user)->get(route('dashboard'))->assertOk()
+            ->assertInertia(fn (Assert $page) => $page->component('households/Dashboard')
+                ->where('dashboard', null)->where('household', null)
+                ->where('can.lists', true)->where('can.recipes', true)
+                ->where('can.contacts', true)->where('can.accounts', true)
+                ->where('can.householdEconomy', false)
+                ->missing('personalLists')
+                ->loadDeferredProps('lists', fn (Assert $deferred) => $deferred
+                    ->where('personalLists.pending_items_count', 3)
+                    ->where('personalLists.active_lists_count', 2)
+                    ->missing('personalEconomy')));
+    }
+
+    public function test_personal_dashboard_without_list_permission_does_not_expose_list_counts(): void
+    {
+        $user = User::factory()->create();
+        $user->assignRole($this->role);
+        $list = ShoppingList::factory()->create(['created_by' => $user->id, 'household_id' => null]);
+        ListItem::factory()->unchecked()->create(['list_id' => $list->id]);
+
+        $this->actingAs($user)->get(route('dashboard'))->assertOk()
+            ->assertInertia(fn (Assert $page) => $page->where('can.lists', false)
+                ->missing('personalLists')
+                ->loadDeferredProps(fn (Assert $deferred) => $deferred->missing('personalLists')));
     }
 }

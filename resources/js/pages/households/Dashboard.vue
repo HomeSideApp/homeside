@@ -16,7 +16,10 @@ import type {
     HouseholdEconomyOverview,
     PersonalEconomyOverview,
 } from '@/components/dashboard/types';
-import type { EconomicAccount, EconomyTransaction } from '@/components/economy/types';
+import type {
+    EconomicAccount,
+    EconomyTransaction,
+} from '@/components/economy/types';
 import Heading from '@/components/Heading.vue';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useHousehold } from '@/composables/useHousehold';
@@ -27,6 +30,11 @@ type DashboardData = {
     active_lists_count: number;
     household_recipes_count: number;
     enabled_modules: string[];
+};
+
+type PersonalListsPayload = {
+    pending_items_count: number;
+    active_lists_count: number;
 };
 
 type DashboardCapabilities = {
@@ -61,6 +69,7 @@ type PendingImportsPayload = {
 
 const props = defineProps<{
     dashboard?: DashboardData | null;
+    personalLists?: PersonalListsPayload;
     household: { id: string; name: string } | null;
     can: DashboardCapabilities;
     householdEconomy?: HouseholdEconomyOverview;
@@ -76,15 +85,23 @@ const page = usePage();
 const { householdUrl } = useHousehold();
 
 /**
- * Deferred props are `undefined` while loading; the personal variant resolves to `null`. Computing
- * the list counts here keeps the narrowing out of the template.
+ * The personal dashboard loads its private list counts separately from the household summary.
  */
-const showSkeletons = computed(() => props.dashboard === undefined);
+const listSummary = computed(() =>
+    props.household ? props.dashboard : props.personalLists,
+);
+const showSkeletons = computed(
+    () =>
+        props.dashboard === undefined ||
+        (props.can.lists &&
+            !props.household &&
+            props.personalLists === undefined),
+);
 const listCounts = computed(() =>
-    props.dashboard && props.can.lists
+    listSummary.value && props.can.lists
         ? {
-              pendingItems: props.dashboard.pending_items_count,
-              activeLists: props.dashboard.active_lists_count,
+              pendingItems: listSummary.value.pending_items_count,
+              activeLists: listSummary.value.active_lists_count,
           }
         : null,
 );
@@ -92,9 +109,6 @@ const householdRecipesCount = computed(() =>
     props.dashboard && props.can.recipes
         ? props.dashboard.household_recipes_count
         : null,
-);
-const hasHouseholdDashboard = computed(
-    () => props.dashboard !== undefined && props.dashboard !== null,
 );
 
 watchEffect(() => {
@@ -146,17 +160,15 @@ watchEffect(() => {
             :household-id="household?.id ?? null"
         />
 
-        <!-- `dashboard` is deferred: `undefined` while loading, but `null` is a valid resolved
-             value for the personal variant, so the skeletons must only wait for the request. -->
         <div
-            v-if="dashboard === undefined"
+            v-if="showSkeletons"
             class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4"
         >
             <Skeleton v-for="i in 4" :key="i" class="h-28 w-full" />
         </div>
 
         <ModuleTiles
-            v-if="hasHouseholdDashboard"
+            v-if="!showSkeletons"
             :can="can"
             :pending-items-count="listCounts?.pendingItems ?? null"
             :active-lists-count="listCounts?.activeLists ?? null"
