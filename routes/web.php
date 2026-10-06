@@ -1,7 +1,5 @@
 <?php
 
-use App\Http\Controllers\HouseholdOwnershipController;
-use App\Http\Controllers\HouseholdMemberPermissionController;
 use App\Http\Controllers\Admin\AdminAiProviderController;
 use App\Http\Controllers\Admin\AdminCategoryController;
 use App\Http\Controllers\Admin\AdminPersonalProductController;
@@ -10,6 +8,8 @@ use App\Http\Controllers\Admin\AdminRoleController;
 use App\Http\Controllers\Admin\AdminTranslationController;
 use App\Http\Controllers\Admin\AdminUserController;
 use App\Http\Controllers\Admin\GoogleApprovalController;
+use App\Http\Controllers\HouseholdMemberPermissionController;
+use App\Http\Controllers\HouseholdOwnershipController;
 use App\Http\Controllers\InvitationController;
 use App\Http\Controllers\InviteLinkController;
 use App\Http\Controllers\OtpSetupController;
@@ -289,8 +289,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::put('{list}/items/{item}', [ListItemController::class, 'update'])->middleware('permission:households.lists.items.update')->name('items.update');
         Route::delete('{list}/items/{item}', [ListItemController::class, 'destroy'])->middleware('permission:households.lists.items.destroy')->name('items.destroy');
         Route::get('{list}/items/{item}/image', [ListItemController::class, 'image'])->name('items.image');
-        Route::get('{list}/search-products', [ProductSearchController::class, 'personalSearch'])->middleware('permission:households.lists.search-products')->name('search-products');
-        Route::post('{list}/search-products/quick-create', [ProductSearchController::class, 'personalQuickCreate'])->middleware('permission:households.lists.search-products.quick-create')->name('search-products.quick-create');
+        Route::get('{list}/search-products', [WebProductSearchController::class, 'personalSearch'])->middleware('permission:households.lists.search-products')->name('search-products');
+        Route::post('{list}/search-products/quick-create', [WebProductSearchController::class, 'personalQuickCreate'])->middleware('permission:households.lists.search-products.quick-create')->name('search-products.quick-create');
     });
 
     // === Todas las demás rutas requieren hogar activo ===

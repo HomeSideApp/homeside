@@ -80,6 +80,7 @@ const props = defineProps<{
     lists: ShoppingListSummary[];
     households: HouseholdSummary[];
     activeHouseholdId: string | null;
+    can: { createPersonalList: boolean };
     filters: {
         search: string;
         scope: ListScope;
@@ -219,9 +220,9 @@ defineOptions({
                             t('common.actions.filters')
                         }}</TooltipContent>
                     </Tooltip>
-                    <Tooltip>
+                    <Tooltip v-if="can.createPersonalList">
                         <TooltipTrigger as-child>
-                            <Button v-can="'households.lists.create'" variant="outline" size="icon-sm" as-child>
+                            <Button variant="outline" size="icon-sm" as-child>
                                 <Link
                                     :href="createPersonalList.url()"
                                     :aria-label="

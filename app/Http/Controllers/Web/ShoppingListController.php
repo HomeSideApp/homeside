@@ -45,6 +45,7 @@ final class ShoppingListController extends Controller
         ];
 
         return Inertia::render('lists/Index', [
+            'can' => ['createPersonalList' => $user->getPermissionRouteNames()->contains('households.lists.create')],
             'lists' => $action->execute($user, $filters),
             'households' => [$household->only(['id', 'name', 'color', 'image_url'])],
             'activeHouseholdId' => $user->active_household_id,
