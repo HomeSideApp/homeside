@@ -2,6 +2,7 @@
 import { router } from '@inertiajs/vue3';
 import { Trash2 } from '@lucide/vue';
 import { useI18n } from 'vue-i18n';
+import MemberPermissionsDialog from '@/components/households/MemberPermissionsDialog.vue';
 import {
     AlertDialog,
     AlertDialogAction,
@@ -17,6 +18,12 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { remove } from '@/routes/households';
+import { transfer } from '@/routes/households/ownership';
+import type {
+    HouseholdAccessProfile,
+    HouseholdModuleAccess,
+} from '@/types/household-access';
 
 /**
  * Contact summary of the member resolved from the viewer's address book.
@@ -32,6 +39,9 @@ type MemberContact = {
 type Member = {
     id: string;
     role: string;
+    is_customized?: boolean;
+    access_profile?: HouseholdAccessProfile;
+    module_access?: HouseholdModuleAccess;
     joined_at: string;
     user: {
         id: string;
@@ -46,12 +56,13 @@ defineProps<{
     currentUserId: string;
     householdId: string;
     isAdmin: boolean;
+    ownerId?: string;
 }>();
 
 const { t } = useI18n();
 
 function removeMember(householdId: string, memberId: string) {
-    router.delete(`/households/${householdId}/members/${memberId}`);
+    router.delete(remove.url({ household: householdId, member: memberId }));
 }
 </script>
 
@@ -109,20 +120,75 @@ function removeMember(householdId: string, memberId: string) {
                         </div>
                     </div>
                 </div>
-                <div class="flex items-center gap-2">
+                <div class="flex flex-wrap items-center gap-2">
+                    <Badge v-if="member.user.id === ownerId">{{
+                        t('households.access.owner')
+                    }}</Badge>
+                    <MemberPermissionsDialog
+                        v-if="isAdmin"
+                        :household-id="householdId"
+                        :member="member"
+                    />
+                    <AlertDialog
+                        v-if="
+                            currentUserId === ownerId &&
+                            member.role === 'admin' &&
+                            member.user.id !== ownerId
+                        "
+                    >
+                        <AlertDialogTrigger as-child
+                            ><Button variant="outline" size="sm">{{
+                                t('households.access.transfer')
+                            }}</Button></AlertDialogTrigger
+                        >
+                        <AlertDialogContent>
+                            <AlertDialogHeader
+                                ><AlertDialogTitle>{{
+                                    t('households.access.transfer')
+                                }}</AlertDialogTitle
+                                ><AlertDialogDescription>{{
+                                    t('households.access.transferDescription')
+                                }}</AlertDialogDescription></AlertDialogHeader
+                            >
+                            <AlertDialogFooter
+                                ><AlertDialogCancel>{{
+                                    t('common.actions.cancel')
+                                }}</AlertDialogCancel
+                                ><AlertDialogAction
+                                    @click="
+                                        router.post(transfer.url(householdId), {
+                                            member_id: member.id,
+                                        })
+                                    "
+                                    >{{
+                                        t('common.actions.confirm')
+                                    }}</AlertDialogAction
+                                ></AlertDialogFooter
+                            >
+                        </AlertDialogContent>
+                    </AlertDialog>
                     <Badge
                         :variant="
                             member.role === 'admin' ? 'default' : 'secondary'
                         "
                     >
                         {{
-                            member.role === 'admin'
-                                ? t('households.members.admin')
-                                : t('households.members.member')
+                            member.is_customized
+                                ? t('households.access.customized')
+                                : t(
+                                      'households.access.profiles.' +
+                                          (member.access_profile ??
+                                              (member.role === 'admin'
+                                                  ? 'admin'
+                                                  : 'member')),
+                                  )
                         }}
                     </Badge>
                     <AlertDialog
-                        v-if="isAdmin || member.user.id === currentUserId"
+                        v-if="
+                            member.user.id !== ownerId &&
+                            (isAdmin || member.user.id === currentUserId)
+                        "
                     >
                         <AlertDialogTrigger as-child>
                             <Button variant="ghost" size="icon" class="size-8">

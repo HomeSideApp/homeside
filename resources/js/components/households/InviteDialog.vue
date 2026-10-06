@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { useForm } from '@inertiajs/vue3';
+import { useForm, usePage } from '@inertiajs/vue3';
 import { ref } from 'vue';
 import { useI18n } from 'vue-i18n';
+import HouseholdAccessForm from '@/components/households/HouseholdAccessForm.vue';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -15,8 +16,11 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { lookup } from '@/routes/contacts';
+import { invite } from '@/routes/households';
+import type { HouseholdAccessProfile } from '@/types/household-access';
 
 const { t } = useI18n();
+const page = usePage();
 
 const props = defineProps<{
     householdId: string;
@@ -36,6 +40,8 @@ const open = ref(false);
 
 const form = useForm({
     email: '',
+    access_profile: 'member' as HouseholdAccessProfile,
+    module_access: { ...page.props.householdAccessDefaults.member },
 });
 
 const results = ref<ContactOption[]>([]);
@@ -90,7 +96,7 @@ function pick(contact: ContactOption): void {
 
 function submit() {
     showResults.value = false;
-    form.post(`/households/${props.householdId}/invite`, {
+    form.post(invite.url(props.householdId), {
         onSuccess: () => {
             form.reset();
             open.value = false;
@@ -154,6 +160,17 @@ function submit() {
                         {{ form.errors.email }}
                     </p>
                 </div>
+                <HouseholdAccessForm
+                    v-model:access-profile="form.access_profile"
+                    v-model:module-access="form.module_access"
+                />
+                <p
+                    v-for="(error, key) in form.errors"
+                    :key="key"
+                    class="text-sm text-destructive"
+                >
+                    {{ error }}
+                </p>
                 <DialogFooter>
                     <Button type="submit" :disabled="form.processing">
                         {{ t('households.invite.submit') }}

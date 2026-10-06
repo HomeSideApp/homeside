@@ -74,7 +74,7 @@ const mainNavItems = computed<NavItem[]>(() => [
         title: t('sidebar.shoppingLists'),
         href: listRoutes.index(),
         icon: ClipboardList,
-        permission: 'households.lists.index',
+        permission: 'lists.index',
     },
     {
         title: 'Recetas',

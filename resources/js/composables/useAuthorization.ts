@@ -5,11 +5,11 @@ export function useAuthorization() {
     const page = usePage();
 
     const permissions = computed(
-        () => (page.props.auth as any)?.permissions as string[] ?? [],
+        () => ((page.props.auth as any)?.permissions as string[]) ?? [],
     );
 
     const roles = computed(
-        () => (page.props.auth as any)?.roles as string[] ?? [],
+        () => ((page.props.auth as any)?.roles as string[]) ?? [],
     );
 
     /**
@@ -18,7 +18,7 @@ export function useAuthorization() {
      * Supports:
      * - `'admin.users'` → checks permissions array
      * - `'admin'` → checks roles array
-     * - `'admin:admin.users'` → checks both role AND permission
+     * - `'admin:admin.users'` → checks the administrative capability
      *
      * @param  string  permission  Permission string to check
      * @return boolean
@@ -29,9 +29,57 @@ export function useAuthorization() {
         }
 
         if (permission.includes(':')) {
-            const [role, perm] = permission.split(':');
+            const [, perm] = permission.split(':');
 
-            return roles.value.includes(role) && permissions.value.includes(perm);
+            return hasPermission(perm);
+        }
+
+        if (
+            permission === 'households.create' ||
+            permission === 'households.store'
+        ) {
+            return !!page.props.auth?.user?.can_create_households;
+        }
+
+        if (permission.startsWith('lists.')) {
+            return permissions.value.includes('households.' + permission);
+        }
+
+        const context = (page.props as any).householdContext;
+        const areas: Record<string, string> = {
+            lists: 'shopping_lists',
+            recipes: 'recipes',
+            economy: 'economy',
+            contacts: 'contacts',
+        };
+        const match = permission.match(
+            /^households\.(lists|recipes|economy|contacts)\.(.+)$/,
+        );
+
+        if (match && context?.active) {
+            if (
+                match[1] === 'lists' &&
+                (page.props as any).list?.household_id === null
+            ) {
+                return true;
+            }
+
+            const level =
+                /(^|\.)(index|show|view|totals|overview|search-products)$/.test(
+                    match[2],
+                )
+                    ? 'read'
+                    : 'write';
+
+            return !!context.capabilities?.[areas[match[1]]]?.[level];
+        }
+
+        if (
+            permission.startsWith('households.') &&
+            context?.active &&
+            /\.(invite|remove|edit|update|ai-providers\..*)$/.test(permission)
+        ) {
+            return !!context.canManage;
         }
 
         const hasRole = roles.value.includes(permission);

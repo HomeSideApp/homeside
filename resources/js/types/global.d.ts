@@ -1,4 +1,5 @@
 import type { AppLocale, Auth } from '@/types/auth';
+import type { HouseholdAccessDefaults } from '@/types/household-access';
 
 type Localization = {
     locale: AppLocale;
@@ -29,6 +30,7 @@ declare module '@inertiajs/core' {
     export interface InertiaConfig {
         sharedPageProps: {
             name: string;
+            householdAccessDefaults: HouseholdAccessDefaults;
             auth: Auth;
             localization: Localization;
             sidebarOpen: boolean;

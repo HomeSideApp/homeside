@@ -3,11 +3,13 @@
 namespace App\Http\Middleware;
 
 use App\Enums\AppLocale;
+use App\Enums\HouseholdAccessProfile;
 use App\Http\Resources\Households\HouseholdInvitationResource;
 use App\Http\Resources\Households\HouseholdResource;
 use App\Models\Household;
 use App\Models\HouseholdInvitation;
 use App\Models\User;
+use App\Support\HouseholdAccess;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -41,6 +43,9 @@ class HandleInertiaRequests extends Middleware
         return [
             ...parent::share($request),
             'name' => config('app.name'),
+            'householdAccessDefaults' => fn () => collect(HouseholdAccessProfile::cases())
+                ->mapWithKeys(fn (HouseholdAccessProfile $profile): array => [$profile->value => $profile->permissions()])
+                ->all(),
             'localization' => [
                 'locale' => app()->getLocale(),
                 'fallbackLocale' => config('app.fallback_locale'),
@@ -58,6 +63,8 @@ class HandleInertiaRequests extends Middleware
             'householdContext' => [
                 'active' => fn () => $this->resolveActiveHousehold($request, $user),
                 'enabledModules' => fn () => $this->resolveEnabledModules($request, $user),
+                'capabilities' => fn () => ($user && ($household = $this->resolveActiveHousehold($request, $user))) ? app(HouseholdAccess::class)->capabilities($user, $household) : [],
+                'canManage' => fn () => ($user && ($household = $this->resolveActiveHousehold($request, $user))) ? app(HouseholdAccess::class)->manages($user, $household) : false,
                 'households' => fn () => $user?->households_enabled
                     ? HouseholdResource::collection(
                         $user->households()->withCount('members')->with('modules')->get()
@@ -88,21 +95,21 @@ class HandleInertiaRequests extends Middleware
         // 1. Desde request attributes (si EnsureUserHasHousehold ya ejecutó)
         $fromAttributes = $request->attributes->get('household');
         if ($fromAttributes instanceof Household) {
-            return $fromAttributes;
+            return app(HouseholdAccess::class)->membership($user, $fromAttributes) !== null ? $fromAttributes : null;
         }
 
         // 2. Desde el parámetro de ruta (route model binding)
         $routeHousehold = $request->route('household');
         if ($routeHousehold instanceof Household) {
-            return $routeHousehold;
+            return app(HouseholdAccess::class)->membership($user, $routeHousehold) !== null ? $routeHousehold : null;
         }
         if (is_string($routeHousehold)) {
-            return Household::query()->whereKey($routeHousehold)->first();
+            return app(HouseholdAccess::class)->membership($user, $routeHousehold)?->household;
         }
 
         // 3. Fallback a active_household_id en BD
         if ($user->active_household_id) {
-            return Household::query()->whereKey($user->active_household_id)->first();
+            return app(HouseholdAccess::class)->membership($user, $user->active_household_id)?->household;
         }
 
         return null;

@@ -48,6 +48,23 @@ class HouseholdPermissionsTest extends TestCase
 {
     use RefreshDatabase;
 
+    #[TestWith(['households.show'])]
+    #[TestWith(['households.settings.edit'])]
+    public function test_household_forms_receive_access_profile_defaults_from_the_server(string $routeName): void
+    {
+        [$owner, $household] = $this->household();
+        $collaboration = ['shopping_lists' => 'write', 'recipes' => 'write', 'economy' => 'write', 'contacts' => 'write'];
+        $defaults = [
+            'admin' => $collaboration,
+            'member' => $collaboration,
+            'buyer' => ['shopping_lists' => 'write', 'recipes' => 'read', 'economy' => 'none', 'contacts' => 'none'],
+            'reader' => ['shopping_lists' => 'read', 'recipes' => 'read', 'economy' => 'read', 'contacts' => 'read'],
+        ];
+
+        $this->actingAs($owner)->get(route($routeName, $household))
+            ->assertInertia(fn ($page) => $page->where('householdAccessDefaults', $defaults));
+    }
+
     public function test_recipe_ingredients_require_collaboration_in_the_recipe_and_destination(): void
     {
         [$owner, $household] = $this->household();

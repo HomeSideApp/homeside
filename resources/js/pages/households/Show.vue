@@ -28,6 +28,7 @@ import {
     TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { useAuthorization } from '@/composables/useAuthorization';
+import { destroy } from '@/routes/households';
 
 const page = usePage();
 const { d, t } = useI18n();
@@ -60,6 +61,7 @@ type HouseholdData = {
     }>;
     pending_invitations: PendingInvitation[];
     created_by: string;
+    owner_id: string;
 };
 
 const props = defineProps<{
@@ -102,7 +104,7 @@ function copyInviteCode() {
 }
 
 function deleteHousehold() {
-    router.delete(`/households/${props.household.id}`);
+    router.delete(destroy.url(props.household.id));
 }
 </script>
 
@@ -167,7 +169,7 @@ function deleteHousehold() {
                             t('households.show.aiSettings')
                         }}</TooltipContent>
                     </Tooltip>
-                    <AlertDialog v-if="isAdmin">
+                    <AlertDialog v-if="household.owner_id === currentUserId">
                         <Tooltip>
                             <TooltipTrigger as-child>
                                 <AlertDialogTrigger as-child>
@@ -263,6 +265,7 @@ function deleteHousehold() {
                 :current-user-id="currentUserId"
                 :household-id="household.id"
                 :is-admin="isAdmin"
+                :owner-id="household.owner_id"
             />
 
             <div

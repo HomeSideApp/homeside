@@ -199,7 +199,7 @@ function confirmDelete(): void {
                     @update:model-value="onSearchInput"
                 />
                 <Button
-                    v-if="can('contacts.create') && can('contacts.home.create')"
+                    v-if="can('households.contacts.create')"
                     @click="createOpen = true"
                 >
                     <Plus data-icon="inline-start" /> Nuevo contacto
@@ -297,10 +297,7 @@ function confirmDelete(): void {
                             <TableCell class="text-right">
                                 <div class="flex justify-end gap-1">
                                     <Button
-                                        v-if="
-                                            can('contacts.update') ||
-                                            can('contacts.home.update')
-                                        "
+                                        v-if="can('households.contacts.update')"
                                         variant="ghost"
                                         size="sm"
                                         as-child
@@ -310,10 +307,7 @@ function confirmDelete(): void {
                                         >
                                     </Button>
                                     <Button
-                                        v-if="
-                                            can('contacts.delete') ||
-                                            can('contacts.home.delete')
-                                        "
+                                        v-if="can('households.contacts.delete')"
                                         variant="ghost"
                                         size="sm"
                                         class="text-destructive"

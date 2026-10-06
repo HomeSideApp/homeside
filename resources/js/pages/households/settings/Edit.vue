@@ -4,6 +4,7 @@ import { AlertCircle, Check, Copy, Trash2 } from '@lucide/vue';
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Heading from '@/components/Heading.vue';
+import HouseholdAccessForm from '@/components/households/HouseholdAccessForm.vue';
 import HouseholdModulesForm from '@/components/households/HouseholdModulesForm.vue';
 import HouseholdSettingsForm from '@/components/households/HouseholdSettingsForm.vue';
 import HouseholdTagsForm from '@/components/households/HouseholdTagsForm.vue';
@@ -17,7 +18,12 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
+import {
+    store as storeInviteLink,
+    destroy as destroyInviteLink,
+} from '@/routes/households/invite-links';
 import type { HouseholdModule, HouseholdTag } from '@/types';
+import type { HouseholdAccessProfile } from '@/types/household-access';
 
 const { t } = useI18n();
 
@@ -123,6 +129,8 @@ function submit() {
 }
 
 const linkForm = useForm({
+    access_profile: 'member' as HouseholdAccessProfile,
+    module_access: { ...page.props.householdAccessDefaults.member },
     expires_at: '',
     max_uses: '',
 });
@@ -132,10 +140,12 @@ const copiedLinkId = ref<string | null>(null);
 function createLink() {
     linkForm
         .transform((data) => ({
+            access_profile: data.access_profile,
+            module_access: data.module_access,
             expires_at: data.expires_at || null,
             max_uses: data.max_uses ? Number(data.max_uses) : null,
         }))
-        .post(`/households/${props.household.id}/invite-links`, {
+        .post(storeInviteLink.url(props.household.id), {
             preserveScroll: true,
             onSuccess: () => linkForm.reset(),
         });
@@ -150,9 +160,12 @@ function copyLink(link: InviteLink) {
 }
 
 function revokeLink(link: InviteLink) {
-    router.delete(`/households/${props.household.id}/invite-links/${link.id}`, {
-        preserveScroll: true,
-    });
+    router.delete(
+        destroyInviteLink.url({ household: props.household.id, link: link.id }),
+        {
+            preserveScroll: true,
+        },
+    );
 }
 </script>
 
@@ -284,6 +297,10 @@ function revokeLink(link: InviteLink) {
                         class="h-9 rounded-md border border-input bg-transparent px-3 text-sm"
                     />
                 </div>
+                <HouseholdAccessForm
+                    v-model:access-profile="linkForm.access_profile"
+                    v-model:module-access="linkForm.module_access"
+                />
                 <Button
                     type="button"
                     variant="outline"

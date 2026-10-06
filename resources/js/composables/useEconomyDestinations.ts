@@ -14,6 +14,7 @@ interface HouseholdContextEntry {
     id: string;
     name: string;
     economy_module_enabled?: boolean;
+    capabilities?: { economy?: { read: boolean; write: boolean } };
 }
 
 /**
@@ -48,12 +49,12 @@ export function useEconomyDestinations(): {
         () => canCreatePersonalExpense.value || canImportPersonalTicket.value,
     );
 
-    const canUseHousehold = computed(() => {
-        const canCreate = permissions.value.includes('economy.create');
-        const canImport = permissions.value.includes('economy.imports.create');
-
-        return canCreate || canImport;
-    });
+    const canUseHousehold = computed(() =>
+        (
+            ((page.props as any).householdContext
+                ?.households as HouseholdContextEntry[]) ?? []
+        ).some((household) => household.capabilities?.economy?.write),
+    );
 
     const destinations = computed<EconomyDestination[]>(() => {
         const items: EconomyDestination[] = [];
@@ -71,7 +72,7 @@ export function useEconomyDestinations(): {
                 ?.households as HouseholdContextEntry[]) ?? [];
 
         for (const household of households) {
-            if (!canUseHousehold.value || !household.economy_module_enabled) {
+            if (!household.capabilities?.economy?.write) {
                 continue;
             }
 
@@ -90,13 +91,16 @@ export function useEconomyDestinations(): {
      * otherwise the private account.
      */
     const defaultDestinationId = computed<string | null>(() => {
-        const activeId = (page.props.auth as any)?.user?.active_household_id ?? null;
+        const activeId =
+            (page.props.auth as any)?.user?.active_household_id ?? null;
 
         if (activeId === null) {
             return null;
         }
 
-        return destinations.value.some((destination) => destination.id === activeId)
+        return destinations.value.some(
+            (destination) => destination.id === activeId,
+        )
             ? activeId
             : null;
     });

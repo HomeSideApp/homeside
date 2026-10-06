@@ -18,6 +18,7 @@ import {
     Card,
     CardContent,
     CardDescription,
+    CardFooter,
     CardHeader,
     CardTitle,
 } from '@/components/ui/card';
@@ -38,7 +39,12 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { vCan } from '@/directives/can';
 import {
     create as createHouseholdList,
@@ -57,6 +63,7 @@ interface HouseholdSummary {
     name: string;
     color: string | null;
     image_url: string | null;
+    can_write?: boolean;
 }
 
 interface ShoppingListSummary {
@@ -95,9 +102,13 @@ const selectedHouseholdForCreate = computed(() => {
     const preferredHouseholdId =
         household.value !== 'all' ? household.value : props.activeHouseholdId;
 
+    const writableHouseholds = props.households.filter(
+        (item) => item.can_write,
+    );
+
     return (
-        props.households.find((item) => item.id === preferredHouseholdId) ??
-        props.households[0] ??
+        writableHouseholds.find((item) => item.id === preferredHouseholdId) ??
+        writableHouseholds[0] ??
         null
     );
 });
@@ -189,31 +200,67 @@ defineOptions({
                 <div class="flex shrink-0 flex-nowrap items-center gap-2">
                     <Tooltip>
                         <TooltipTrigger as-child>
-                            <Button type="button" variant="outline" size="icon-sm" :aria-label="t('common.actions.filters')" :aria-expanded="showFilters" :aria-controls="showFilters ? 'list-filters' : undefined" data-test="toggle-list-filters" @click="showFilters = !showFilters">
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="icon-sm"
+                                :aria-label="t('common.actions.filters')"
+                                :aria-expanded="showFilters"
+                                :aria-controls="
+                                    showFilters ? 'list-filters' : undefined
+                                "
+                                data-test="toggle-list-filters"
+                                @click="showFilters = !showFilters"
+                            >
                                 <ListFilter aria-hidden="true" />
                             </Button>
                         </TooltipTrigger>
-                        <TooltipContent>{{ t('common.actions.filters') }}</TooltipContent>
+                        <TooltipContent>{{
+                            t('common.actions.filters')
+                        }}</TooltipContent>
                     </Tooltip>
                     <Tooltip>
                         <TooltipTrigger as-child>
                             <Button v-can="'households.lists.create'" variant="outline" size="icon-sm" as-child>
-                                <Link :href="createPersonalList.url()" :aria-label="t('lists.index.newPersonalList')">
+                                <Link
+                                    :href="createPersonalList.url()"
+                                    :aria-label="
+                                        t('lists.index.newPersonalList')
+                                    "
+                                >
                                     <LockKeyhole aria-hidden="true" />
                                 </Link>
                             </Button>
                         </TooltipTrigger>
-                        <TooltipContent>{{ t('lists.index.newPersonalList') }}</TooltipContent>
+                        <TooltipContent>{{
+                            t('lists.index.newPersonalList')
+                        }}</TooltipContent>
                     </Tooltip>
                     <Tooltip v-if="selectedHouseholdForCreate">
                         <TooltipTrigger as-child>
-                            <Button v-can="'households.lists.create'" size="icon-sm" as-child>
-                                <Link :href="createHouseholdList.url(selectedHouseholdForCreate.id)" :aria-label="t('lists.index.newHouseholdList', { household: selectedHouseholdForCreate.name })">
+                            <Button size="icon-sm" as-child>
+                                <Link
+                                    :href="
+                                        createHouseholdList.url(
+                                            selectedHouseholdForCreate.id,
+                                        )
+                                    "
+                                    :aria-label="
+                                        t('lists.index.newHouseholdList', {
+                                            household:
+                                                selectedHouseholdForCreate.name,
+                                        })
+                                    "
+                                >
                                     <Plus aria-hidden="true" />
                                 </Link>
                             </Button>
                         </TooltipTrigger>
-                        <TooltipContent>{{ t('lists.index.newHouseholdList', { household: selectedHouseholdForCreate.name }) }}</TooltipContent>
+                        <TooltipContent>{{
+                            t('lists.index.newHouseholdList', {
+                                household: selectedHouseholdForCreate.name,
+                            })
+                        }}</TooltipContent>
                     </Tooltip>
                 </div>
             </TooltipProvider>
