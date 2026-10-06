@@ -12,8 +12,13 @@ use App\Actions\Economy\UpdateEconomicTransaction;
 use App\Data\Economy\CreateEconomicTransactionData;
 use App\Data\Economy\UpdateEconomicTransactionData;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\DeleteEconomicTransactionRequest;
+use App\Http\Requests\EconomicTotalsRequest;
+use App\Http\Requests\IndexEconomicTransactionsRequest;
+use App\Http\Requests\IndexPersonalEconomicTransactionsRequest;
 use App\Http\Requests\StoreEconomicTransactionApiRequest;
 use App\Http\Requests\UpdateEconomicTransactionApiRequest;
+use App\Http\Requests\ViewEconomicTransactionRequest;
 use App\Http\Resources\Economy\EconomicTransactionResource;
 use App\Models\EconomicTransaction;
 use App\Models\Household;
@@ -34,32 +39,15 @@ final class EconomicTransactionController extends Controller
     /**
      * List the transactions of a household.
      *
-     * @param  Request  $request  The incoming HTTP request, optionally containing filter parameters.
      * @param  ListEconomicTransactions  $action  The action that lists the household transactions.
      * @return AnonymousResourceCollection The collection of EconomicTransactionResource instances.
      */
-    public function index(Request $request, ListEconomicTransactions $action): AnonymousResourceCollection
+    public function index(IndexEconomicTransactionsRequest $request, ListEconomicTransactions $action): AnonymousResourceCollection
     {
         $household = $this->resolveHousehold($request);
         abort_unless($household instanceof Household, 404);
-        $this->authorize('view', $household);
 
-        $filters = $request->validate([
-            'search' => ['sometimes', 'string', 'max:100'],
-            'type' => ['sometimes', 'in:expense,income'],
-            'scope' => ['sometimes', 'in:personal,shared'],
-            'created_by' => ['sometimes', 'uuid'],
-            'from' => ['sometimes', 'date_format:Y-m-d'],
-            'to' => ['sometimes', 'date_format:Y-m-d', 'after_or_equal:from'],
-            'page' => ['sometimes', 'integer', 'min:1'],
-            'perPage' => ['sometimes', 'integer', 'between:1,100'],
-            'sort' => ['sometimes', 'in:occurred_at,amount_minor,created_at'],
-            'direction' => ['sometimes', 'in:asc,desc'],
-        ]);
-
-        if (isset($filters['created_by'])) {
-            abort_unless($household->members()->where('user_id', $filters['created_by'])->exists(), 404);
-        }
+        $filters = $request->validated();
 
         $transactions = $action->execute($household, $this->authenticatedUser($request), $filters);
 
@@ -69,13 +57,12 @@ final class EconomicTransactionController extends Controller
     /**
      * Return household economy totals equivalent to the web overview statistics.
      */
-    public function totals(Request $request, GetEconomyStats $action): JsonResponse
+    public function totals(EconomicTotalsRequest $request, GetEconomyStats $action): JsonResponse
     {
         $household = $this->resolveHousehold($request);
         abort_unless($household instanceof Household, 404);
-        $this->authorize('view', $household);
 
-        $validated = $request->validate(['period' => ['sometimes', 'date_format:Y-m']]);
+        $validated = $request->validated();
 
         return response()->json(['data' => $action->execute(
             $household,
@@ -87,22 +74,12 @@ final class EconomicTransactionController extends Controller
     /**
      * List the user's personal transactions.
      *
-     * @param  Request  $request  The incoming HTTP request, optionally containing filter parameters.
      * @param  ListEconomicTransactions  $action  The action that lists the user's personal transactions.
      * @return AnonymousResourceCollection The collection of the user's personal EconomicTransactionResource instances.
      */
-    public function personalIndex(Request $request, ListEconomicTransactions $action): AnonymousResourceCollection
+    public function personalIndex(IndexPersonalEconomicTransactionsRequest $request, ListEconomicTransactions $action): AnonymousResourceCollection
     {
-        $filters = $request->validate([
-            'search' => ['sometimes', 'string', 'max:100'],
-            'type' => ['sometimes', 'in:expense,income'],
-            'from' => ['sometimes', 'date_format:Y-m-d'],
-            'to' => ['sometimes', 'date_format:Y-m-d', 'after_or_equal:from'],
-            'page' => ['sometimes', 'integer', 'min:1'],
-            'perPage' => ['sometimes', 'integer', 'between:1,100'],
-            'sort' => ['sometimes', 'in:occurred_at,amount_minor,created_at'],
-            'direction' => ['sometimes', 'in:asc,desc'],
-        ]);
+        $filters = $request->validated();
 
         return EconomicTransactionResource::collection(
             $action->executePersonal($this->authenticatedUser($request), $filters)
@@ -112,13 +89,12 @@ final class EconomicTransactionController extends Controller
     /**
      * Get the user's personal totals.
      *
-     * @param  Request  $request  The incoming HTTP request, optionally containing a period filter.
      * @param  GetPersonalTotalsStats  $action  The action that computes the personal totals.
      * @return JsonResponse The JSON response with the aggregated personal totals structure.
      */
-    public function personalTotals(Request $request, GetPersonalTotalsStats $action): JsonResponse
+    public function personalTotals(EconomicTotalsRequest $request, GetPersonalTotalsStats $action): JsonResponse
     {
-        $validated = $request->validate(['period' => ['sometimes', 'date_format:Y-m']]);
+        $validated = $request->validated();
 
         return response()->json(['data' => $action->execute($this->authenticatedUser($request), $validated['period'] ?? null)]);
     }
@@ -144,15 +120,12 @@ final class EconomicTransactionController extends Controller
     /**
      * Show an economic transaction.
      *
-     * @param  Request  $request  The incoming HTTP request containing the transaction route parameter.
      * @param  GetEconomicTransaction  $action  The action that retrieves the transaction.
      * @return EconomicTransactionResource The resource representation of the transaction.
      */
-    public function show(Request $request, GetEconomicTransaction $action): EconomicTransactionResource
+    public function show(ViewEconomicTransactionRequest $request, GetEconomicTransaction $action): EconomicTransactionResource
     {
         $transaction = EconomicTransaction::query()->whereKey($request->route('transaction'))->firstOrFail();
-        $this->ensureRouteScope($request, $transaction->household_id);
-        $this->authorize('view', $transaction);
 
         return new EconomicTransactionResource($action->execute($transaction));
     }
@@ -175,15 +148,12 @@ final class EconomicTransactionController extends Controller
     /**
      * Delete an economic transaction.
      *
-     * @param  Request  $request  The incoming HTTP request containing the transaction route parameter.
      * @param  DeleteEconomicTransaction  $action  The action that deletes the transaction.
      * @return Response An empty 204 no-content response.
      */
-    public function destroy(Request $request, DeleteEconomicTransaction $action): Response
+    public function destroy(DeleteEconomicTransactionRequest $request, DeleteEconomicTransaction $action): Response
     {
         $transaction = EconomicTransaction::query()->whereKey($request->route('transaction'))->firstOrFail();
-        $this->ensureRouteScope($request, $transaction->household_id);
-        $this->authorize('delete', $transaction);
         $action->execute($transaction);
 
         return response()->noContent();
@@ -195,7 +165,6 @@ final class EconomicTransactionController extends Controller
      * Project convention: the FormRequest validates before the model binding,
      * so the household is resolved manually.
      *
-     * @param  Request  $request  The incoming HTTP request.
      * @return Household|null The resolved household model instance, or null for personal routes.
      */
     private function resolveHousehold(Request $request): ?Household
@@ -212,12 +181,7 @@ final class EconomicTransactionController extends Controller
     /**
      * Ensure that a transaction belongs to the household represented by the current route.
      *
-     * @param  Request  $request  The incoming request containing the optional household route parameter.
      * @param  string|null  $resourceHouseholdId  The household identifier stored on the transaction.
      * @return void This guard does not return a value.
      */
-    private function ensureRouteScope(Request $request, ?string $resourceHouseholdId): void
-    {
-        abort_unless($resourceHouseholdId === $this->resolveHousehold($request)?->id, 403);
-    }
 }

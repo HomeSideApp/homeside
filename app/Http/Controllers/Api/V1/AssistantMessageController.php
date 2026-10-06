@@ -3,24 +3,21 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\IndexAiMessagesRequest;
+use App\Http\Requests\SendAiMessageRequest;
 use App\Http\Resources\Assistant\AiRunResource;
 use App\Jobs\RunAssistantMessageJob;
 use HomeSide\AiAgents\Execution\AiExecutionContextData;
 use HomeSide\AiAgents\Execution\ExecutionRecorder;
 use HomeSide\AiAgents\Models\AiConversation;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 final class AssistantMessageController extends Controller
 {
-    public function index(Request $request, AiConversation $conversation): AnonymousResourceCollection
+    public function index(IndexAiMessagesRequest $request, AiConversation $conversation): AnonymousResourceCollection
     {
-        $this->authorize('view', $conversation);
-        $validated = $request->validate([
-            'page' => ['sometimes', 'integer', 'min:1'],
-            'perPage' => ['sometimes', 'integer', 'between:1,100'],
-        ]);
+        $validated = $request->validated();
 
         return AiRunResource::collection($conversation->runs()
             ->orderByDesc('created_at')
@@ -29,10 +26,9 @@ final class AssistantMessageController extends Controller
             ->withQueryString());
     }
 
-    public function store(Request $request, AiConversation $conversation, ExecutionRecorder $recorder): JsonResponse
+    public function store(SendAiMessageRequest $request, AiConversation $conversation, ExecutionRecorder $recorder): JsonResponse
     {
-        $this->authorize('view', $conversation);
-        $validated = $request->validate(['message' => ['required', 'string', 'max:2000']]);
+        $validated = $request->validated();
         $user = $this->authenticatedUser($request);
         $run = $recorder->queueRun(new AiExecutionContextData(
             userId: $user->id,

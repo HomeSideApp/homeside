@@ -21,7 +21,8 @@ class ReprocessEconomicImportRequest extends FormRequest
             return false;
         }
 
-        return $this->user()?->can('retry', $import) ?? false;
+        return $import->household_id === $this->resolveHousehold()?->id
+            && ($this->user()?->can('retry', $import) ?? false);
     }
 
     /**

@@ -6,6 +6,7 @@ use App\Actions\Households\RegisterViaInviteLink;
 use App\Data\Households\RegisterViaInviteLinkData;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\RegisterViaInviteLinkRequest;
+use App\Http\Requests\ViewInviteLinkRequest;
 use App\Http\Resources\Households\HouseholdInviteLinkResource;
 use App\Models\HouseholdInviteLink;
 use Illuminate\Http\JsonResponse;
@@ -21,10 +22,9 @@ final class InviteLinkController extends Controller
      * @param  string  $token  The public invite link token.
      * @return JsonResponse The HTTP response.
      */
-    public function show(string $token): JsonResponse
+    public function show(ViewInviteLinkRequest $request, string $token): JsonResponse
     {
-        $link = HouseholdInviteLink::query()->where('token', $token)->firstOrFail();
-        abort_unless($link->isUsable(), 404, __('app.errors.invite_link_unusable'));
+        $link = $request->inviteLink();
 
         $link->load('household:id,name,image_url');
 
@@ -42,7 +42,6 @@ final class InviteLinkController extends Controller
     public function store(RegisterViaInviteLinkRequest $request, string $token, RegisterViaInviteLink $action): JsonResponse
     {
         $link = HouseholdInviteLink::query()->where('token', $token)->firstOrFail();
-        abort_unless($request->validated()['token'] === $token, 422, __('app.errors.invite_link_unusable'));
 
         $user = $action->execute(RegisterViaInviteLinkData::fromArray($request->validated()), $link);
 

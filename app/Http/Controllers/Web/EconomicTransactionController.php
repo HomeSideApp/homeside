@@ -12,8 +12,13 @@ use App\Actions\Economy\UpdateEconomicTransaction;
 use App\Data\Economy\CreateEconomicTransactionData;
 use App\Data\Economy\UpdateEconomicTransactionData;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\CreateEconomicTransactionFormRequest;
+use App\Http\Requests\DeleteEconomicTransactionRequest;
+use App\Http\Requests\ManageEconomicTransactionRequest;
+use App\Http\Requests\ReadEconomyRequest;
 use App\Http\Requests\StoreEconomicTransactionRequest;
 use App\Http\Requests\UpdateEconomicTransactionRequest;
+use App\Http\Requests\ViewEconomicTransactionRequest;
 use App\Http\Resources\Economy\EconomicAccountResource;
 use App\Http\Resources\Economy\EconomicTransactionResource;
 use App\Http\Resources\Households\HouseholdMemberResource;
@@ -31,17 +36,12 @@ final class EconomicTransactionController extends Controller
     /**
      * Display the household economy overview and its filtered transaction list.
      *
-     * @param  Request  $request  The incoming HTTP request.
      * @param  ListEconomicTransactions  $action  The action used to query visible transactions.
      * @return Response The Inertia economy overview response.
      */
-    public function index(Request $request, ListEconomicTransactions $action): Response
+    public function index(ReadEconomyRequest $request, ListEconomicTransactions $action): Response
     {
         $household = $this->resolveHousehold($request);
-
-        if ($household !== null) {
-            $this->authorize('view', $household);
-        }
 
         $transactions = $action->execute($household, $request->user(), [
             'type' => $request->input('type'),
@@ -68,16 +68,11 @@ final class EconomicTransactionController extends Controller
     /**
      * Display the transaction creation form for a household or private scope.
      *
-     * @param  Request  $request  The incoming HTTP request containing the optional household route parameter.
      * @return Response The Inertia transaction creation response.
      */
-    public function create(Request $request): Response
+    public function create(CreateEconomicTransactionFormRequest $request): Response
     {
         $household = $this->resolveHousehold($request);
-
-        if ($household !== null) {
-            $this->authorize('view', $household);
-        }
 
         return Inertia::render('economy/Create', [
             'household' => $household,
@@ -94,7 +89,6 @@ final class EconomicTransactionController extends Controller
     /**
      * Resolve the configured default expense split type of every household the user belongs to.
      *
-     * @param  Request  $request  The incoming HTTP request.
      * @return array<string, string> The SplitType value keyed by household id.
      */
     private function splitTypesByHousehold(Request $request): array
@@ -126,7 +120,6 @@ final class EconomicTransactionController extends Controller
     /**
      * Resolve the members of every household the authenticated user belongs to, keyed by household.
      *
-     * @param  Request  $request  The incoming HTTP request.
      * @return array<string, array<int, array<string, mixed>>> The serialized members per household.
      */
     private function membersByHousehold(Request $request): array
@@ -179,17 +172,14 @@ final class EconomicTransactionController extends Controller
     /**
      * Display an economic transaction and its related details.
      *
-     * @param  Request  $request  The incoming HTTP request containing the optional household route parameter.
      * @param  Household|null  $household  The routed household, when the route is household-scoped.
      * @param  EconomicTransaction  $transaction  The transaction to display.
      * @param  GetEconomicTransaction  $action  The action used to load the transaction details.
      * @return Response The Inertia transaction detail response.
      */
-    public function show(Request $request, ?Household $household, EconomicTransaction $transaction, GetEconomicTransaction $action): Response
+    public function show(ViewEconomicTransactionRequest $request, ?Household $household, EconomicTransaction $transaction, GetEconomicTransaction $action): Response
     {
         $household = $household?->exists ? $household : null;
-        $this->ensureRouteScope($request, $transaction->household_id);
-        $this->authorize('view', $transaction);
 
         return Inertia::render('economy/Show', [
             'household' => $household,
@@ -200,16 +190,13 @@ final class EconomicTransactionController extends Controller
     /**
      * Display the edit form for an existing economic transaction.
      *
-     * @param  Request  $request  The incoming HTTP request containing the optional household route parameter.
      * @param  Household|null  $household  The routed household, when the route is household-scoped.
      * @param  EconomicTransaction  $transaction  The transaction to edit.
      * @return Response The Inertia transaction edit response.
      */
-    public function edit(Request $request, ?Household $household, EconomicTransaction $transaction): Response
+    public function edit(ManageEconomicTransactionRequest $request, ?Household $household, EconomicTransaction $transaction): Response
     {
         $household = $household?->exists ? $household : null;
-        $this->ensureRouteScope($request, $transaction->household_id);
-        $this->authorize('update', $transaction);
 
         return Inertia::render('economy/Edit', [
             'household' => $household,
@@ -245,17 +232,14 @@ final class EconomicTransactionController extends Controller
     /**
      * Delete an economic transaction and redirect to its owning economy overview.
      *
-     * @param  Request  $request  The incoming HTTP request containing the optional household route parameter.
      * @param  Household|null  $household  The routed household, when the route is household-scoped.
      * @param  EconomicTransaction  $transaction  The transaction to delete.
      * @param  DeleteEconomicTransaction  $action  The action used to delete the transaction.
      * @return RedirectResponse The redirect response to the applicable economy overview.
      */
-    public function destroy(Request $request, ?Household $household, EconomicTransaction $transaction, DeleteEconomicTransaction $action): RedirectResponse
+    public function destroy(DeleteEconomicTransactionRequest $request, ?Household $household, EconomicTransaction $transaction, DeleteEconomicTransaction $action): RedirectResponse
     {
         $household = $household?->exists ? $household : null;
-        $this->ensureRouteScope($request, $transaction->household_id);
-        $this->authorize('delete', $transaction);
         $action->execute($transaction);
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('app.toast.transaction_deleted')]);
@@ -268,7 +252,6 @@ final class EconomicTransactionController extends Controller
     /**
      * Resolve the household from the route, if present.
      *
-     * @param  Request  $request  The incoming request containing the optional household route parameter.
      * @return Household|null The routed household, or null for a private economy route.
      */
     /**
@@ -277,7 +260,6 @@ final class EconomicTransactionController extends Controller
      * Only the owner sees their accounts, which keeps the funding source private even when the
      * transaction itself is shared with the household.
      *
-     * @param  Request  $request  The incoming HTTP request.
      * @return array<int, array<string, mixed>> The serialized active accounts available to the user.
      */
     private function availableAccounts(Request $request): array
@@ -297,7 +279,6 @@ final class EconomicTransactionController extends Controller
     /**
      * Resolve the household from the route, if present.
      *
-     * @param  Request  $request  The incoming request containing the optional household route parameter.
      * @return Household|null The routed household, or null for a private economy route.
      */
     private function resolveHousehold(Request $request): ?Household
@@ -311,25 +292,6 @@ final class EconomicTransactionController extends Controller
         return $raw ? Household::findOrFail($raw) : null;
     }
 
-    /**
-     * Ensure that a resource belongs to the household represented by the current route.
-     *
-     * @param  Request  $request  The incoming request containing the optional household route parameter.
-     * @param  string|null  $resourceHouseholdId  The household identifier stored on the routed resource.
-     * @return void This guard does not return a value.
-     */
-    private function ensureRouteScope(Request $request, ?string $resourceHouseholdId): void
-    {
-        abort_unless($resourceHouseholdId === $this->resolveHousehold($request)?->id, 403);
-    }
-
-    /**
-     * Redirect to the transaction page in the right scope.
-     *
-     * @param  Household|null  $household  The household scope, or null for a private transaction.
-     * @param  EconomicTransaction  $transaction  The transaction whose detail page should be displayed.
-     * @return RedirectResponse The redirect response to the appropriate transaction detail route.
-     */
     private function redirectToTransaction(?Household $household, EconomicTransaction $transaction): RedirectResponse
     {
         return $household !== null

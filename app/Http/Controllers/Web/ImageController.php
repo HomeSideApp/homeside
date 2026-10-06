@@ -6,10 +6,10 @@ namespace App\Http\Controllers\Web;
 
 use App\Enums\ImageType;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\ViewImageRequest;
 use App\Models\Household;
 use App\Models\ListItem;
 use App\Models\Recipe;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -21,7 +21,7 @@ final class ImageController extends Controller
     /**
      * Serve an image by type and UUID.
      */
-    public function show(Request $request): StreamedResponse
+    public function show(ViewImageRequest $request): StreamedResponse
     {
         /** @var string $typeValue */
         $typeValue = $request->route('type');
@@ -44,10 +44,6 @@ final class ImageController extends Controller
         $item = ListItem::find($uuid);
         abort_unless($item, 404);
 
-        $user = $this->authenticatedUser(request());
-        $list = $item->list;
-        abort_unless($list && $list->created_by === $user->id, 403);
-
         $path = $item->image_url;
         abort_unless($path, 404);
 
@@ -59,9 +55,6 @@ final class ImageController extends Controller
         $household = Household::find($uuid);
         abort_unless($household, 404);
 
-        $user = $this->authenticatedUser(request());
-        abort_unless($household->isMember($user), 403);
-
         $path = $household->image_url;
         abort_unless($path, 404);
 
@@ -72,9 +65,6 @@ final class ImageController extends Controller
     {
         $recipe = Recipe::find($uuid);
         abort_unless($recipe, 404);
-
-        $user = $this->authenticatedUser(request());
-        abort_unless($user->can('view', $recipe), 403);
 
         if ($stepId) {
             $step = $recipe->steps()->where('id', $stepId)->first();

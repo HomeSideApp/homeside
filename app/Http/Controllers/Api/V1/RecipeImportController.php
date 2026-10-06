@@ -4,13 +4,13 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Actions\Recipes\PreviewJsonLdRecipeImport;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\PreviewCooklangRecipeRequest;
 use App\Http\Requests\PreviewJsonLdRecipeRequest;
 use App\Http\Requests\ReviewRecipeImportRequest;
 use App\Models\Product;
 use App\Models\RecipeCookware;
 use App\Services\Recipes\Import\CooklangRecipeImporter;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
 final class RecipeImportController extends Controller
@@ -47,12 +47,8 @@ final class RecipeImportController extends Controller
         ]);
     }
 
-    public function previewCooklang(Request $request, CooklangRecipeImporter $importer): JsonResponse
+    public function previewCooklang(PreviewCooklangRecipeRequest $request, CooklangRecipeImporter $importer): JsonResponse
     {
-        $request->validate([
-            'cooklang' => 'required|string|min:10',
-        ]);
-
         $content = $request->input('cooklang');
         $result = $importer->import($content);
 

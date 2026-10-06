@@ -15,8 +15,13 @@ use App\Data\Economy\ImageProcessingData;
 use App\Data\Economy\ImportFiltersData;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\ConfirmEconomicImportRequest;
+use App\Http\Requests\CreateEconomicTransactionFormRequest;
+use App\Http\Requests\DiscardEconomicImportRequest;
+use App\Http\Requests\ReadEconomyRequest;
 use App\Http\Requests\ReprocessEconomicImportRequest;
+use App\Http\Requests\RetryEconomicImportRequest;
 use App\Http\Requests\StoreEconomicImportUploadRequest;
+use App\Http\Requests\ViewEconomicImportRequest;
 use App\Http\Resources\Economy\EconomicImportResource;
 use App\Models\EconomicImport;
 use App\Models\Household;
@@ -36,11 +41,10 @@ final class EconomicImportController extends Controller
      * This index is the recovery point for analyses: leaving the review page never loses an
      * import, because its lifecycle state lives in the database and this list links back to it.
      *
-     * @param  Request  $request  The incoming HTTP request with the optional status filters.
      * @param  ListEconomicImports  $action  The action that lists the visible imports.
      * @return Response The Inertia import list response.
      */
-    public function index(Request $request, ListEconomicImports $action): Response
+    public function index(ReadEconomyRequest $request, ListEconomicImports $action): Response
     {
         $household = $this->resolveHousehold($request);
         $user = $this->authenticatedUser($request);
@@ -49,7 +53,6 @@ final class EconomicImportController extends Controller
         ]));
 
         if ($household !== null) {
-            $this->authorize('view', $household);
             $imports = $action->executeHousehold($household, $user, $filters);
         } else {
             $imports = $action->executePersonal($user, $filters);
@@ -70,16 +73,11 @@ final class EconomicImportController extends Controller
     /**
      * Show the import creation page.
      *
-     * @param  Request  $request  The incoming HTTP request.
      * @return Response The HTTP response.
      */
-    public function create(Request $request): Response
+    public function create(CreateEconomicTransactionFormRequest $request): Response
     {
         $household = $this->resolveHousehold($request);
-
-        if ($household !== null) {
-            $this->authorize('view', $household);
-        }
 
         return Inertia::render('economy/imports/Create', [
             'household' => $household,
@@ -120,15 +118,12 @@ final class EconomicImportController extends Controller
     /**
      * Show the import review page.
      *
-     * @param  Request  $request  The incoming HTTP request.
      * @param  Household|null  $household  The routed household, when the route is household-scoped.
      * @param  EconomicImport  $import  The economic import model instance.
      * @return Response The HTTP response.
      */
-    public function show(Request $request, ?Household $household, EconomicImport $import): Response
+    public function show(ViewEconomicImportRequest $request, ?Household $household, EconomicImport $import): Response
     {
-        $this->ensureRouteScope($request, $import->household_id);
-        $this->authorize('view', $import);
 
         return Inertia::render('economy/imports/Review', [
             'household' => $this->resolveHousehold($request),
@@ -161,16 +156,13 @@ final class EconomicImportController extends Controller
     /**
      * Retry a failed import analysis.
      *
-     * @param  Request  $request  The current HTTP request used to determine the private or household route scope.
      * @param  Household|null  $household  The routed household, when the route is household-scoped.
      * @param  EconomicImport  $import  The economic import model instance.
      * @param  RetryEconomicImport  $action  The action responsible for the operation.
      * @return RedirectResponse The HTTP response.
      */
-    public function retry(Request $request, ?Household $household, EconomicImport $import, RetryEconomicImport $action): RedirectResponse
+    public function retry(RetryEconomicImportRequest $request, ?Household $household, EconomicImport $import, RetryEconomicImport $action): RedirectResponse
     {
-        $this->ensureRouteScope($request, $import->household_id);
-        $this->authorize('retry', $import);
         $action->execute($import);
 
         Inertia::flash('toast', ['type' => 'info', 'message' => __('app.toast.analysis_restarted')]);
@@ -193,7 +185,6 @@ final class EconomicImportController extends Controller
         EconomicImport $import,
         ReprocessEconomicImport $action,
     ): RedirectResponse {
-        $this->ensureRouteScope($request, $import->household_id);
         $action->execute($import, ImageProcessingData::fromArray($request->validated('image_processing')));
 
         Inertia::flash('toast', ['type' => 'info', 'message' => __('app.toast.analysis_restarted')]);
@@ -204,16 +195,13 @@ final class EconomicImportController extends Controller
     /**
      * Discard an economic import.
      *
-     * @param  Request  $request  The incoming HTTP request.
      * @param  Household|null  $household  The routed household, when the route is household-scoped.
      * @param  EconomicImport  $import  The economic import model instance.
      * @param  DiscardEconomicImport  $action  The action responsible for the operation.
      * @return RedirectResponse The HTTP response.
      */
-    public function discard(Request $request, ?Household $household, EconomicImport $import, DiscardEconomicImport $action): RedirectResponse
+    public function discard(DiscardEconomicImportRequest $request, ?Household $household, EconomicImport $import, DiscardEconomicImport $action): RedirectResponse
     {
-        $this->ensureRouteScope($request, $import->household_id);
-        $this->authorize('discard', $import);
         $action->execute($import);
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('app.toast.import_discarded')]);
@@ -226,7 +214,6 @@ final class EconomicImportController extends Controller
     /**
      * Resolve the household from the route, if present.
      *
-     * @param  Request  $request  The incoming request containing the optional household route parameter.
      * @return Household|null The routed household, or null for a private economy route.
      */
     private function resolveHousehold(Request $request): ?Household
@@ -240,17 +227,5 @@ final class EconomicImportController extends Controller
         return is_string($raw)
             ? Household::query()->whereKey($raw)->firstOrFail()
             : null;
-    }
-
-    /**
-     * Ensure that an import belongs to the household represented by the current route.
-     *
-     * @param  Request  $request  The incoming request containing the optional household route parameter.
-     * @param  string|null  $resourceHouseholdId  The household identifier stored on the import.
-     * @return void This guard does not return a value.
-     */
-    private function ensureRouteScope(Request $request, ?string $resourceHouseholdId): void
-    {
-        abort_unless($resourceHouseholdId === $this->resolveHousehold($request)?->id, 403);
     }
 }

@@ -5,29 +5,18 @@ declare(strict_types=1);
 namespace App\Http\Requests\Settings;
 
 use App\Enums\AiProviderModule;
+use App\Http\Requests\ManageUserAiProviderRequest;
 use App\Http\Requests\ProviderSpecificationRules;
-use App\Models\User;
 use HomeSide\AiAgents\Enums\AiDriver;
 use HomeSide\AiAgents\Enums\FallbackPolicy;
 use HomeSide\AiAgents\Enums\PrivacyLevel;
-use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 /**
  * Validates updates to an AI provider through the personal settings boundary.
  */
-final class UpdateUserAiProviderRequest extends FormRequest
+final class UpdateUserAiProviderRequest extends ManageUserAiProviderRequest
 {
-    /**
-     * Allow authenticated users to reach the controller's ownership-hiding check.
-     *
-     * @return bool True when the request has an authenticated user.
-     */
-    public function authorize(): bool
-    {
-        return $this->user() instanceof User;
-    }
-
     /**
      * Get the rules for updating a personal AI provider configuration.
      *

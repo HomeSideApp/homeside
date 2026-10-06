@@ -11,13 +11,13 @@ use App\Data\Translations\CreateTranslationData;
 use App\Data\Translations\GenerateTranslationsData;
 use App\Data\Translations\PublishTranslationData;
 use App\Data\Translations\UpdateTranslationData;
-use App\Enums\AppLocale;
 use App\Enums\TranslationFieldStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\GenerateTranslationsRequest;
 use App\Http\Requests\Admin\PublishTranslationRequest;
 use App\Http\Requests\Admin\StoreTranslationRequest;
 use App\Http\Requests\Admin\UpdateTranslationRequest;
+use App\Http\Requests\IndexAdminTranslationsRequest;
 use App\Http\Resources\Translations\TranslationResource;
 use App\Http\Resources\Translations\TranslationStatusResource;
 use App\Models\Translation;
@@ -27,7 +27,6 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
-use Illuminate\Validation\Rule;
 use RuntimeException;
 
 /**
@@ -44,17 +43,9 @@ final class AdminTranslationController extends Controller
      *
      * @return AnonymousResourceCollection The paginated collection of TranslationResource instances.
      */
-    public function index(Request $request): AnonymousResourceCollection
+    public function index(IndexAdminTranslationsRequest $request): AnonymousResourceCollection
     {
-        $validated = $request->validate([
-            'type' => ['sometimes', 'string', Rule::in(['category', 'product', 'store', 'tag'])],
-            'locale' => ['sometimes', 'string', Rule::in(AppLocale::values())],
-            'field' => ['sometimes', 'string', Rule::in(['name'])],
-            'status' => ['sometimes', 'string', Rule::in(TranslationFieldStatus::values())],
-            'search' => ['sometimes', 'string', 'max:100'],
-            'page' => ['sometimes', 'integer', 'min:1'],
-            'perPage' => ['sometimes', 'integer', 'between:1,100'],
-        ]);
+        $validated = $request->validated();
 
         $translations = Translation::query()
             ->when($validated['type'] ?? null, fn ($query, string $type) => $query->forType($type))

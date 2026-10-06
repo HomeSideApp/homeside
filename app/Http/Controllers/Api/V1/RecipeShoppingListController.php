@@ -30,10 +30,6 @@ final class RecipeShoppingListController extends Controller
         AddToListRequest $request,
         AddToShoppingList $action,
     ): JsonResponse {
-        abort_unless($list->household_id === $household->id, 404);
-        $this->authorize('view', $household);
-        $this->authorize('view', $recipe);
-        $this->authorize('update', $list);
         $data = AddToListData::fromArray($request->validated());
 
         $items = $action->execute($recipe, $list, $data, $this->authenticatedUser($request));

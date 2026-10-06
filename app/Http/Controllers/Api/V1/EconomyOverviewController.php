@@ -5,19 +5,15 @@ namespace App\Http\Controllers\Api\V1;
 use App\Actions\Economy\GetHouseholdEconomyOverview;
 use App\Actions\Economy\GetPersonalEconomyOverview;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\EconomyOverviewRequest;
 use App\Models\Household;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 
 final class EconomyOverviewController extends Controller
 {
-    public function household(Request $request, Household $household, GetHouseholdEconomyOverview $action): JsonResponse
+    public function household(EconomyOverviewRequest $request, Household $household, GetHouseholdEconomyOverview $action): JsonResponse
     {
-        $this->authorize('view', $household);
-        $validated = $request->validate([
-            'months' => ['sometimes', 'integer', 'between:1,24'],
-            'currency' => ['sometimes', 'string', 'size:3', 'uppercase'],
-        ]);
+        $validated = $request->validated();
 
         return response()->json(['data' => $action->execute(
             $household,
@@ -27,12 +23,9 @@ final class EconomyOverviewController extends Controller
         )]);
     }
 
-    public function personal(Request $request, GetPersonalEconomyOverview $action): JsonResponse
+    public function personal(EconomyOverviewRequest $request, GetPersonalEconomyOverview $action): JsonResponse
     {
-        $validated = $request->validate([
-            'months' => ['sometimes', 'integer', 'between:1,24'],
-            'currency' => ['sometimes', 'string', 'size:3', 'uppercase'],
-        ]);
+        $validated = $request->validated();
 
         return response()->json(['data' => $action->execute(
             $this->authenticatedUser($request),

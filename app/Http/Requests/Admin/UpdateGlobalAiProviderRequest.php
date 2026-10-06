@@ -7,6 +7,7 @@ use App\Http\Requests\ProviderSpecificationRules;
 use HomeSide\AiAgents\Enums\AiDriver;
 use HomeSide\AiAgents\Enums\FallbackPolicy;
 use HomeSide\AiAgents\Enums\PrivacyLevel;
+use HomeSide\AiAgents\Models\AiProvider;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -15,7 +16,11 @@ class UpdateGlobalAiProviderRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()?->hasRole('admin') ?? false;
+        /** @var AiProvider $provider */
+        $provider = $this->route('provider');
+        abort_unless($provider->isGlobal(), 404);
+
+        return $this->user()?->can('manage', $provider) ?? false;
     }
 
     /**

@@ -3,6 +3,10 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\ManageRecipeRequest;
+use App\Http\Requests\UploadRecipeImageRequest;
+use App\Http\Requests\UploadRecipeStepImageRequest;
+use App\Http\Requests\ViewRecipeRequest;
 use App\Models\Recipe;
 use App\Models\RecipeStep;
 use Illuminate\Http\JsonResponse;
@@ -15,12 +19,9 @@ use Symfony\Component\HttpFoundation\Response;
  */
 final class RecipeImageController extends Controller
 {
-    public function store(Recipe $recipe, Request $request): JsonResponse
+    public function store(Recipe $recipe, UploadRecipeImageRequest $request): JsonResponse
     {
-        $this->authorize('update', $recipe);
-        $validated = $request->validate([
-            'image' => ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048', 'dimensions:max_width=6000,max_height=6000'],
-        ]);
+        $validated = $request->validated();
 
         $this->replaceImage($recipe, 'cover_image_path', $validated['image']->store("recipes/{$recipe->id}", 'local'));
 
@@ -30,22 +31,18 @@ final class RecipeImageController extends Controller
         ]], 201);
     }
 
-    public function destroy(Recipe $recipe): Response
+    public function destroy(Recipe $recipe, ManageRecipeRequest $request): Response
     {
-        $this->authorize('update', $recipe);
         $this->deleteImage($recipe->cover_image_path);
         $recipe->update(['cover_image_path' => null]);
 
         return response()->noContent();
     }
 
-    public function storeStep(Recipe $recipe, Request $request): JsonResponse
+    public function storeStep(Recipe $recipe, UploadRecipeStepImageRequest $request): JsonResponse
     {
-        $this->authorize('update', $recipe);
         $step = $this->resolveStep($recipe, $request);
-        $validated = $request->validate([
-            'image' => ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048', 'dimensions:max_width=6000,max_height=6000'],
-        ]);
+        $validated = $request->validated();
 
         $this->replaceImage($step, 'image_path', $validated['image']->store("recipes/{$recipe->id}/steps", 'local'));
 
@@ -55,9 +52,8 @@ final class RecipeImageController extends Controller
         ]], 201);
     }
 
-    public function destroyStep(Recipe $recipe, Request $request): Response
+    public function destroyStep(Recipe $recipe, ManageRecipeRequest $request): Response
     {
-        $this->authorize('update', $recipe);
         $step = $this->resolveStep($recipe, $request);
         $this->deleteImage($step->image_path);
         $step->update(['image_path' => null]);
@@ -68,9 +64,8 @@ final class RecipeImageController extends Controller
     /**
      * Serve a recipe cover image or one of its step images.
      */
-    public function show(Recipe $recipe, Request $request): Response
+    public function show(Recipe $recipe, ViewRecipeRequest $request): Response
     {
-        $this->authorize('view', $recipe);
 
         $stepId = $request->route('step');
 

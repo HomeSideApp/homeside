@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Actions\Households\RegisterViaInviteLink;
 use App\Data\Households\RegisterViaInviteLinkData;
 use App\Http\Requests\RegisterViaInviteLinkRequest;
+use App\Http\Requests\ViewInviteLinkRequest;
 use App\Models\HouseholdInviteLink;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
@@ -21,10 +22,9 @@ class InviteLinkController extends Controller
      * @param  string  $token  The public invite link token.
      * @return Response The HTTP response.
      */
-    public function show(string $token): Response
+    public function show(ViewInviteLinkRequest $request, string $token): Response
     {
-        $link = HouseholdInviteLink::query()->where('token', $token)->firstOrFail();
-        abort_unless($link->isUsable(), 404, __('app.errors.invite_link_unusable'));
+        $link = $request->inviteLink();
 
         $household = $link->household()->firstOrFail();
 
@@ -49,7 +49,6 @@ class InviteLinkController extends Controller
     public function store(RegisterViaInviteLinkRequest $request, string $token, RegisterViaInviteLink $action): RedirectResponse
     {
         $link = HouseholdInviteLink::query()->where('token', $token)->firstOrFail();
-        abort_unless($request->validated()['token'] === $token, 422, __('app.errors.invite_link_unusable'));
 
         $user = $action->execute(RegisterViaInviteLinkData::fromArray($request->validated()), $link);
 

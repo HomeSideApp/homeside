@@ -9,20 +9,20 @@ use App\Actions\Households\MarkAiProviderDefault;
 use App\Actions\Households\UpdateAiProvider;
 use App\Data\Households\CreateAiProviderData;
 use App\Data\Households\UpdateAiProviderData;
-use App\Enums\AiProviderModule;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\DefaultUserAiProviderRequest;
+use App\Http\Requests\ManageUserAiProviderRequest;
 use App\Http\Requests\Settings\StoreUserAiProviderRequest;
 use App\Http\Requests\Settings\UpdateUserAiProviderRequest;
+use App\Http\Requests\TestUserAiProviderConfigurationRequest;
 use App\Http\Resources\Households\AiProviderResource;
 use App\Models\User;
-use HomeSide\AiAgents\Enums\AiDriver;
 use HomeSide\AiAgents\Models\AiProvider;
 use HomeSide\AiAgents\Providers\AiProviderTester;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
-use Illuminate\Validation\Rule;
 
 /**
  * Handles API operations for AI providers owned by the authenticated user.
@@ -66,7 +66,6 @@ final class UserAiProviderController extends Controller
         AiProvider $provider,
         UpdateAiProvider $action,
     ): AiProviderResource {
-        $provider = $this->ownedProvider($this->authenticatedUser($request), $provider);
         $data = UpdateAiProviderData::fromArray($request->validated());
 
         return new AiProviderResource($action->execute($provider, $data));
@@ -75,9 +74,9 @@ final class UserAiProviderController extends Controller
     /**
      * Delete a personal provider.
      */
-    public function destroy(Request $request, AiProvider $provider): Response
+    public function destroy(ManageUserAiProviderRequest $request, AiProvider $provider): Response
     {
-        $this->ownedProvider($this->authenticatedUser($request), $provider)->delete();
+        $provider->delete();
 
         return response()->noContent();
     }
@@ -86,12 +85,11 @@ final class UserAiProviderController extends Controller
      * Mark a personal provider as default for its module.
      */
     public function markDefault(
-        Request $request,
+        DefaultUserAiProviderRequest $request,
         AiProvider $provider,
         MarkAiProviderDefault $action,
     ): AiProviderResource {
-        $provider = $this->ownedProvider($this->authenticatedUser($request), $provider);
-        $module = $request->validate(['module' => ['sometimes', 'string', Rule::in(AiProviderModule::cases())]])['module'] ?? $provider->module;
+        $module = $request->validated()['module'] ?? $provider->module;
         $provider->markAsDefaultForModule($module);
 
         return new AiProviderResource($provider->refresh());
@@ -100,9 +98,8 @@ final class UserAiProviderController extends Controller
     /**
      * Test a stored personal provider connection.
      */
-    public function test(Request $request, AiProvider $provider, AiProviderTester $tester): JsonResponse
+    public function test(ManageUserAiProviderRequest $request, AiProvider $provider, AiProviderTester $tester): JsonResponse
     {
-        $provider = $this->ownedProvider($this->authenticatedUser($request), $provider);
 
         return response()->json($tester->testProvider($provider));
     }
@@ -110,25 +107,10 @@ final class UserAiProviderController extends Controller
     /**
      * Test an unsaved personal provider configuration.
      */
-    public function testConfig(Request $request, AiProviderTester $tester): JsonResponse
+    public function testConfig(TestUserAiProviderConfigurationRequest $request, AiProviderTester $tester): JsonResponse
     {
-        $configuration = $request->validate([
-            'type' => ['required', 'string', Rule::in(AiDriver::cases())],
-            'base_url' => ['required', 'url', 'max:255'],
-            'model' => ['required', 'string', 'max:255'],
-            'api_key' => ['nullable', 'string', 'max:255'],
-        ]);
+        $configuration = $request->configuration();
 
         return response()->json($tester->testConfig($configuration));
-    }
-
-    /**
-     * Resolve a route-bound provider within the authenticated user's scope.
-     */
-    private function ownedProvider(User $user, AiProvider $provider): AiProvider
-    {
-        abort_unless($provider->isUser() && $provider->user_id === $user->id, 404);
-
-        return $provider;
     }
 }

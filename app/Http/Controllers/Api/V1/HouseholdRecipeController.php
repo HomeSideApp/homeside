@@ -6,11 +6,13 @@ use App\Actions\Recipes\ListHouseholdRecipes;
 use App\Actions\Recipes\ShareRecipe;
 use App\Actions\Recipes\UnshareRecipe;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\IndexHouseholdRecipesRequest;
+use App\Http\Requests\ShareHouseholdRecipeRequest;
+use App\Http\Requests\UnshareHouseholdRecipeRequest;
 use App\Http\Resources\Households\HouseholdRecipeResource;
 use App\Models\Household;
 use App\Models\Recipe;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
 
@@ -25,17 +27,9 @@ final class HouseholdRecipeController extends Controller
     /**
      * List the recipes shared with the given household.
      */
-    public function index(Household $household, ListHouseholdRecipes $action, Request $request): AnonymousResourceCollection
+    public function index(Household $household, ListHouseholdRecipes $action, IndexHouseholdRecipesRequest $request): AnonymousResourceCollection
     {
-        $this->authorize('view', $household);
-        $filters = $request->validate([
-            'search' => ['sometimes', 'string', 'max:100'],
-            'tag' => ['sometimes', 'string', 'max:100'],
-            'page' => ['sometimes', 'integer', 'min:1'],
-            'perPage' => ['sometimes', 'integer', 'between:1,100'],
-            'sort' => ['sometimes', 'in:created_at,updated_at'],
-            'direction' => ['sometimes', 'in:asc,desc'],
-        ]);
+        $filters = $request->validated();
         $recipes = $action->execute($household, $filters);
 
         return HouseholdRecipeResource::collection($recipes);
@@ -44,10 +38,8 @@ final class HouseholdRecipeController extends Controller
     /**
      * Share the given recipe with the household.
      */
-    public function share(Household $household, Recipe $recipe, ShareRecipe $action, Request $request): JsonResponse
+    public function share(Household $household, Recipe $recipe, ShareRecipe $action, ShareHouseholdRecipeRequest $request): JsonResponse
     {
-        $this->authorize('view', $household);
-        $this->authorize('share', $recipe);
         $householdRecipe = $action->execute($recipe, $household, $this->authenticatedUser($request));
 
         return HouseholdRecipeResource::make($householdRecipe)
@@ -58,13 +50,8 @@ final class HouseholdRecipeController extends Controller
     /**
      * Unshare the given recipe from the household.
      */
-    public function unshare(Household $household, Recipe $recipe, UnshareRecipe $action, Request $request): Response
+    public function unshare(Household $household, Recipe $recipe, UnshareRecipe $action, UnshareHouseholdRecipeRequest $request): Response
     {
-        $this->authorize('view', $household);
-
-        if (! $household->isAdmin($this->authenticatedUser($request))) {
-            $this->authorize('unshare', $recipe);
-        }
 
         $action->execute($recipe, $household, $this->authenticatedUser($request));
 

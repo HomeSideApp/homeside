@@ -5,8 +5,9 @@ namespace App\Http\Controllers\Api\V1;
 use App\Actions\Products\QuickCreateProduct;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\QuickCreateProductRequest;
+use App\Http\Requests\RecentProductsRequest;
+use App\Http\Requests\SearchProductsRequest;
 use App\Http\Resources\Products\ProductResource;
-use App\Models\Household;
 use App\Models\Product;
 use App\Models\ProductUsage;
 use Illuminate\Http\JsonResponse;
@@ -24,18 +25,12 @@ final class ProductSearchController extends Controller
     /**
      * Search products by the given query.
      *
-     * @param  Request  $request  The incoming HTTP request containing the search term.
      * @param  SearchProducts  $action  The action that performs the product search.
      * @return AnonymousResourceCollection The collection of matching product resources.
      */
-    public function search(Request $request): AnonymousResourceCollection
+    public function search(SearchProductsRequest $request): AnonymousResourceCollection
     {
-        $validated = $request->validate([
-            'q' => ['required', 'string', 'between:1,100'],
-            'category_id' => ['sometimes', 'uuid', 'exists:categories,id'],
-            'page' => ['sometimes', 'integer', 'min:1'],
-            'perPage' => ['sometimes', 'integer', 'between:1,100'],
-        ]);
+        $validated = $request->validated();
         $products = Product::query()
             ->withTranslationData()
             ->with(['category' => fn ($query) => $query->withTranslationData()])
@@ -52,22 +47,13 @@ final class ProductSearchController extends Controller
     /**
      * List the recently used products of the authenticated user.
      *
-     * @param  Request  $request  The incoming HTTP request.
      * @param  GetRecentProducts  $action  The action that retrieves the recent products.
      * @return AnonymousResourceCollection The collection of recent product resources.
      */
-    public function recent(Request $request): AnonymousResourceCollection
+    public function recent(RecentProductsRequest $request): AnonymousResourceCollection
     {
-        $validated = $request->validate([
-            'household_id' => ['sometimes', 'uuid', 'exists:households,id'],
-            'limit' => ['sometimes', 'integer', 'between:1,50'],
-        ]);
+        $validated = $request->validated();
         $user = $this->authenticatedUser($request);
-
-        if (isset($validated['household_id'])) {
-            $household = Household::query()->findOrFail($validated['household_id']);
-            $this->authorize('view', $household);
-        }
 
         $products = ProductUsage::query()
             ->with(['product' => fn ($query) => $query->withTranslationData(), 'product.category' => fn ($query) => $query->withTranslationData()])

@@ -14,7 +14,10 @@ use App\Http\Requests\Admin\StoreGlobalAiProviderRequest;
 use App\Http\Requests\Admin\UpdateGlobalAiProviderRequest;
 use App\Http\Requests\Admin\UpdateGlobalPromptRequest;
 use App\Http\Requests\Admin\UpdateModulePromptRequest;
+use App\Http\Requests\DefaultGlobalAiProviderRequest;
+use App\Http\Requests\ManageGlobalAiProviderRequest;
 use App\Http\Requests\ProviderSpecificationRules;
+use App\Http\Requests\TestGlobalAiProviderConfigurationRequest;
 use App\Models\User;
 use HomeSide\AiAgents\AgentRegistry;
 use HomeSide\AiAgents\Models\AiGlobalSetting;
@@ -24,7 +27,6 @@ use HomeSide\AiAgents\Providers\AiProviderTester;
 use HomeSide\AiAgents\Providers\ImageGenerationProviderTester;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -130,7 +132,6 @@ final class AdminAiProviderController extends Controller
 
     public function update(UpdateGlobalAiProviderRequest $request, AiProvider $provider): RedirectResponse
     {
-        $this->authorize('manage', $provider);
 
         $data = UpdateGlobalAiProviderData::fromArray($request->validated());
 
@@ -159,9 +160,8 @@ final class AdminAiProviderController extends Controller
         return back();
     }
 
-    public function destroy(AiProvider $provider): RedirectResponse
+    public function destroy(ManageGlobalAiProviderRequest $request, AiProvider $provider): RedirectResponse
     {
-        $this->authorize('manage', $provider);
         $provider->delete();
 
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Proveedor IA global eliminado.']);
@@ -169,17 +169,15 @@ final class AdminAiProviderController extends Controller
         return back();
     }
 
-    public function test(AiProvider $provider, AiProviderTester $tester): JsonResponse
+    public function test(ManageGlobalAiProviderRequest $request, AiProvider $provider, AiProviderTester $tester): JsonResponse
     {
-        $this->authorize('manage', $provider);
 
         return response()->json($tester->testProvider($provider));
     }
 
-    public function markDefault(AiProvider $provider): RedirectResponse
+    public function markDefault(DefaultGlobalAiProviderRequest $request, AiProvider $provider): RedirectResponse
     {
-        $this->authorize('manage', $provider);
-        $module = request()->validate(['module' => ['sometimes', 'string', Rule::in(AiProviderModule::cases())]])['module'] ?? $provider->module;
+        $module = $request->validated()['module'] ?? $provider->module;
         $provider->markAsDefaultForModule($module);
 
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Proveedor marcado como predeterminado.']);
@@ -188,17 +186,13 @@ final class AdminAiProviderController extends Controller
     }
 
     public function testConfig(
+        TestGlobalAiProviderConfigurationRequest $request,
         AiProviderTester $tester,
         ImageGenerationProviderTester $imageTester,
     ): JsonResponse {
-        $module = AiProviderModule::tryFrom(request('module', ''));
+        $module = AiProviderModule::tryFrom($request->validated('module', ''));
 
-        $config = [
-            'type' => request('type'),
-            'base_url' => request('base_url'),
-            'model' => request('model'),
-            'api_key' => request('api_key'),
-        ];
+        $config = $request->configuration();
 
         if ($module === AiProviderModule::ImageGeneration) {
             return response()->json($imageTester->testConfig($config));

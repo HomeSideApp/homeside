@@ -4,12 +4,14 @@ namespace App\Http\Controllers\Web;
 
 use App\Actions\Recipes\PreviewJsonLdRecipeImport;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\PreviewCooklangRecipeRequest;
+use App\Http\Requests\PreviewJsonLdRecipeRequest;
+use App\Http\Requests\ReviewCooklangRecipeRequest;
 use App\Models\Product;
 use App\Models\RecipeCookware;
 use App\Services\Recipes\Import\CooklangRecipeImporter;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
@@ -21,12 +23,8 @@ final class RecipeImportController extends Controller
         return Inertia::render('recipes/Import');
     }
 
-    public function previewJsonLd(Request $request, PreviewJsonLdRecipeImport $import): JsonResponse
+    public function previewJsonLd(PreviewJsonLdRecipeRequest $request, PreviewJsonLdRecipeImport $import): JsonResponse
     {
-        $request->validate([
-            'url' => ['required', 'url', 'max:2048'],
-        ]);
-
         $url = $request->input('url');
         $outcome = $import->execute($url);
 
@@ -57,12 +55,8 @@ final class RecipeImportController extends Controller
         ]);
     }
 
-    public function previewCooklang(Request $request, CooklangRecipeImporter $importer): JsonResponse
+    public function previewCooklang(PreviewCooklangRecipeRequest $request, CooklangRecipeImporter $importer): JsonResponse
     {
-        $request->validate([
-            'cooklang' => 'required|string|min:10',
-        ]);
-
         $content = $request->input('cooklang');
         $result = $importer->import($content);
 
@@ -75,13 +69,9 @@ final class RecipeImportController extends Controller
         ]);
     }
 
-    public function review(Request $request): InertiaResponse|RedirectResponse
+    public function review(ReviewCooklangRecipeRequest $request): InertiaResponse|RedirectResponse
     {
         if ($request->isMethod('POST')) {
-            $request->validate([
-                'recipe' => 'required|json',
-            ]);
-
             $recipeData = json_decode($request->input('recipe'), true, 512, JSON_THROW_ON_ERROR);
             session(['import_recipe' => $recipeData]);
 

@@ -9,6 +9,8 @@ use App\Actions\Products\CreateProduct;
 use App\Ai\ImageGenerationService;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\PromotePersonalProductRequest;
+use App\Http\Requests\GenerateProductIconRequest;
+use App\Http\Requests\ViewPersonalProductRequest;
 use App\Models\Category;
 use App\Models\ListItem;
 use App\Models\Product;
@@ -52,9 +54,8 @@ class AdminPersonalProductController extends Controller
     /**
      * Show the promote form for a personal product.
      */
-    public function show(Product $product, ListIcons $listIcons): Response
+    public function show(ViewPersonalProductRequest $request, Product $product, ListIcons $listIcons): Response
     {
-        abort_unless($product->is_personal && $product->creator?->shares_personal_products, 404);
 
         return Inertia::render('admin/PersonalProducts/Promote', [
             'product' => $product->load('creator', 'category'),
@@ -71,12 +72,6 @@ class AdminPersonalProductController extends Controller
         Product $product,
         CreateProduct $action,
     ): RedirectResponse {
-        // IDOR check: ensure product is personal and shared
-        abort_unless(
-            $product->is_personal && $product->creator?->shares_personal_products,
-            403
-        );
-
         $globalProduct = $action->execute([
             'name' => $request->validated('name', $product->name),
             'category_id' => $request->validated('category_id') ?? $product->category_id,
@@ -108,12 +103,9 @@ class AdminPersonalProductController extends Controller
      *
      * Accepts a detailed prompt for better icon generation.
      */
-    public function generateIcon(Request $request, ImageGenerationService $imageService): JsonResponse
+    public function generateIcon(GenerateProductIconRequest $request, ImageGenerationService $imageService): JsonResponse
     {
-        $validated = $request->validate([
-            'prompt' => ['required', 'string', 'max:1000'],
-            'category' => ['nullable', 'string', 'max:255'],
-        ]);
+        $validated = $request->validated();
 
         try {
             $result = $imageService->generateProductIcon(

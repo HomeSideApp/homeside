@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\DeleteRecipeCollectionRequest;
 use App\Http\Requests\StoreRecipeCollectionRequest;
 use App\Http\Requests\UpdateRecipeCollectionRequest;
 use App\Http\Resources\Recipes\RecipeCollectionResource;
@@ -61,7 +62,6 @@ final class RecipeCollectionController extends Controller
         RecipeCollection $recipeCollection,
         ManageRecipeCollections $collections,
     ): RecipeCollectionResource {
-        $this->ensureOwner($request, $recipeCollection);
 
         return new RecipeCollectionResource(
             $collections->rename($recipeCollection, $request->validated('name')),
@@ -72,11 +72,10 @@ final class RecipeCollectionController extends Controller
      * Delete an owned recipe collection.
      */
     public function destroy(
-        Request $request,
+        DeleteRecipeCollectionRequest $request,
         RecipeCollection $recipeCollection,
         ManageRecipeCollections $collections,
     ): Response {
-        $this->ensureOwner($request, $recipeCollection);
         $collections->delete($recipeCollection);
 
         return response()->noContent();
@@ -85,8 +84,4 @@ final class RecipeCollectionController extends Controller
     /**
      * Ensure the collection belongs to the authenticated user.
      */
-    private function ensureOwner(Request $request, RecipeCollection $collection): void
-    {
-        abort_unless($collection->owner_id === $this->authenticatedUser($request)->id, 404);
-    }
 }

@@ -2,14 +2,20 @@
 
 namespace App\Http\Controllers\Web;
 
-use App\Support\HouseholdAccess;
 use App\Actions\Contacts\FindContactDuplicates;
 use App\Actions\Contacts\MarkFavoriteContacts;
 use App\Actions\Contacts\SaveLocalContact;
 use App\Actions\Contacts\UseRemoteContactFields;
 use App\Data\Contacts\ContactData;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\DeleteContactRequest;
+use App\Http\Requests\IndexContactsRequest;
+use App\Http\Requests\LookupContactsRequest;
+use App\Http\Requests\ManageContactRequest;
 use App\Http\Requests\SaveContactRequest;
+use App\Http\Requests\UpdateContactLabelsRequest;
+use App\Http\Requests\UseRemoteContactFieldsRequest;
+use App\Http\Requests\ViewContactRequest;
 use App\Http\Resources\Contacts\ContactResource;
 use App\Models\Contact;
 use App\Models\ContactLabel;
@@ -17,6 +23,7 @@ use App\Models\ContactRecord;
 use App\Models\ContactSource;
 use App\Models\Household;
 use App\Models\User;
+use App\Support\HouseholdAccess;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Query\Builder as QueryBuilder;
@@ -28,15 +35,13 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class ContactController extends Controller
 {
-    public function index(Request $request, MarkFavoriteContacts $favorites, FindContactDuplicates $duplicates): Response
+    public function index(IndexContactsRequest $request, MarkFavoriteContacts $favorites, FindContactDuplicates $duplicates): Response
     {
-        Gate::authorize('viewAny', Contact::class);
 
         $user = $this->authenticatedUser($request);
         [$search, $labelId] = $this->resolveFilters($request, $user);
@@ -68,17 +73,14 @@ class ContactController extends Controller
     /**
      * Render the household address book using the standard contacts table layout.
      *
-     * @param  Request  $request  Incoming web request carrying the search and label filters.
      * @param  Household  $household  Household whose shared contacts are listed.
      * @param  MarkFavoriteContacts  $favorites  Action marking favorite contacts for the viewer.
      * @return Response Inertia response for the household contacts page.
      */
-    public function householdIndex(Request $request, Household $household, MarkFavoriteContacts $favorites): Response
+    public function householdIndex(IndexContactsRequest $request, Household $household, MarkFavoriteContacts $favorites): Response
     {
-        Gate::authorize('viewAny', Contact::class);
 
         $user = $this->authenticatedUser($request);
-        abort_unless($household->isMember($user), 403);
         [$search, $labelId] = $this->resolveFilters($request, $user);
 
         return Inertia::render('households/contacts/Index', [
@@ -93,7 +95,6 @@ class ContactController extends Controller
     /**
      * Read the sanitized search term and the resolved label filter from the query string.
      *
-     * @param  Request  $request  Incoming web request.
      * @param  User  $user  Authenticated viewer scoping the label lookup.
      * @return array{0: string, 1: string|null} Search term and label id (when the label is visible).
      */
@@ -222,7 +223,6 @@ class ContactController extends Controller
     /**
      * Execute the contact listing query and serialize it for the page props.
      *
-     * @param  Request  $request  Incoming web request resolving the resource URLs.
      * @param  User  $user  Authenticated viewer whose favorites are marked.
      * @param  string  $search  Sanitized search term.
      * @param  string|null  $labelId  Optional label restricting the results.
@@ -263,14 +263,9 @@ class ContactController extends Controller
         return redirect()->route('contacts.index');
     }
 
-    public function lookup(Request $request): JsonResponse
+    public function lookup(LookupContactsRequest $request): JsonResponse
     {
-        Gate::authorize('viewAny', Contact::class);
-        $validated = $request->validate([
-            'q' => ['required', 'string', 'min:2', 'max:100'],
-            'scope' => ['nullable', 'uuid'],
-            'by' => ['nullable', 'in:name,email'],
-        ]);
+        $validated = $request->validated();
 
         $query = Contact::query()->visibleTo($this->authenticatedUser($request))
             ->when(isset($validated['scope']), fn ($query) => $query->where('household_id', $validated['scope']))
@@ -316,9 +311,8 @@ class ContactController extends Controller
         ]);
     }
 
-    public function show(Request $request, Contact $contact): Response
+    public function show(ViewContactRequest $request, Contact $contact): Response
     {
-        Gate::authorize('view', $contact);
 
         $user = $this->authenticatedUser($request);
         $contact->load([
@@ -352,9 +346,8 @@ class ContactController extends Controller
         ]);
     }
 
-    public function edit(Request $request, Contact $contact): Response
+    public function edit(ManageContactRequest $request, Contact $contact): Response
     {
-        Gate::authorize('update', $contact);
 
         $user = $this->authenticatedUser($request);
         $contact->load(['records' => fn ($records) => $records->orderBy('source_order')->orderBy('created_at')->orderBy('id'), 'labels' => fn (BelongsToMany $labels): BelongsToMany => $labels->visibleTo($user)->orderBy('name')]);
@@ -368,14 +361,10 @@ class ContactController extends Controller
         ]);
     }
 
-    public function updateLabels(Request $request, Contact $contact): RedirectResponse
+    public function updateLabels(UpdateContactLabelsRequest $request, Contact $contact): RedirectResponse
     {
-        Gate::authorize('update', $contact);
         $user = $this->authenticatedUser($request);
-        $validated = $request->validate([
-            'label_ids' => ['present', 'array', 'max:100'],
-            'label_ids.*' => ['uuid', 'distinct', Rule::exists('contact_labels', 'id')->where('user_id', $user->id)],
-        ]);
+        $validated = $request->validated();
         $selected = array_fill_keys($validated['label_ids'], true);
         $assigned = $contact->labels()->where('user_id', $user->id)->get();
         foreach ($assigned as $label) {
@@ -398,9 +387,8 @@ class ContactController extends Controller
         return back();
     }
 
-    public function avatar(Contact $contact): \Illuminate\Http\Response
+    public function avatar(Contact $contact, ViewContactRequest $request): \Illuminate\Http\Response
     {
-        Gate::authorize('view', $contact);
         $photo = DB::table('contact_record_photos')
             ->join('contact_records', 'contact_records.id', '=', 'contact_record_photos.contact_record_id')
             ->where('contact_records.contact_id', $contact->id)
@@ -414,14 +402,9 @@ class ContactController extends Controller
         ]);
     }
 
-    public function useRemoteFields(Request $request, Contact $contact, UseRemoteContactFields $action): RedirectResponse
+    public function useRemoteFields(UseRemoteContactFieldsRequest $request, Contact $contact, UseRemoteContactFields $action): RedirectResponse
     {
-        Gate::authorize('update', $contact);
-        $validated = $request->validate([
-            'record_id' => ['required', 'uuid'],
-            'fields' => ['required', 'array', 'min:1', 'max:16'],
-            'fields.*' => ['required', 'string', 'distinct', Rule::in(UseRemoteContactFields::FIELDS)],
-        ]);
+        $validated = $request->validated();
         $remote = ContactRecord::query()->where('contact_id', $contact->id)
             ->whereNotNull('contact_source_id')->findOrFail($validated['record_id']);
         $action->execute($contact, $remote, $validated['fields']);
@@ -436,9 +419,8 @@ class ContactController extends Controller
         return redirect()->route('contacts.show', $contact);
     }
 
-    public function destroy(Contact $contact): RedirectResponse
+    public function destroy(Contact $contact, DeleteContactRequest $request): RedirectResponse
     {
-        Gate::authorize('delete', $contact);
         $contact->delete();
 
         return redirect()->route('contacts.index');

@@ -4,6 +4,9 @@ namespace App\Http\Controllers\Web;
 
 use App\Actions\Economy\UploadEconomicDocument;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\DeleteEconomicDocumentRequest;
+use App\Http\Requests\UploadEconomicDocumentRequest;
+use App\Http\Requests\ViewEconomicDocumentRequest;
 use App\Http\Resources\Economy\EconomicDocumentResource;
 use App\Models\EconomicDocument;
 use App\Models\Household;
@@ -20,21 +23,12 @@ final class EconomicDocumentController extends Controller
     /**
      * Upload a new economic document.
      *
-     * @param  Request  $request  The incoming HTTP request.
      * @param  UploadEconomicDocument  $action  The action responsible for the operation.
      * @return JsonResponse The JSON response.
      */
-    public function store(Request $request, UploadEconomicDocument $action): JsonResponse
+    public function store(UploadEconomicDocumentRequest $request, UploadEconomicDocument $action): JsonResponse
     {
         $household = $this->resolveHousehold($request);
-
-        if ($household !== null) {
-            $this->authorize('view', $household);
-        }
-
-        $request->validate([
-            'file' => ['required', 'file', 'max:10240'],
-        ]);
 
         $document = $action->execute($request->file('file'), $household, $request->user());
 
@@ -46,15 +40,12 @@ final class EconomicDocumentController extends Controller
     /**
      * Delete an economic document.
      *
-     * @param  Request  $request  The incoming request containing the optional household route parameter.
      * @param  Household|null  $household  The routed household, when the route is household-scoped.
      * @param  EconomicDocument  $document  The economic document model instance.
      * @return JsonResponse The JSON response.
      */
-    public function destroy(Request $request, ?Household $household, EconomicDocument $document): JsonResponse
+    public function destroy(DeleteEconomicDocumentRequest $request, ?Household $household, EconomicDocument $document): JsonResponse
     {
-        $this->ensureRouteScope($request, $document->household_id);
-        $this->authorize('delete', $document);
         $document->delete();
 
         return response()->noContent();
@@ -63,15 +54,12 @@ final class EconomicDocumentController extends Controller
     /**
      * Download an economic document file.
      *
-     * @param  Request  $request  The incoming request containing the optional household route parameter.
      * @param  Household|null  $household  The routed household, when the route is household-scoped.
      * @param  EconomicDocument  $document  The economic document model instance.
      * @return StreamedResponse The HTTP response.
      */
-    public function file(Request $request, ?Household $household, EconomicDocument $document): StreamedResponse
+    public function file(ViewEconomicDocumentRequest $request, ?Household $household, EconomicDocument $document): StreamedResponse
     {
-        $this->ensureRouteScope($request, $document->household_id);
-        $this->authorize('view', $document);
 
         return Storage::disk($document->disk)
             ->download($document->path, $document->original_filename);
@@ -80,7 +68,6 @@ final class EconomicDocumentController extends Controller
     /**
      * Resolve the household from the route, if present.
      *
-     * @param  Request  $request  The incoming request containing the optional household route parameter.
      * @return Household|null The routed household, or null for a private economy route.
      */
     private function resolveHousehold(Request $request): ?Household
@@ -97,12 +84,7 @@ final class EconomicDocumentController extends Controller
     /**
      * Ensure that a document belongs to the household represented by the current route.
      *
-     * @param  Request  $request  The incoming request containing the optional household route parameter.
      * @param  string|null  $resourceHouseholdId  The household identifier stored on the document.
      * @return void This guard does not return a value.
      */
-    private function ensureRouteScope(Request $request, ?string $resourceHouseholdId): void
-    {
-        abort_unless($resourceHouseholdId === $this->resolveHousehold($request)?->id, 403);
-    }
 }

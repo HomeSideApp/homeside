@@ -9,11 +9,14 @@ use App\Actions\Households\UpdateModuleAiConfig;
 use App\Data\Households\CreateAiProviderData;
 use App\Data\Households\UpdateAiProviderData;
 use App\Data\Households\UpdateModuleAiConfigData;
-use App\Enums\AiProviderModule;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\DefaultHouseholdAiProviderRequest;
+use App\Http\Requests\ManageHouseholdAiProviderRequest;
 use App\Http\Requests\StoreAiProviderRequest;
+use App\Http\Requests\TestHouseholdAiProviderConfigurationRequest;
 use App\Http\Requests\UpdateAiProviderRequest;
 use App\Http\Requests\UpdateModuleAiConfigRequest;
+use App\Http\Requests\ViewHouseholdRequest;
 use App\Models\Household;
 use HomeSide\AiAgents\AgentRegistry;
 use HomeSide\AiAgents\Models\AiProvider;
@@ -21,16 +24,13 @@ use HomeSide\AiAgents\Models\ModuleAiConfiguration;
 use HomeSide\AiAgents\Providers\AiProviderTester;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
 final class AiProviderController extends Controller
 {
-    public function index(Household $household): Response
+    public function index(ViewHouseholdRequest $request, Household $household): Response
     {
-        $this->authorize('view', $household);
 
         $providers = $household->aiProviders()->get()->map(fn (AiProvider $p) => [
             'id' => $p->id,
@@ -117,9 +117,8 @@ final class AiProviderController extends Controller
         return back();
     }
 
-    public function destroy(Household $household, AiProvider $provider): RedirectResponse
+    public function destroy(ManageHouseholdAiProviderRequest $request, Household $household, AiProvider $provider): RedirectResponse
     {
-        $this->authorize('manage', $provider);
         $provider->delete();
 
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Proveedor IA eliminado.']);
@@ -127,17 +126,15 @@ final class AiProviderController extends Controller
         return back();
     }
 
-    public function test(Household $household, AiProvider $provider, AiProviderTester $tester): JsonResponse
+    public function test(ManageHouseholdAiProviderRequest $request, Household $household, AiProvider $provider, AiProviderTester $tester): JsonResponse
     {
-        $this->authorize('manage', $provider);
 
         return response()->json($tester->testProvider($provider));
     }
 
-    public function markDefault(Household $household, AiProvider $provider, MarkAiProviderDefault $action): RedirectResponse
+    public function markDefault(DefaultHouseholdAiProviderRequest $request, Household $household, AiProvider $provider, MarkAiProviderDefault $action): RedirectResponse
     {
-        $this->authorize('manage', $provider);
-        $module = request()->validate(['module' => ['sometimes', 'string', Rule::in(AiProviderModule::cases())]])['module'] ?? $provider->module;
+        $module = $request->validated()['module'] ?? $provider->module;
         $provider->markAsDefaultForModule($module);
 
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Proveedor marcado como predeterminado.']);
@@ -147,7 +144,6 @@ final class AiProviderController extends Controller
 
     public function updateModuleConfig(Household $household, UpdateModuleAiConfigRequest $request, UpdateModuleAiConfig $action): RedirectResponse
     {
-        $this->authorize('manage', $household);
 
         $data = UpdateModuleAiConfigData::fromArray($request->validated());
         $action->execute($household, $data);
@@ -157,16 +153,10 @@ final class AiProviderController extends Controller
         return back();
     }
 
-    public function testConfig(Household $household, AiProviderTester $tester, Request $request): JsonResponse
+    public function testConfig(Household $household, AiProviderTester $tester, TestHouseholdAiProviderConfigurationRequest $request): JsonResponse
     {
-        $this->authorize('view', $household);
 
-        return response()->json($tester->testConfig([
-            'type' => $request->string('type', 'openai-compatible')->toString(),
-            'base_url' => $request->string('base_url')->toString(),
-            'model' => $request->string('model')->toString(),
-            'api_key' => $request->string('api_key')->toString(),
-        ]));
+        return response()->json($tester->testConfig($request->configuration()));
     }
 
     private function syncModuleConfigs(Household $household): void

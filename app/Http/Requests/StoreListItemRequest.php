@@ -2,10 +2,18 @@
 
 namespace App\Http\Requests;
 
+use App\Concerns\AuthorizesShoppingListRoute;
 use Illuminate\Foundation\Http\FormRequest;
 
 class StoreListItemRequest extends FormRequest
 {
+    use AuthorizesShoppingListRoute;
+
+    public function authorize(): bool
+    {
+        return $this->user()?->can('update', $this->shoppingList()) ?? false;
+    }
+
     /**
      * @return array<string, mixed>
      */

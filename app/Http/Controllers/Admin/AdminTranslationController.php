@@ -244,11 +244,7 @@ final class AdminTranslationController extends Controller
     {
         $data = GenerateTranslationsData::fromArray($request->validated());
 
-        $user = $request->user();
-
-        if ($user === null) {
-            abort(403);
-        }
+        $user = $this->authenticatedUser($request);
 
         try {
             $result = $action->execute($user, $data);

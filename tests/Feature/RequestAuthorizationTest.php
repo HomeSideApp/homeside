@@ -20,6 +20,51 @@ class RequestAuthorizationTest extends TestCase
 {
     use RefreshDatabase;
 
+    #[TestWith(['settings.ai-providers.update'])]
+    #[TestWith(['api.v1.me.ai-providers.update'])]
+    public function test_foreign_personal_provider_is_hidden_before_invalid_fields_are_validated(string $routeName): void
+    {
+        $user = User::factory()->create();
+        $provider = AiProvider::factory()->create(['household_id' => null, 'user_id' => User::factory()]);
+        $name = $provider->name;
+
+        $this->actingAs($user)->putJson(route($routeName, $provider), ['name' => []])->assertNotFound();
+
+        $this->assertSame($name, $provider->refresh()->name);
+    }
+
+    #[TestWith(['households.ai-providers.update'])]
+    #[TestWith(['api.v1.households.ai-providers.update'])]
+    public function test_household_provider_rejects_another_route_household_before_validating_fields(string $routeName): void
+    {
+        $user = User::factory()->create();
+        $household = Household::factory()->create(['created_by' => $user->id]);
+        HouseholdMember::factory()->create(['household_id' => $household->id, 'user_id' => $user->id, 'role' => HouseholdRole::Admin]);
+        $other = Household::factory()->create(['created_by' => $user->id]);
+        HouseholdMember::factory()->create(['household_id' => $other->id, 'user_id' => $user->id, 'role' => HouseholdRole::Admin]);
+        $provider = AiProvider::factory()->create(['household_id' => $other->id, 'user_id' => null]);
+        $name = $provider->name;
+
+        $this->actingAs($user)->putJson(route($routeName, [$household, $provider]), ['name' => []])->assertNotFound();
+
+        $this->assertSame($name, $provider->refresh()->name);
+    }
+
+    #[TestWith(['contacts.update'])]
+    #[TestWith(['api.v1.contacts.update'])]
+    public function test_foreign_contact_is_forbidden_before_invalid_fields_are_validated(string $routeName): void
+    {
+        $this->seed(RolesAndPermissionsSeeder::class);
+        $user = User::factory()->create();
+        $user->assignRole('user');
+        $contact = Contact::create(['user_id' => User::factory()->create()->id, 'type' => 'person', 'display_name' => 'Private']);
+        $name = $contact->display_name;
+
+        $this->actingAs($user)->putJson(route($routeName, $contact), ['display_name' => []])->assertForbidden();
+
+        $this->assertSame($name, $contact->refresh()->display_name);
+    }
+
     #[TestWith([['roles' => []]])]
     #[TestWith([['can_create_households' => 'invalid']])]
     public function test_user_data_editor_cannot_submit_administrative_fields_even_when_invalid(array $fields): void

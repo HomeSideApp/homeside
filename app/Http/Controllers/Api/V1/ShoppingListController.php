@@ -9,13 +9,15 @@ use App\Actions\ShoppingLists\UpdateShoppingList;
 use App\Data\ShoppingLists\CreateShoppingListData;
 use App\Data\ShoppingLists\UpdateShoppingListData;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\DeleteShoppingListRequest;
+use App\Http\Requests\IndexHouseholdShoppingListsRequest;
 use App\Http\Requests\StoreListRequest;
 use App\Http\Requests\UpdateListRequest;
+use App\Http\Requests\ViewShoppingListRequest;
 use App\Http\Resources\ShoppingLists\ShoppingListResource;
 use App\Models\Household;
 use App\Models\ShoppingList;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
 
@@ -30,15 +32,9 @@ final class ShoppingListController extends Controller
     /**
      * List the shopping lists of the given household.
      */
-    public function index(Household $household, Request $request): AnonymousResourceCollection
+    public function index(Household $household, IndexHouseholdShoppingListsRequest $request): AnonymousResourceCollection
     {
-        abort_unless($this->authenticatedUser($request)->households_enabled, 403);
-        $this->authorize('view', $household);
-        $validated = $request->validate([
-            'search' => ['sometimes', 'string', 'max:100'],
-            'page' => ['sometimes', 'integer', 'min:1'],
-            'perPage' => ['sometimes', 'integer', 'between:1,100'],
-        ]);
+        $validated = $request->validated();
         $query = ShoppingList::query()
             ->with('household:id,name')
             ->where('household_id', $household->id);
@@ -57,9 +53,8 @@ final class ShoppingListController extends Controller
     /**
      * Return the given shopping list.
      */
-    public function show(Household $household, ShoppingList $list, GetShoppingList $action, Request $request): ShoppingListResource
+    public function show(Household $household, ShoppingList $list, GetShoppingList $action, ViewShoppingListRequest $request): ShoppingListResource
     {
-        $this->authorize('view', $list);
         $data = $action->execute($list, $this->authenticatedUser($request)->id);
 
         return new ShoppingListResource($data['list']);
@@ -70,8 +65,6 @@ final class ShoppingListController extends Controller
      */
     public function store(StoreListRequest $request, Household $household, CreateShoppingList $action): JsonResponse
     {
-        abort_unless($this->authenticatedUser($request)->households_enabled, 403);
-        $this->authorize('view', $household);
         $data = CreateShoppingListData::fromArray($request->validated());
         $list = $action->execute($data, $this->authenticatedUser($request), $household);
 
@@ -85,7 +78,6 @@ final class ShoppingListController extends Controller
      */
     public function update(UpdateListRequest $request, Household $household, ShoppingList $list, UpdateShoppingList $action): ShoppingListResource
     {
-        $this->authorize('manage', $list);
         $data = UpdateShoppingListData::fromArray($request->validated());
         $list = $action->execute($list, $data);
 
@@ -95,9 +87,8 @@ final class ShoppingListController extends Controller
     /**
      * Delete the given shopping list.
      */
-    public function destroy(Household $household, ShoppingList $list, DeleteShoppingList $action): Response
+    public function destroy(Household $household, ShoppingList $list, DeleteShoppingList $action, DeleteShoppingListRequest $request): Response
     {
-        $this->authorize('delete', $list);
         $action->execute($list);
 
         return response()->noContent();

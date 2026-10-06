@@ -6,10 +6,12 @@ use App\Actions\Recipes\ListHouseholdRecipes;
 use App\Actions\Recipes\ShareRecipe;
 use App\Actions\Recipes\UnshareRecipe;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\IndexHouseholdRecipesRequest;
+use App\Http\Requests\ShareHouseholdRecipeRequest;
+use App\Http\Requests\UnshareHouseholdRecipeRequest;
 use App\Models\Household;
 use App\Models\Recipe;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -23,10 +25,9 @@ final class HouseholdRecipeController extends Controller
      *
      * @param  Household  $household  The household model instance.
      * @param  ListHouseholdRecipes  $action  The action responsible for the operation.
-     * @param  Request  $request  The incoming HTTP request.
      * @return Response The HTTP response.
      */
-    public function index(Household $household, ListHouseholdRecipes $action, Request $request): Response
+    public function index(Household $household, ListHouseholdRecipes $action, IndexHouseholdRecipesRequest $request): Response
     {
         $filters = $request->only(['search']);
 
@@ -37,14 +38,14 @@ final class HouseholdRecipeController extends Controller
         ]);
     }
 
-    public function share(Household $household, Recipe $recipe, ShareRecipe $action, Request $request): RedirectResponse
+    public function share(Household $household, Recipe $recipe, ShareRecipe $action, ShareHouseholdRecipeRequest $request): RedirectResponse
     {
         $action->execute($recipe, $household, $this->authenticatedUser($request));
 
         return back()->with('toast', ['type' => 'success', 'message' => 'Receta compartida con el hogar.']);
     }
 
-    public function unshare(Household $household, Recipe $recipe, UnshareRecipe $action, Request $request): RedirectResponse
+    public function unshare(Household $household, Recipe $recipe, UnshareRecipe $action, UnshareHouseholdRecipeRequest $request): RedirectResponse
     {
         $action->execute($recipe, $household, $this->authenticatedUser($request));
 

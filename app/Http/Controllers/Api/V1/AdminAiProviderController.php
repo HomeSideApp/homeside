@@ -3,10 +3,14 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Data\Admin\CreateGlobalAiProviderData;
-use App\Enums\AiProviderModule;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StoreGlobalAiProviderRequest;
 use App\Http\Requests\Admin\UpdateGlobalAiProviderRequest;
+use App\Http\Requests\DefaultGlobalAiProviderRequest;
+use App\Http\Requests\IndexGlobalAiProvidersRequest;
+use App\Http\Requests\ManageGlobalAiProviderRequest;
+use App\Http\Requests\TestGlobalAiProviderConfigurationRequest;
+use App\Http\Requests\UpdateGlobalModulePromptApiRequest;
 use App\Http\Resources\Households\AiProviderResource;
 use HomeSide\AiAgents\AgentRegistry;
 use HomeSide\AiAgents\Enums\AiDriver;
@@ -15,18 +19,13 @@ use HomeSide\AiAgents\Models\AiProvider;
 use HomeSide\AiAgents\Models\AiProviderModel;
 use HomeSide\AiAgents\Providers\AiProviderTester;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 use Illuminate\Http\Response;
-use Illuminate\Validation\Rule;
 
 final class AdminAiProviderController extends Controller
 {
-    public function index(Request $request): JsonResponse
+    public function index(IndexGlobalAiProvidersRequest $request): JsonResponse
     {
-        $validated = $request->validate([
-            'page' => ['sometimes', 'integer', 'min:1'],
-            'perPage' => ['sometimes', 'integer', 'between:1,100'],
-        ]);
+        $validated = $request->validated();
         $providers = AiProvider::query()->global()->orderBy('name')->orderBy('id')
             ->paginate($validated['perPage'] ?? 15)->withQueryString();
 
@@ -51,16 +50,14 @@ final class AdminAiProviderController extends Controller
         return AiProviderResource::make($provider)->response()->setStatusCode(201);
     }
 
-    public function show(AiProvider $provider): AiProviderResource
+    public function show(ManageGlobalAiProviderRequest $request, AiProvider $provider): AiProviderResource
     {
-        $this->ensureGlobal($provider);
 
         return new AiProviderResource($provider);
     }
 
     public function update(UpdateGlobalAiProviderRequest $request, AiProvider $provider): AiProviderResource
     {
-        $this->ensureGlobal($provider);
         $validated = $request->validated();
         $updates = collect($validated)
             ->only(['name', 'base_url', 'model', 'module', 'enabled', 'configuration', 'privacy_level', 'fallback_policy'])
@@ -86,35 +83,29 @@ final class AdminAiProviderController extends Controller
         return new AiProviderResource($provider->fresh());
     }
 
-    public function destroy(AiProvider $provider): Response
+    public function destroy(ManageGlobalAiProviderRequest $request, AiProvider $provider): Response
     {
-        $this->ensureGlobal($provider);
         $provider->delete();
 
         return response()->noContent();
     }
 
-    public function testConfig(Request $request, AiProviderTester $tester): JsonResponse
+    public function testConfig(TestGlobalAiProviderConfigurationRequest $request, AiProviderTester $tester): JsonResponse
     {
-        $validated = $request->validate([
-            'type' => ['required', 'string'], 'base_url' => ['required', 'url'],
-            'model' => ['required', 'string'], 'api_key' => ['required', 'string'],
-        ]);
+        $validated = $request->validated();
 
-        return response()->json(['data' => $tester->testConfig($validated)]);
+        return response()->json(['data' => $tester->testConfig($request->configuration())]);
     }
 
-    public function test(AiProvider $provider, AiProviderTester $tester): JsonResponse
+    public function test(ManageGlobalAiProviderRequest $request, AiProvider $provider, AiProviderTester $tester): JsonResponse
     {
-        $this->ensureGlobal($provider);
 
         return response()->json(['data' => $tester->testProvider($provider)]);
     }
 
-    public function markDefault(Request $request, AiProvider $provider): AiProviderResource
+    public function markDefault(DefaultGlobalAiProviderRequest $request, AiProvider $provider): AiProviderResource
     {
-        $this->ensureGlobal($provider);
-        $module = $request->validate(['module' => ['sometimes', 'string', Rule::in(AiProviderModule::cases())]])['module'] ?? $provider->module;
+        $module = $request->validated()['module'] ?? $provider->module;
         $provider->markAsDefaultForModule($module);
 
         return new AiProviderResource($provider->fresh());
@@ -142,17 +133,11 @@ final class AdminAiProviderController extends Controller
         ])]);
     }
 
-    public function updatePrompt(Request $request, string $module): JsonResponse
+    public function updatePrompt(UpdateGlobalModulePromptApiRequest $request, string $module): JsonResponse
     {
-        abort_unless(in_array($module, array_column(AiProviderModule::cases(), 'value'), true), 404);
-        $validated = $request->validate(['extra_prompt' => ['nullable', 'string', 'max:20000']]);
+        $validated = $request->validated();
         $setting = AiGlobalSetting::updateOrCreate(['module' => $module], ['extra_prompt' => $validated['extra_prompt'] ?? null]);
 
         return response()->json(['data' => ['module' => $module, 'extra_prompt' => $setting->extra_prompt]]);
-    }
-
-    private function ensureGlobal(AiProvider $provider): void
-    {
-        abort_unless($provider->isGlobal(), 404);
     }
 }

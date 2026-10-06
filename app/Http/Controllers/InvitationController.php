@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\AcceptInvitationRequest;
+use App\Http\Requests\ViewInvitationRequest;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Hash;
@@ -21,12 +22,8 @@ class InvitationController extends Controller
      * @param  User  $user  The authenticated user.
      * @return Response The HTTP response.
      */
-    public function show(User $user): Response
+    public function show(ViewInvitationRequest $request, User $user): Response
     {
-        if ($user->email_verified_at !== null) {
-            abort(404, __('app.errors.invitation_invalid'));
-        }
-
         return Inertia::render('auth/SetPassword', [
             'token' => $user->getRouteKey(),
             'email' => $user->email,
@@ -45,13 +42,7 @@ class InvitationController extends Controller
     {
         $validated = $request->validated();
 
-        $user = User::where('id', $validated['token'])
-            ->whereNull('email_verified_at')
-            ->first();
-
-        if (! $user) {
-            abort(404, __('app.errors.invitation_invalid'));
-        }
+        $user = $request->invitedUser();
 
         $user->update(array_filter([
             'password' => Hash::make($validated['password']),

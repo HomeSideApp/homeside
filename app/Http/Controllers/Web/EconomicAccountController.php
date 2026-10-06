@@ -10,8 +10,14 @@ use App\Actions\Economy\ListEconomicTransactions;
 use App\Actions\Economy\UpdateEconomicAccount;
 use App\Data\Economy\EconomicAccountData;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\ArchiveEconomicAccountRequest;
+use App\Http\Requests\CreateEconomicAccountFormRequest;
+use App\Http\Requests\DeleteEconomicAccountRequest;
+use App\Http\Requests\IndexEconomicAccountsRequest;
+use App\Http\Requests\ManageEconomicAccountRequest;
 use App\Http\Requests\StoreEconomicAccountRequest;
 use App\Http\Requests\UpdateEconomicAccountRequest;
+use App\Http\Requests\ViewEconomicAccountRequest;
 use App\Http\Resources\Economy\EconomicAccountResource;
 use App\Http\Resources\Economy\EconomicTransactionResource;
 use App\Http\Resources\Economy\PaymentMethodResource;
@@ -34,14 +40,12 @@ final class EconomicAccountController extends Controller
     /**
      * List the authenticated user's economic accounts with their computed balances.
      *
-     * @param  Request  $request  The incoming HTTP request, optionally containing search filters.
      * @param  GetAccountBalances  $balances  The action that resolves the account balances in one query.
      * @return Response The Inertia accounts list response.
      */
-    public function index(Request $request, GetAccountBalances $balances): Response
+    public function index(IndexEconomicAccountsRequest $request, GetAccountBalances $balances): Response
     {
         $user = $this->authenticatedUser($request);
-        $this->authorize('viewAny', EconomicAccount::class);
 
         $query = EconomicAccount::query()
             ->ownedBy($user->id)
@@ -83,13 +87,11 @@ final class EconomicAccountController extends Controller
     /**
      * Show the account creation form.
      *
-     * @param  Request  $request  The incoming HTTP request.
      * @return Response The Inertia account creation response.
      */
-    public function create(Request $request): Response
+    public function create(CreateEconomicAccountFormRequest $request): Response
     {
         $user = $this->authenticatedUser($request);
-        $this->authorize('create', EconomicAccount::class);
 
         return Inertia::render('economy/Accounts/Create', [
             'paymentMethods' => $this->availablePaymentMethods($request),
@@ -117,19 +119,17 @@ final class EconomicAccountController extends Controller
     /**
      * Display an account together with the transactions assigned to it.
      *
-     * @param  Request  $request  The incoming HTTP request.
      * @param  EconomicAccount  $account  The routed account model instance.
      * @param  GetAccountBalances  $balances  The action that resolves the account balance.
      * @param  ListEconomicTransactions  $transactions  The action that lists the account movements.
      * @return Response The Inertia account detail response.
      */
     public function show(
-        Request $request,
+        ViewEconomicAccountRequest $request,
         EconomicAccount $account,
         GetAccountBalances $balances,
         ListEconomicTransactions $transactions,
     ): Response {
-        $this->authorize('view', $account);
 
         $user = $this->authenticatedUser($request);
         $resolvedBalances = $balances->execute($user, collect([$account]));
@@ -151,13 +151,11 @@ final class EconomicAccountController extends Controller
     /**
      * Show the account editing form.
      *
-     * @param  Request  $request  The incoming HTTP request.
      * @param  EconomicAccount  $account  The routed account model instance.
      * @return Response The Inertia account edit response.
      */
-    public function edit(Request $request, EconomicAccount $account): Response
+    public function edit(ManageEconomicAccountRequest $request, EconomicAccount $account): Response
     {
-        $this->authorize('update', $account);
         $user = $this->authenticatedUser($request);
 
         return Inertia::render('economy/Accounts/Edit', [
@@ -188,14 +186,12 @@ final class EconomicAccountController extends Controller
     /**
      * Toggle the archived state of an account.
      *
-     * @param  Request  $request  The incoming HTTP request carrying the desired archived flag.
      * @param  EconomicAccount  $account  The routed account model instance.
      * @param  ArchiveEconomicAccount  $action  The action used to toggle the archived state.
      * @return RedirectResponse The redirect response back to the accounts list.
      */
-    public function archive(Request $request, EconomicAccount $account, ArchiveEconomicAccount $action): RedirectResponse
+    public function archive(ArchiveEconomicAccountRequest $request, EconomicAccount $account, ArchiveEconomicAccount $action): RedirectResponse
     {
-        $this->authorize('archive', $account);
         $archived = filter_var($request->input('archived', true), FILTER_VALIDATE_BOOL);
         $action->execute($account, $archived);
 
@@ -216,9 +212,8 @@ final class EconomicAccountController extends Controller
      * @param  DeleteEconomicAccount  $action  The action used to delete the account.
      * @return RedirectResponse The redirect response back to the accounts list.
      */
-    public function destroy(EconomicAccount $account, DeleteEconomicAccount $action): RedirectResponse
+    public function destroy(EconomicAccount $account, DeleteEconomicAccount $action, DeleteEconomicAccountRequest $request): RedirectResponse
     {
-        $this->authorize('delete', $account);
         $action->execute($account);
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('app.toast.account_deleted')]);
@@ -229,7 +224,6 @@ final class EconomicAccountController extends Controller
     /**
      * Resolve the payment methods available to the authenticated user.
      *
-     * @param  Request  $request  The incoming HTTP request.
      * @return array<int, array<string, mixed>> The serialized active payment methods.
      */
     private function availablePaymentMethods(Request $request): array

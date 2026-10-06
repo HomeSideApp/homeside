@@ -20,11 +20,16 @@ use App\Data\Households\CreateInviteLinkData;
 use App\Data\Households\InviteMemberData;
 use App\Data\Households\UpdateHouseholdSettingsData;
 use App\Http\Controllers\Controller;
-use App\Http\Requests\AcceptInvitationRequest;
+use App\Http\Requests\AcceptHouseholdInvitationByTokenRequest;
 use App\Http\Requests\CreateHouseholdInviteLinkRequest;
+use App\Http\Requests\DeleteHouseholdRequest;
 use App\Http\Requests\InviteMemberRequest;
+use App\Http\Requests\LinkHouseholdMemberContactRequest;
+use App\Http\Requests\RemoveHouseholdMemberRequest;
+use App\Http\Requests\RevokeHouseholdInviteLinkRequest;
 use App\Http\Requests\StoreHouseholdRequest;
 use App\Http\Requests\UpdateHouseholdSettingsRequest;
+use App\Http\Requests\ViewHouseholdRequest;
 use App\Http\Resources\Households\HouseholdInvitationResource;
 use App\Http\Resources\Households\HouseholdInviteLinkResource;
 use App\Http\Resources\Households\HouseholdMemberResource;
@@ -37,9 +42,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Validation\Rule;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 /**
@@ -100,9 +103,8 @@ final class HouseholdController extends Controller
     /**
      * Return the given household.
      */
-    public function show(Household $household, GetHousehold $action): HouseholdResource
+    public function show(Household $household, GetHousehold $action, ViewHouseholdRequest $request): HouseholdResource
     {
-        $this->authorize('view', $household);
 
         return new HouseholdResource($action->execute($household));
     }
@@ -134,9 +136,8 @@ final class HouseholdController extends Controller
     /**
      * Delete the given household.
      */
-    public function destroy(Household $household, DeleteHousehold $action): Response
+    public function destroy(Household $household, DeleteHousehold $action, DeleteHouseholdRequest $request): Response
     {
-        $this->authorize('delete', $household);
         $action->execute($household);
 
         return response()->noContent();
@@ -147,7 +148,6 @@ final class HouseholdController extends Controller
      */
     public function invite(InviteMemberRequest $request, Household $household, InviteMember $action): JsonResponse
     {
-        $this->authorize('invite', $household);
         $data = InviteMemberData::fromArray($request->validated());
         $invitation = $action->execute($data, $household, $this->authenticatedUser($request));
 
@@ -160,7 +160,7 @@ final class HouseholdController extends Controller
     /**
      * Accept a household invitation.
      */
-    public function acceptInvitation(AcceptInvitationRequest $request, AcceptInvitation $action): HouseholdInvitationResource
+    public function acceptInvitation(AcceptHouseholdInvitationByTokenRequest $request, AcceptInvitation $action): HouseholdInvitationResource
     {
         $token = $request->validated('token');
         $invitation = HouseholdInvitation::query()->where('token', $token)->firstOrFail();
@@ -202,10 +202,8 @@ final class HouseholdController extends Controller
     /**
      * Remove a member from the given household.
      */
-    public function removeMember(Household $household, HouseholdMember $member, RemoveMember $action): Response
+    public function removeMember(Household $household, HouseholdMember $member, RemoveMember $action, RemoveHouseholdMemberRequest $request): Response
     {
-        abort_unless($member->household_id === $household->id, 404);
-        $this->authorize('removeMember', [$household, $member]);
         $action->execute($household, $member);
 
         return response()->noContent();
@@ -221,7 +219,6 @@ final class HouseholdController extends Controller
      */
     public function storeInviteLink(CreateHouseholdInviteLinkRequest $request, Household $household, CreateHouseholdInviteLink $action): JsonResponse
     {
-        $this->authorize('update', $household);
 
         $link = $action->execute(CreateInviteLinkData::fromArray($request->validated()), $household, $request->user());
 
@@ -236,10 +233,8 @@ final class HouseholdController extends Controller
      * @param  RevokeHouseholdInviteLink  $action  The action responsible for the operation.
      * @return Response The HTTP response.
      */
-    public function destroyInviteLink(Household $household, HouseholdInviteLink $link, RevokeHouseholdInviteLink $action): Response
+    public function destroyInviteLink(Household $household, HouseholdInviteLink $link, RevokeHouseholdInviteLink $action, RevokeHouseholdInviteLinkRequest $request): Response
     {
-        $this->authorize('update', $household);
-        abort_unless($link->household_id === $household->id, 404);
 
         $action->execute($link);
 
@@ -249,24 +244,16 @@ final class HouseholdController extends Controller
     /**
      * Link or unlink a household member with one of the viewer's contacts.
      *
-     * @param  Request  $request  The incoming request carrying the contact id.
      * @param  Household  $household  The household the member belongs to.
      * @param  HouseholdMember  $member  The member to relink.
      * @return JsonResponse The updated member payload.
      */
-    public function linkMemberContact(Request $request, Household $household, HouseholdMember $member): JsonResponse
+    public function linkMemberContact(LinkHouseholdMemberContactRequest $request, Household $household, HouseholdMember $member): JsonResponse
     {
-        $this->authorize('view', $household);
 
         $user = $this->authenticatedUser($request);
-        abort_unless($member->household_id === $household->id, 404);
-        abort_unless($household->isAdmin($user) || $member->user_id === $user->id, 403);
 
-        $validated = $request->validate([
-            'contact_id' => ['nullable', 'uuid', Rule::exists('contacts', 'id')->where(fn ($query) => $query
-                ->where('user_id', $user->id)
-                ->orWhereIn('household_id', DB::table('household_members')->where('user_id', $user->id)->select('household_id')))],
-        ]);
+        $validated = $request->validated();
 
         $member->update(['contact_id' => $validated['contact_id'] ?? null]);
 
@@ -276,9 +263,8 @@ final class HouseholdController extends Controller
     /**
      * Serve the household image.
      */
-    public function image(Household $household): BinaryFileResponse
+    public function image(Household $household, ViewHouseholdRequest $request): BinaryFileResponse
     {
-        $this->authorize('view', $household);
 
         if (! $household->image_url) {
             abort(404);

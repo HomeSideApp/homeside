@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Web;
 
 use App\Actions\Households\GetHouseholdSettings;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\ManageHouseholdRequest;
+use App\Http\Requests\ViewHouseholdRequest;
 use App\Models\Household;
 use HomeSide\AiAgents\AgentRegistry;
 use HomeSide\AiAgents\Models\AiGlobalSetting;
@@ -31,9 +33,8 @@ final class CatalogController extends Controller
     /**
      * Search the models.dev catalog from the household AI providers page.
      */
-    public function searchProviders(Household $household, Request $request): Response
+    public function searchProviders(Household $household, ViewHouseholdRequest $request): Response
     {
-        $this->authorize('view', $household);
 
         $term = $request->string('q')->toString();
         $providerSlug = $request->string('provider_slug')->toString();
@@ -262,9 +263,8 @@ final class CatalogController extends Controller
     /**
      * Search the models.dev catalog from the household wizard page.
      */
-    public function searchProvidersWizard(Household $household, Request $request): Response
+    public function searchProvidersWizard(Household $household, ManageHouseholdRequest $request): Response
     {
-        $this->authorize('update', $household);
 
         $term = $request->string('q')->toString();
         $providerSlug = $request->string('provider_slug')->toString();
@@ -306,9 +306,8 @@ final class CatalogController extends Controller
     /**
      * Search models for a specific provider slug.
      */
-    public function searchModels(Household $household, Request $request): Response
+    public function searchModels(Household $household, ViewHouseholdRequest $request): Response
     {
-        $this->authorize('view', $household);
 
         $providerSlug = $request->string('provider_slug')->toString();
         $term = $request->string('q')->toString();

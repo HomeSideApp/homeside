@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Models\Household;
+use App\Support\HouseholdAccess;
 use Illuminate\Foundation\Http\FormRequest;
 
 class StoreEconomicImportRequest extends FormRequest
@@ -20,7 +21,7 @@ class StoreEconomicImportRequest extends FormRequest
             return $this->user() !== null;
         }
 
-        return $this->user()?->isMemberOf($household) ?? false;
+        return $this->user() !== null && app(HouseholdAccess::class)->allows($this->user(), $household, 'economy', true);
     }
 
     /**

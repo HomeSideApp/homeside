@@ -10,12 +10,14 @@ use App\Actions\Recipes\UpdateRecipe;
 use App\Data\Recipes\CreateRecipeData;
 use App\Data\Recipes\RecipeData;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\DeleteRecipeRequest;
+use App\Http\Requests\IndexRecipesRequest;
 use App\Http\Requests\StoreRecipeApiRequest;
 use App\Http\Requests\UpdateRecipeApiRequest;
+use App\Http\Requests\ViewRecipeRequest;
 use App\Http\Resources\Recipes\RecipeResource;
 use App\Models\Recipe;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
 
@@ -30,20 +32,10 @@ final class RecipeController extends Controller
     /**
      * List recipes visible to the authenticated user.
      */
-    public function index(ListRecipes $action, Request $request): AnonymousResourceCollection
+    public function index(ListRecipes $action, IndexRecipesRequest $request): AnonymousResourceCollection
     {
         $user = $this->authenticatedUser($request);
-        $filters = $request->validate([
-            'search' => ['sometimes', 'string', 'max:100'],
-            'tag' => ['sometimes', 'string', 'max:100'],
-            'collection' => ['sometimes', 'uuid'],
-            'difficulty' => ['sometimes', 'string', 'max:50'],
-            'cuisine' => ['sometimes', 'string', 'max:100'],
-            'page' => ['sometimes', 'integer', 'min:1'],
-            'perPage' => ['sometimes', 'integer', 'between:1,100'],
-            'sort' => ['sometimes', 'in:name,created_at,updated_at'],
-            'direction' => ['sometimes', 'in:asc,desc'],
-        ]);
+        $filters = $request->validated();
 
         $recipes = $action->execute($user, $filters);
 
@@ -68,9 +60,8 @@ final class RecipeController extends Controller
     /**
      * Return the given recipe.
      */
-    public function show(Recipe $recipe, GetRecipe $action, Request $request): RecipeResource
+    public function show(Recipe $recipe, GetRecipe $action, ViewRecipeRequest $request): RecipeResource
     {
-        abort_unless($this->authenticatedUser($request)->can('view', $recipe), 403);
 
         $result = $action->execute($recipe, $this->authenticatedUser($request));
 
@@ -82,7 +73,6 @@ final class RecipeController extends Controller
      */
     public function update(UpdateRecipeApiRequest $request, Recipe $recipe, UpdateRecipe $action): JsonResponse
     {
-        abort_unless($this->authenticatedUser($request)->can('update', $recipe), 403);
 
         $data = RecipeData::fromArray(array_merge($request->validated(), ['id' => $recipe->id]));
         $recipe = $action->execute($recipe, $data);
@@ -95,11 +85,10 @@ final class RecipeController extends Controller
     /**
      * Delete the given recipe.
      */
-    public function destroy(Recipe $recipe, DeleteRecipe $action, Request $request): Response
+    public function destroy(Recipe $recipe, DeleteRecipe $action, DeleteRecipeRequest $request): Response
     {
-        abort_unless($this->authenticatedUser($request)->can('delete', $recipe), 403);
 
-        $action->execute($recipe, $this->authenticatedUser($request));
+        $action->execute($recipe);
 
         return response()->noContent();
     }

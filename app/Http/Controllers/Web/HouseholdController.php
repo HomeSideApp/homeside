@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers\Web;
 
-use App\Support\HouseholdAccess;
 use App\Actions\Economy\GetAccountBalances;
 use App\Actions\Economy\GetHouseholdEconomyOverview;
 use App\Actions\Economy\GetHouseholdsComparison;
@@ -33,9 +32,15 @@ use App\Enums\EconomicImportStatus;
 use App\Enums\HouseholdModule;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\CreateHouseholdInviteLinkRequest;
+use App\Http\Requests\DeleteHouseholdRequest;
 use App\Http\Requests\InviteMemberRequest;
+use App\Http\Requests\LinkHouseholdMemberContactRequest;
+use App\Http\Requests\ManageHouseholdRequest;
+use App\Http\Requests\RemoveHouseholdMemberRequest;
+use App\Http\Requests\RevokeHouseholdInviteLinkRequest;
 use App\Http\Requests\StoreHouseholdRequest;
 use App\Http\Requests\UpdateHouseholdSettingsRequest;
+use App\Http\Requests\ViewHouseholdRequest;
 use App\Http\Resources\Economy\EconomicAccountResource;
 use App\Http\Resources\Economy\EconomicTransactionResource;
 use App\Http\Resources\Households\HouseholdInvitationResource;
@@ -48,12 +53,11 @@ use App\Models\HouseholdInvitation;
 use App\Models\HouseholdInviteLink;
 use App\Models\HouseholdMember;
 use App\Models\User;
+use App\Support\HouseholdAccess;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Config;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
-use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -72,7 +76,6 @@ final class HouseholdController extends Controller
      *
      * @param  ListHouseholds  $action  The action responsible for the operation.
      * @param  ListPendingInvitations  $pendingAction  The pendingAction value.
-     * @param  Request  $request  The incoming HTTP request.
      * @return Response The HTTP response.
      */
     public function select(ListHouseholds $action, ListPendingInvitations $pendingAction, Request $request): Response
@@ -91,7 +94,6 @@ final class HouseholdController extends Controller
      * List the user's households.
      *
      * @param  ListHouseholds  $action  The action responsible for the operation.
-     * @param  Request  $request  The incoming HTTP request.
      * @return Response The HTTP response.
      */
     public function index(ListHouseholds $action, Request $request): Response
@@ -141,7 +143,6 @@ final class HouseholdController extends Controller
      * The dashboard lives at a single URL: the active household is resolved server-side instead of
      * being encoded in the path, so switching household no longer means switching dashboards.
      *
-     * @param  Request  $request  The incoming HTTP request.
      * @param  GetHouseholdDashboard  $dashboard  The dashboard summary action.
      * @param  GetHouseholdEconomyOverview  $householdEconomy  The household economy overview action.
      * @param  GetPersonalEconomyOverview  $personalEconomy  The personal economy overview action.
@@ -469,9 +470,8 @@ final class HouseholdController extends Controller
      * @param  GetHousehold  $action  The action responsible for the operation.
      * @return Response The HTTP response.
      */
-    public function show(Household $household, GetHousehold $action): Response
+    public function show(Household $household, GetHousehold $action, ViewHouseholdRequest $request): Response
     {
-        $this->authorize('view', $household);
 
         $householdData = $action->execute($household);
 
@@ -494,9 +494,8 @@ final class HouseholdController extends Controller
      * @param  DeleteHousehold  $action  The action responsible for the operation.
      * @return RedirectResponse The HTTP response.
      */
-    public function destroy(Household $household, DeleteHousehold $action): RedirectResponse
+    public function destroy(Household $household, DeleteHousehold $action, DeleteHouseholdRequest $request): RedirectResponse
     {
-        $this->authorize('delete', $household);
         $action->execute($household);
 
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Hogar eliminado correctamente.']);
@@ -527,7 +526,6 @@ final class HouseholdController extends Controller
      *
      * @param  string  $token  The invitation token.
      * @param  AcceptInvitation  $action  The action responsible for the operation.
-     * @param  Request  $request  The incoming HTTP request.
      * @return RedirectResponse The HTTP response.
      */
     public function acceptInvitation(string $token, AcceptInvitation $action, Request $request): RedirectResponse
@@ -544,7 +542,6 @@ final class HouseholdController extends Controller
      *
      * @param  HouseholdInvitation  $invitation  The household invitation model instance.
      * @param  AcceptHouseholdInvitation  $action  The action responsible for the operation.
-     * @param  Request  $request  The incoming HTTP request.
      * @return RedirectResponse The HTTP response.
      */
     public function acceptFromList(HouseholdInvitation $invitation, AcceptHouseholdInvitation $action, Request $request): RedirectResponse
@@ -561,7 +558,6 @@ final class HouseholdController extends Controller
      *
      * @param  HouseholdInvitation  $invitation  The household invitation model instance.
      * @param  CancelInvitation  $action  The action responsible for the operation.
-     * @param  Request  $request  The incoming HTTP request.
      * @return RedirectResponse The HTTP response.
      */
     public function cancelInvitation(HouseholdInvitation $invitation, CancelInvitation $action, Request $request): RedirectResponse
@@ -578,7 +574,6 @@ final class HouseholdController extends Controller
      *
      * @param  Household  $household  The household model instance.
      * @param  SwitchActiveHousehold  $action  The action responsible for the operation.
-     * @param  Request  $request  The incoming HTTP request.
      * @return RedirectResponse The HTTP response.
      */
     public function switchActive(Household $household, SwitchActiveHousehold $action, Request $request): RedirectResponse
@@ -598,9 +593,8 @@ final class HouseholdController extends Controller
      * @param  RemoveMember  $action  The action responsible for the operation.
      * @return RedirectResponse The HTTP response.
      */
-    public function removeMember(Household $household, HouseholdMember $member, RemoveMember $action): RedirectResponse
+    public function removeMember(Household $household, HouseholdMember $member, RemoveMember $action, RemoveHouseholdMemberRequest $request): RedirectResponse
     {
-        $this->authorize('removeMember', [$household, $member]);
         $action->execute($household, $member);
 
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Miembro eliminado del hogar.']);
@@ -611,24 +605,16 @@ final class HouseholdController extends Controller
     /**
      * Link or unlink a household member with one of the viewer's contacts.
      *
-     * @param  Request  $request  The incoming HTTP request with the contact id.
      * @param  Household  $household  The household model instance.
      * @param  HouseholdMember  $member  The household member model instance.
      * @return RedirectResponse The HTTP response.
      */
-    public function linkMemberContact(Request $request, Household $household, HouseholdMember $member): RedirectResponse
+    public function linkMemberContact(LinkHouseholdMemberContactRequest $request, Household $household, HouseholdMember $member): RedirectResponse
     {
-        $this->authorize('view', $household);
 
         $user = $this->authenticatedUser($request);
-        abort_unless($member->household_id === $household->id, 404);
-        abort_unless($household->isAdmin($user) || $member->user_id === $user->id, 403);
 
-        $validated = $request->validate([
-            'contact_id' => ['nullable', 'uuid', Rule::exists('contacts', 'id')->where(fn ($query) => $query
-                ->where('user_id', $user->id)
-                ->orWhereIn('household_id', DB::table('household_members')->where('user_id', $user->id)->select('household_id')))],
-        ]);
+        $validated = $request->validated();
 
         $member->update(['contact_id' => $validated['contact_id'] ?? null]);
 
@@ -645,7 +631,6 @@ final class HouseholdController extends Controller
      */
     public function storeInviteLink(CreateHouseholdInviteLinkRequest $request, Household $household, CreateHouseholdInviteLink $action): RedirectResponse
     {
-        $this->authorize('update', $household);
 
         $action->execute(CreateInviteLinkData::fromArray($request->validated()), $household, $request->user());
 
@@ -660,10 +645,8 @@ final class HouseholdController extends Controller
      * @param  RevokeHouseholdInviteLink  $action  The action responsible for the operation.
      * @return RedirectResponse The HTTP response.
      */
-    public function destroyInviteLink(Household $household, HouseholdInviteLink $link, RevokeHouseholdInviteLink $action): RedirectResponse
+    public function destroyInviteLink(Household $household, HouseholdInviteLink $link, RevokeHouseholdInviteLink $action, RevokeHouseholdInviteLinkRequest $request): RedirectResponse
     {
-        $this->authorize('update', $household);
-        abort_unless($link->household_id === $household->id, 404);
 
         $action->execute($link);
 
@@ -677,9 +660,8 @@ final class HouseholdController extends Controller
      * @param  GetHouseholdSettings  $action  The action responsible for the operation.
      * @return Response The HTTP response.
      */
-    public function editSettings(Household $household, GetHouseholdSettings $action): Response
+    public function editSettings(Household $household, GetHouseholdSettings $action, ManageHouseholdRequest $request): Response
     {
-        $this->authorize('update', $household);
 
         return Inertia::render('households/settings/Edit', array_merge($action->execute($household), [
             'invite_links' => HouseholdInviteLinkResource::collection(
@@ -732,9 +714,8 @@ final class HouseholdController extends Controller
      * @param  GetHouseholdSettings  $settingsAction  The settingsAction value.
      * @return Response The HTTP response.
      */
-    public function wizard(Household $household, GetHouseholdSettings $settingsAction): Response
+    public function wizard(Household $household, GetHouseholdSettings $settingsAction, ManageHouseholdRequest $request): Response
     {
-        $this->authorize('update', $household);
 
         $settings = $settingsAction->execute($household);
 
@@ -752,9 +733,8 @@ final class HouseholdController extends Controller
      * @param  Household  $household  The household model instance.
      * @return RedirectResponse The HTTP response.
      */
-    public function wizardComplete(Household $household): RedirectResponse
+    public function wizardComplete(Household $household, ManageHouseholdRequest $request): RedirectResponse
     {
-        $this->authorize('update', $household);
 
         return to_route('dashboard');
     }

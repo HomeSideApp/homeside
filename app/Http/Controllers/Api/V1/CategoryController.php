@@ -10,6 +10,7 @@ use App\Data\Categories\UpdateCategoryData;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StoreCategoryRequest;
 use App\Http\Requests\Admin\UpdateCategoryRequest;
+use App\Http\Requests\IndexCategoriesRequest;
 use App\Http\Resources\Categories\CategoryResource;
 use App\Models\Category;
 use Illuminate\Http\JsonResponse;
@@ -25,16 +26,11 @@ final class CategoryController extends Controller
     /**
      * List categories with optional search.
      *
-     * @param  Request  $request  The incoming HTTP request, optionally containing a search term.
      * @return AnonymousResourceCollection The paginated collection of CategoryResource instances.
      */
-    public function index(Request $request): AnonymousResourceCollection
+    public function index(IndexCategoriesRequest $request): AnonymousResourceCollection
     {
-        $validated = $request->validate([
-            'search' => ['sometimes', 'string', 'max:100'],
-            'page' => ['sometimes', 'integer', 'min:1'],
-            'perPage' => ['sometimes', 'integer', 'between:1,100'],
-        ]);
+        $validated = $request->validated();
         $query = Category::withTranslationData()->withCount('products');
 
         if ($search = $validated['search'] ?? null) {

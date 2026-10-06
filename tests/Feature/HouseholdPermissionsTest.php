@@ -48,6 +48,37 @@ class HouseholdPermissionsTest extends TestCase
 {
     use RefreshDatabase;
 
+    #[TestWith(['recipes.update'])]
+    #[TestWith(['api.v1.recipes.update'])]
+    public function test_recipe_update_authorizes_before_validating_an_invalid_payload(string $routeName): void
+    {
+        $this->seed(RolesAndPermissionsSeeder::class);
+        [$user] = $this->household();
+        $user->assignRole('user');
+        $recipe = Recipe::factory()->create();
+        $name = $recipe->name;
+
+        $this->actingAs($user)->putJson(route($routeName, $recipe), ['name' => []])->assertForbidden();
+
+        $this->assertSame($name, $recipe->refresh()->name);
+    }
+
+    #[TestWith(['lists.items.update'])]
+    #[TestWith(['api.v1.lists.items.update'])]
+    public function test_list_item_update_rejects_a_foreign_item_before_validating_the_payload(string $routeName): void
+    {
+        $this->seed(RolesAndPermissionsSeeder::class);
+        [$user] = $this->household();
+        $user->assignRole('user');
+        $list = ShoppingList::factory()->create(['household_id' => null, 'created_by' => $user->id]);
+        $item = ListItem::factory()->create();
+        $quantity = $item->quantity;
+
+        $this->actingAs($user)->putJson(route($routeName, [$list, $item]), ['quantity' => 'invalid'])->assertNotFound();
+
+        $this->assertSame($quantity, $item->refresh()->quantity);
+    }
+
     #[TestWith(['households.show'])]
     #[TestWith(['households.settings.edit'])]
     public function test_household_forms_receive_access_profile_defaults_from_the_server(string $routeName): void
@@ -249,6 +280,20 @@ class HouseholdPermissionsTest extends TestCase
         $this->get(route('lists.create'))->assertOk();
     }
 
+    public function test_contact_destinations_require_write_access_and_source_destinations_require_administration(): void
+    {
+        $this->seed(RolesAndPermissionsSeeder::class);
+        $user = User::factory()->create();
+        $user->assignRole('user');
+        HouseholdMember::factory()->create(['user_id' => $user->id, 'access_profile' => 'reader']);
+        $writer = HouseholdMember::factory()->create(['user_id' => $user->id, 'role' => 'member']);
+        $this->actingAs($user)->get(route('contacts.index'))->assertOk()->assertInertia(fn ($page) => $page->has('households', 1)->where('households.0.id', $writer->household_id));
+        $this->get(route('contacts.sources.index'))->assertOk()->assertInertia(fn ($page) => $page->has('households', 0));
+        $writer->update(['role' => 'admin', 'access_profile' => 'admin', 'module_access' => array_replace($writer->permissions(), ['contacts' => 'none'])]);
+        $this->get(route('contacts.sources.index'))->assertOk()->assertInertia(fn ($page) => $page->has('households', 1)->where('households.0.id', $writer->household_id));
+        $this->get(route('contacts.index'))->assertOk()->assertInertia(fn ($page) => $page->has('households', 0));
+    }
+
     public function test_ai_proposal_rechecks_write_access_and_cannot_execute_twice_from_a_stale_copy(): void
     {
         $member = HouseholdMember::factory()->create();
@@ -278,6 +323,22 @@ class HouseholdPermissionsTest extends TestCase
             $this->assertSame(409, $exception->getStatusCode());
         }
         $this->assertSame(1, $list->items()->count());
+    }
+
+    public function test_shared_movements_cannot_publish_another_users_private_document(): void
+    {
+        $this->seed(RolesAndPermissionsSeeder::class);
+        [$owner, $household] = $this->household();
+        $member = HouseholdMember::factory()->create(['household_id' => $household->id]);
+        $document = EconomicDocument::factory()->forHousehold($household)->uploadedBy($owner)->create();
+        $this->assertFalse($member->user->can('view', $document));
+        $this->actingAs($member->user)->postJson(route('api.v1.households.economy.transactions.store', $household), [
+            'type' => 'expense', 'scope' => 'shared', 'title' => 'Invalid document', 'amount' => 12, 'currency' => 'EUR', 'source_document_id' => $document->id,
+        ])->assertUnprocessable()->assertJsonValidationErrors('source_document_id');
+        EconomicTransaction::factory()->forHousehold($household)->createdBy($owner)->shared()->create(['source_document_id' => $document->id]);
+        $reader = HouseholdMember::factory()->create(['household_id' => $household->id, 'access_profile' => 'reader']);
+        $this->assertTrue($reader->user->can('view', $document));
+        $this->actingAs($reader->user)->getJson(route('api.v1.households.economy.documents.show', [$household, $document]))->assertOk();
     }
 
     public function test_revocation_removes_cross_household_totals_and_ai_results(): void

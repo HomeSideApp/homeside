@@ -7,6 +7,8 @@ use App\Actions\Economy\DeletePaymentMethod;
 use App\Actions\Economy\UpdatePaymentMethod;
 use App\Data\Economy\PaymentMethodData;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\DeletePaymentMethodRequest;
+use App\Http\Requests\IndexPaymentMethodsRequest;
 use App\Http\Requests\StorePaymentMethodRequest;
 use App\Http\Requests\UpdatePaymentMethodRequest;
 use App\Http\Resources\Economy\PaymentMethodResource;
@@ -27,13 +29,11 @@ final class PaymentMethodController extends Controller
     /**
      * List the payment methods available to the authenticated user.
      *
-     * @param  Request  $request  The incoming HTTP request.
      * @return Response The Inertia payment method list response.
      */
-    public function index(Request $request): Response
+    public function index(IndexPaymentMethodsRequest $request): Response
     {
         $user = $this->authenticatedUser($request);
-        $this->authorize('viewAny', PaymentMethod::class);
 
         return Inertia::render('economy/PaymentMethods/Index', [
             'paymentMethods' => PaymentMethodResource::collection(
@@ -91,17 +91,15 @@ final class PaymentMethodController extends Controller
     /**
      * Delete a custom payment method.
      *
-     * @param  Request  $request  The incoming HTTP request.
      * @param  PaymentMethod  $paymentMethod  The routed payment method model instance.
      * @param  DeletePaymentMethod  $action  The action used to delete the payment method.
      * @return RedirectResponse The redirect response back to the payment method list.
      */
     public function destroy(
-        Request $request,
+        DeletePaymentMethodRequest $request,
         PaymentMethod $paymentMethod,
         DeletePaymentMethod $action,
     ): RedirectResponse {
-        $this->authorize('delete', $paymentMethod);
         $allowGlobal = $this->authenticatedUser($request)
             ->getPermissionRouteNames()
             ->contains('admin.payment-methods.destroy');

@@ -4,21 +4,16 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Enums\InvitationStatus;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\IndexHouseholdInvitationsRequest;
 use App\Http\Resources\Households\HouseholdInvitationResource;
 use App\Models\HouseholdInvitation;
-use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
-use Illuminate\Validation\Rule;
 
 final class HouseholdInvitationController extends Controller
 {
-    public function index(Request $request): AnonymousResourceCollection
+    public function index(IndexHouseholdInvitationsRequest $request): AnonymousResourceCollection
     {
-        $validated = $request->validate([
-            'status' => ['sometimes', Rule::enum(InvitationStatus::class)],
-            'page' => ['sometimes', 'integer', 'min:1'],
-            'perPage' => ['sometimes', 'integer', 'between:1,100'],
-        ]);
+        $validated = $request->validated();
 
         $status = $validated['status'] ?? InvitationStatus::Pending->value;
         $query = HouseholdInvitation::query()

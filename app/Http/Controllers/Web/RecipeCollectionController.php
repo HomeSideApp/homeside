@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\DeleteRecipeCollectionRequest;
 use App\Http\Requests\StoreRecipeCollectionRequest;
 use App\Http\Requests\UpdateRecipeCollectionRequest;
 use App\Models\RecipeCollection;
@@ -46,22 +47,15 @@ final class RecipeCollectionController extends Controller
         RecipeCollection $recipeCollection,
         ManageRecipeCollections $collections,
     ): RedirectResponse {
-        $this->ensureOwner($request, $recipeCollection);
         $collections->rename($recipeCollection, $request->validated('name'));
 
         return back()->with('toast', ['type' => 'success', 'message' => __('app.toast.collection_renamed')]);
     }
 
-    public function destroy(Request $request, RecipeCollection $recipeCollection, ManageRecipeCollections $collections): RedirectResponse
+    public function destroy(DeleteRecipeCollectionRequest $request, RecipeCollection $recipeCollection, ManageRecipeCollections $collections): RedirectResponse
     {
-        $this->ensureOwner($request, $recipeCollection);
         $collections->delete($recipeCollection);
 
         return back()->with('toast', ['type' => 'success', 'message' => __('app.toast.collection_deleted')]);
-    }
-
-    private function ensureOwner(Request $request, RecipeCollection $collection): void
-    {
-        abort_unless($collection->owner_id === $this->authenticatedUser($request)->id, 403);
     }
 }

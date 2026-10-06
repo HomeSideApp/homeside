@@ -7,6 +7,7 @@ use App\Actions\Products\DeleteProduct;
 use App\Actions\Products\UpdateProduct;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\UpdateAdminProductRequest;
+use App\Http\Requests\IndexProductsRequest;
 use App\Http\Requests\StoreProductRequest;
 use App\Http\Resources\Products\ProductResource;
 use App\Models\Product;
@@ -26,17 +27,9 @@ final class ProductController extends Controller
     /**
      * List products, optionally filtered by search text.
      */
-    public function index(Request $request): AnonymousResourceCollection
+    public function index(IndexProductsRequest $request): AnonymousResourceCollection
     {
-        $validated = $request->validate([
-            'search' => ['sometimes', 'string', 'max:100'],
-            'category_id' => ['sometimes', 'uuid', 'exists:categories,id'],
-            'is_active' => ['sometimes', 'boolean'],
-            'page' => ['sometimes', 'integer', 'min:1'],
-            'perPage' => ['sometimes', 'integer', 'between:1,100'],
-            'sort' => ['sometimes', 'in:name,created_at,updated_at'],
-            'direction' => ['sometimes', 'in:asc,desc'],
-        ]);
+        $validated = $request->validated();
         $query = Product::withTranslationData()->with(['category' => fn ($categoryQuery) => $categoryQuery->withTranslationData()]);
 
         if ($search = $validated['search'] ?? null) {

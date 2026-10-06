@@ -10,7 +10,10 @@ use App\Data\Economy\ConfirmEconomicImportData;
 use App\Data\Economy\CreateEconomicImportData;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\ConfirmEconomicImportApiRequest;
+use App\Http\Requests\DiscardEconomicImportRequest;
+use App\Http\Requests\RetryEconomicImportRequest;
 use App\Http\Requests\StoreEconomicImportRequest;
+use App\Http\Requests\ViewEconomicImportRequest;
 use App\Http\Resources\Economy\EconomicImportResource;
 use App\Http\Resources\Economy\EconomicTransactionResource;
 use App\Models\EconomicImport;
@@ -45,14 +48,11 @@ final class EconomicImportController extends Controller
     /**
      * Show an economic import.
      *
-     * @param  Request  $request  The incoming HTTP request.
      * @return EconomicImportResource The EconomicImport resource.
      */
-    public function show(Request $request): EconomicImportResource
+    public function show(ViewEconomicImportRequest $request): EconomicImportResource
     {
-        $import = EconomicImport::query()->whereKey($request->route('import'))->firstOrFail();
-        $this->ensureRouteScope($request, $import->household_id);
-        $this->authorize('view', $import);
+        $import = $request->route('import') instanceof EconomicImport ? $request->route('import') : EconomicImport::query()->whereKey($request->route('import'))->firstOrFail();
 
         return new EconomicImportResource($import->load(['document', 'aiRun']));
     }
@@ -66,7 +66,7 @@ final class EconomicImportController extends Controller
      */
     public function confirm(ConfirmEconomicImportApiRequest $request, ConfirmEconomicImport $action): EconomicTransactionResource
     {
-        $import = EconomicImport::query()->whereKey($request->route('import'))->firstOrFail();
+        $import = $request->route('import') instanceof EconomicImport ? $request->route('import') : EconomicImport::query()->whereKey($request->route('import'))->firstOrFail();
         $data = ConfirmEconomicImportData::fromArray($request->validated());
         $transaction = $action->execute($import, $data, $this->authenticatedUser($request));
 
@@ -76,15 +76,12 @@ final class EconomicImportController extends Controller
     /**
      * Retry a failed import analysis.
      *
-     * @param  Request  $request  The incoming HTTP request.
      * @param  RetryEconomicImport  $action  The action responsible for the operation.
      * @return JsonResponse The JSON response.
      */
-    public function retry(Request $request, RetryEconomicImport $action): JsonResponse
+    public function retry(RetryEconomicImportRequest $request, RetryEconomicImport $action): JsonResponse
     {
-        $import = EconomicImport::query()->whereKey($request->route('import'))->firstOrFail();
-        $this->ensureRouteScope($request, $import->household_id);
-        $this->authorize('retry', $import);
+        $import = $request->route('import') instanceof EconomicImport ? $request->route('import') : EconomicImport::query()->whereKey($request->route('import'))->firstOrFail();
         $import = $action->execute($import);
 
         return EconomicImportResource::make($import)->response();
@@ -93,15 +90,12 @@ final class EconomicImportController extends Controller
     /**
      * Discard an economic import.
      *
-     * @param  Request  $request  The incoming HTTP request.
      * @param  DiscardEconomicImport  $action  The action responsible for the operation.
      * @return Response The HTTP response.
      */
-    public function discard(Request $request, DiscardEconomicImport $action): Response
+    public function discard(DiscardEconomicImportRequest $request, DiscardEconomicImport $action): Response
     {
-        $import = EconomicImport::query()->whereKey($request->route('import'))->firstOrFail();
-        $this->ensureRouteScope($request, $import->household_id);
-        $this->authorize('discard', $import);
+        $import = $request->route('import') instanceof EconomicImport ? $request->route('import') : EconomicImport::query()->whereKey($request->route('import'))->firstOrFail();
         $action->execute($import);
 
         return response()->noContent();
@@ -110,7 +104,6 @@ final class EconomicImportController extends Controller
     /**
      * Resolve the household from the route if present (null in economy/me/* routes).
      *
-     * @param  Request  $request  The incoming request containing the optional household route parameter.
      * @return Household|null The routed household, or null for a private economy route.
      */
     private function resolveHousehold(Request $request): ?Household
@@ -127,12 +120,7 @@ final class EconomicImportController extends Controller
     /**
      * Ensure that an import belongs to the household represented by the current route.
      *
-     * @param  Request  $request  The incoming request containing the optional household route parameter.
      * @param  string|null  $resourceHouseholdId  The household identifier stored on the import.
      * @return void This guard does not return a value.
      */
-    private function ensureRouteScope(Request $request, ?string $resourceHouseholdId): void
-    {
-        abort_unless($resourceHouseholdId === $this->resolveHousehold($request)?->id, 403);
-    }
 }

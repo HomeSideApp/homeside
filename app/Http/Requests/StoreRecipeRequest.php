@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Concerns\RecipeValidationRules;
+use App\Models\Recipe;
 use Illuminate\Foundation\Http\FormRequest;
 
 class StoreRecipeRequest extends FormRequest
@@ -11,7 +12,7 @@ class StoreRecipeRequest extends FormRequest
 
     public function authorize(): bool
     {
-        return true;
+        return $this->user()?->can('create', Recipe::class) ?? false;
     }
 
     /**

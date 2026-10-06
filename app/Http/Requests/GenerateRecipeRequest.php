@@ -2,13 +2,14 @@
 
 namespace App\Http\Requests;
 
+use App\Models\Recipe;
 use Illuminate\Foundation\Http\FormRequest;
 
 final class GenerateRecipeRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return true;
+        return $this->user()?->can('create', Recipe::class) ?? false;
     }
 
     /** @return array<string, mixed> */

@@ -2,13 +2,18 @@
 
 namespace App\Http\Requests\Admin;
 
+use App\Models\Product;
 use Illuminate\Foundation\Http\FormRequest;
 
 class PromotePersonalProductRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()->hasRole('admin');
+        /** @var Product $product */
+        $product = $this->route('product');
+
+        return ($this->user()?->getPermissionRouteNames()->contains('admin.personal-products.promote') ?? false)
+            && $product->is_personal && $product->creator?->shares_personal_products;
     }
 
     /**

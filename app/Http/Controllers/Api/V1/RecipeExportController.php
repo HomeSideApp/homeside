@@ -5,9 +5,9 @@ namespace App\Http\Controllers\Api\V1;
 use App\Actions\Recipes\GetRecipe;
 use App\Data\Recipes\RecipeData;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\ExportRecipeRequest;
 use App\Models\Recipe;
 use App\Services\Recipes\Exporter\CooklangRecipeExporter;
-use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Str;
 
@@ -23,9 +23,8 @@ final class RecipeExportController extends Controller
         Recipe $recipe,
         GetRecipe $action,
         CooklangRecipeExporter $exporter,
-        Request $request,
+        ExportRecipeRequest $request,
     ): Response {
-        $this->authorize('export', $recipe);
 
         $recipe = $action->execute($recipe, $this->authenticatedUser($request))['recipe'];
         $data = RecipeData::fromModel($recipe);

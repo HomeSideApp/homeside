@@ -9,21 +9,23 @@ use App\Actions\Households\UpdateModuleAiConfig;
 use App\Data\Households\CreateAiProviderData;
 use App\Data\Households\UpdateAiProviderData;
 use App\Data\Households\UpdateModuleAiConfigData;
-use App\Enums\AiProviderModule;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\DefaultHouseholdAiProviderRequest;
+use App\Http\Requests\ManageHouseholdAiProviderRequest;
 use App\Http\Requests\StoreAiProviderRequest;
+use App\Http\Requests\TestHouseholdAiProviderConfigurationRequest;
 use App\Http\Requests\UpdateAiProviderRequest;
 use App\Http\Requests\UpdateModuleAiConfigRequest;
+use App\Http\Requests\ViewHouseholdAiProviderRequest;
+use App\Http\Requests\ViewHouseholdRequest;
 use App\Http\Resources\Households\AiProviderResource;
 use App\Models\Household;
-use HomeSide\AiAgents\Enums\AiDriver;
 use HomeSide\AiAgents\Models\AiProvider;
 use HomeSide\AiAgents\Providers\AiProviderTester;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
-use Illuminate\Validation\Rule;
 
 /**
  * Handles the API household AI provider CRUD.
@@ -36,9 +38,8 @@ final class AiProviderController extends Controller
      * @param  Household  $household  The household whose AI providers are listed.
      * @return AnonymousResourceCollection The collection of AiProviderResource instances for the household.
      */
-    public function index(Household $household): AnonymousResourceCollection
+    public function index(ViewHouseholdRequest $request, Household $household): AnonymousResourceCollection
     {
-        $this->authorize('view', $household);
 
         return AiProviderResource::collection($household->aiProviders);
     }
@@ -53,7 +54,6 @@ final class AiProviderController extends Controller
      */
     public function store(StoreAiProviderRequest $request, Household $household, CreateAiProvider $action): JsonResponse
     {
-        $this->authorize('manage', $household);
         $data = CreateAiProviderData::fromArray($request->validated());
         $provider = $action->execute($data, $household, $this->authenticatedUser($request));
 
@@ -67,10 +67,8 @@ final class AiProviderController extends Controller
      * @param  AiProvider  $provider  The AI provider to display.
      * @return AiProviderResource The resource representation of the provider.
      */
-    public function show(Household $household, AiProvider $provider): AiProviderResource
+    public function show(ViewHouseholdAiProviderRequest $request, Household $household, AiProvider $provider): AiProviderResource
     {
-        $provider = $this->providerForHousehold($household, $provider);
-        $this->authorize('view', $provider);
 
         return new AiProviderResource($provider);
     }
@@ -86,8 +84,6 @@ final class AiProviderController extends Controller
      */
     public function update(UpdateAiProviderRequest $request, Household $household, AiProvider $provider, UpdateAiProvider $action): AiProviderResource
     {
-        $provider = $this->providerForHousehold($household, $provider);
-        $this->authorize('manage', $provider);
         $data = UpdateAiProviderData::fromArray($request->validated());
 
         return new AiProviderResource($action->execute($provider, $data));
@@ -100,10 +96,8 @@ final class AiProviderController extends Controller
      * @param  AiProvider  $provider  The AI provider to delete.
      * @return Response An empty 204 no-content response.
      */
-    public function destroy(Household $household, AiProvider $provider): Response
+    public function destroy(ManageHouseholdAiProviderRequest $request, Household $household, AiProvider $provider): Response
     {
-        $provider = $this->providerForHousehold($household, $provider);
-        $this->authorize('manage', $provider);
         $provider->delete();
 
         return response()->noContent();
@@ -117,10 +111,8 @@ final class AiProviderController extends Controller
      * @param  AiProviderTester  $tester  The service that tests the provider connection.
      * @return JsonResponse The JSON response with the connection test result.
      */
-    public function test(Household $household, AiProvider $provider, AiProviderTester $tester): JsonResponse
+    public function test(ManageHouseholdAiProviderRequest $request, Household $household, AiProvider $provider, AiProviderTester $tester): JsonResponse
     {
-        $provider = $this->providerForHousehold($household, $provider);
-        $this->authorize('manage', $provider);
 
         return response()->json($tester->testProvider($provider));
     }
@@ -128,16 +120,10 @@ final class AiProviderController extends Controller
     /**
      * Test an unsaved provider configuration for a household.
      */
-    public function testConfig(Household $household, Request $request, AiProviderTester $tester): JsonResponse
+    public function testConfig(Household $household, TestHouseholdAiProviderConfigurationRequest $request, AiProviderTester $tester): JsonResponse
     {
-        $this->authorize('manage', $household);
 
-        $configuration = $request->validate([
-            'type' => ['required', 'string', Rule::in(AiDriver::cases())],
-            'base_url' => ['required', 'url', 'max:255'],
-            'model' => ['required', 'string', 'max:255'],
-            'api_key' => ['nullable', 'string', 'max:255'],
-        ]);
+        $configuration = $request->configuration();
 
         return response()->json($tester->testConfig($configuration));
     }
@@ -145,14 +131,12 @@ final class AiProviderController extends Controller
     /**
      * Mark a household provider as the default for its module.
      */
-    public function markDefault(
+    public function markDefault(DefaultHouseholdAiProviderRequest $request,
         Household $household,
         AiProvider $provider,
         MarkAiProviderDefault $action,
     ): AiProviderResource {
-        $provider = $this->providerForHousehold($household, $provider);
-        $this->authorize('manage', $provider);
-        $module = request()->validate(['module' => ['sometimes', 'string', Rule::in(AiProviderModule::cases())]])['module'] ?? $provider->module;
+        $module = $request->validated()['module'] ?? $provider->module;
         $provider->markAsDefaultForModule($module);
 
         return new AiProviderResource($provider->refresh());
@@ -166,22 +150,11 @@ final class AiProviderController extends Controller
         UpdateModuleAiConfigRequest $request,
         UpdateModuleAiConfig $action,
     ): JsonResponse {
-        $this->authorize('manage', $household);
         $configuration = $action->execute(
             $household,
             UpdateModuleAiConfigData::fromArray($request->validated()),
         );
 
         return response()->json(['data' => $configuration]);
-    }
-
-    /**
-     * Ensure a provider belongs to the household represented by the route.
-     */
-    private function providerForHousehold(Household $household, AiProvider $provider): AiProvider
-    {
-        abort_unless($provider->household_id === $household->id && $provider->user_id === null, 404);
-
-        return $provider;
     }
 }

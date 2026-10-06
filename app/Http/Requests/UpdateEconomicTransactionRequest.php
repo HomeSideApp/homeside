@@ -5,8 +5,8 @@ namespace App\Http\Requests;
 use App\Enums\RecurrenceFrequency;
 use App\Models\EconomicTransaction;
 use App\Models\Household;
+use App\Support\HouseholdAccess;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
 
@@ -153,7 +153,7 @@ class UpdateEconomicTransactionRequest extends FormRequest
             'contact_id' => ['sometimes', 'nullable', 'uuid', Rule::exists('contacts', 'id')->where(
                 fn ($query) => $query
                     ->where('user_id', $this->user()?->id)
-                    ->orWhereIn('household_id', DB::table('household_members')->where('user_id', $this->user()?->id)->select('household_id'))
+                    ->orWhereIn('household_id', $this->user() !== null ? app(HouseholdAccess::class)->householdIds($this->user(), 'contacts') : [])
             )],
             'items' => ['nullable', 'array'],
             'items.*.name' => ['required_with:items', 'string', 'max:255'],

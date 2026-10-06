@@ -9,18 +9,18 @@ use App\Actions\Households\MarkAiProviderDefault;
 use App\Actions\Households\UpdateAiProvider;
 use App\Data\Households\CreateAiProviderData;
 use App\Data\Households\UpdateAiProviderData;
-use App\Enums\AiProviderModule;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\DefaultUserAiProviderRequest;
+use App\Http\Requests\ManageUserAiProviderRequest;
 use App\Http\Requests\Settings\StoreUserAiProviderRequest;
 use App\Http\Requests\Settings\UpdateUserAiProviderRequest;
+use App\Http\Requests\TestUserAiProviderConfigurationRequest;
 use App\Models\User;
-use HomeSide\AiAgents\Enums\AiDriver;
 use HomeSide\AiAgents\Models\AiProvider;
 use HomeSide\AiAgents\Providers\AiProviderTester;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -32,7 +32,6 @@ final class UserAiProviderController extends Controller
     /**
      * Display the authenticated user's personal AI providers.
      *
-     * @param  Request  $request  The incoming authenticated request.
      * @return Response The Inertia settings page response.
      */
     public function index(Request $request): Response
@@ -85,7 +84,6 @@ final class UserAiProviderController extends Controller
         AiProvider $provider,
         UpdateAiProvider $action,
     ): RedirectResponse {
-        $provider = $this->ownedProvider($this->authenticatedUser($request), $provider);
         $data = UpdateAiProviderData::fromArray($request->validated());
         $action->execute($provider, $data);
 
@@ -100,13 +98,12 @@ final class UserAiProviderController extends Controller
     /**
      * Delete an AI provider owned by the authenticated user.
      *
-     * @param  Request  $request  The incoming authenticated request.
      * @param  AiProvider  $provider  The route-bound provider to delete.
      * @return RedirectResponse A redirect back to the provider settings page.
      */
-    public function destroy(Request $request, AiProvider $provider): RedirectResponse
+    public function destroy(ManageUserAiProviderRequest $request, AiProvider $provider): RedirectResponse
     {
-        $this->ownedProvider($this->authenticatedUser($request), $provider)->delete();
+        $provider->delete();
 
         Inertia::flash('toast', [
             'type' => 'success',
@@ -119,18 +116,16 @@ final class UserAiProviderController extends Controller
     /**
      * Mark a personal AI provider as default for its module.
      *
-     * @param  Request  $request  The incoming authenticated request.
      * @param  AiProvider  $provider  The route-bound provider to mark as default.
      * @param  MarkAiProviderDefault  $action  The action that changes the default provider.
      * @return RedirectResponse A redirect back to the provider settings page.
      */
     public function markDefault(
-        Request $request,
+        DefaultUserAiProviderRequest $request,
         AiProvider $provider,
         MarkAiProviderDefault $action,
     ): RedirectResponse {
-        $provider = $this->ownedProvider($this->authenticatedUser($request), $provider);
-        $module = $request->validate(['module' => ['sometimes', 'string', Rule::in(AiProviderModule::cases())]])['module'] ?? $provider->module;
+        $module = $request->validated()['module'] ?? $provider->module;
         $provider->markAsDefaultForModule($module);
 
         Inertia::flash('toast', [
@@ -144,14 +139,12 @@ final class UserAiProviderController extends Controller
     /**
      * Test a stored personal AI provider connection.
      *
-     * @param  Request  $request  The incoming authenticated request.
      * @param  AiProvider  $provider  The route-bound provider to test.
      * @param  AiProviderTester  $tester  The service that probes the provider.
      * @return JsonResponse The provider connection test result.
      */
-    public function test(Request $request, AiProvider $provider, AiProviderTester $tester): JsonResponse
+    public function test(ManageUserAiProviderRequest $request, AiProvider $provider, AiProviderTester $tester): JsonResponse
     {
-        $provider = $this->ownedProvider($this->authenticatedUser($request), $provider);
 
         return response()->json($tester->testProvider($provider));
     }
@@ -159,45 +152,16 @@ final class UserAiProviderController extends Controller
     /**
      * Test unsaved personal AI provider credentials.
      *
-     * @param  Request  $request  The incoming request containing provider connection fields.
      * @param  AiProviderTester  $tester  The service that probes the supplied configuration.
      * @return JsonResponse The provider connection test result.
      */
-    public function testConfig(Request $request, AiProviderTester $tester): JsonResponse
+    public function testConfig(TestUserAiProviderConfigurationRequest $request, AiProviderTester $tester): JsonResponse
     {
-        $configuration = $request->validate([
-            'type' => ['required', 'string', Rule::in(AiDriver::cases())],
-            'base_url' => ['required', 'url', 'max:255'],
-            'model' => ['required', 'string', 'max:255'],
-            'api_key' => ['nullable', 'string', 'max:255'],
-        ]);
+        $configuration = $request->configuration();
 
         return response()->json($tester->testConfig($configuration));
     }
 
-    /**
-     * Ensure a route-bound provider belongs exclusively to the given user.
-     *
-     * @param  User  $user  The authenticated owner expected for the provider.
-     * @param  AiProvider  $provider  The route-bound provider being accessed.
-     * @return AiProvider The authorized personal provider.
-     */
-    private function ownedProvider(User $user, AiProvider $provider): AiProvider
-    {
-        abort_unless($provider->isUser() && $provider->user_id === $user->id, 404);
-
-        return $provider;
-    }
-
-    /**
-     * Ensure another personal provider does not already occupy the requested module.
-     *
-     * @param  AiProvider  $provider  The personal provider being updated.
-     * @param  AiProviderModule  $module  The requested target module.
-     * @return void This method does not return a value.
-     *
-     * @throws ValidationException When another provider already uses the module in the same user scope.
-     */
     /**
      * Serialize an AI provider without exposing its encrypted API key.
      *

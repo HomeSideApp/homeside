@@ -3,10 +3,12 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\PrefillCatalogModelRequest;
+use App\Http\Requests\SearchCatalogModelsRequest;
+use App\Http\Requests\SearchCatalogProvidersRequest;
 use HomeSide\AiAgents\ModelsDev\CatalogPrefill;
 use HomeSide\AiAgents\ModelsDev\CatalogQuery;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 
 /**
  * API endpoints for the models.dev catalog.
@@ -22,12 +24,9 @@ final class CatalogController extends Controller
     /**
      * Search providers in the models.dev catalog.
      */
-    public function searchProviders(Request $request): JsonResponse
+    public function searchProviders(SearchCatalogProvidersRequest $request): JsonResponse
     {
-        $validated = $request->validate([
-            'q' => ['sometimes', 'string', 'max:100'],
-            'page' => ['sometimes', 'integer', 'min:1'],
-        ]);
+        $validated = $request->validated();
 
         $term = $validated['q'] ?? null;
         $page = $validated['page'] ?? 1;
@@ -49,13 +48,9 @@ final class CatalogController extends Controller
     /**
      * Search models for a specific provider in the models.dev catalog.
      */
-    public function searchModels(Request $request): JsonResponse
+    public function searchModels(SearchCatalogModelsRequest $request): JsonResponse
     {
-        $validated = $request->validate([
-            'provider_slug' => ['required', 'string', 'max:100'],
-            'q' => ['sometimes', 'string', 'max:100'],
-            'page' => ['sometimes', 'integer', 'min:1'],
-        ]);
+        $validated = $request->validated();
 
         $results = $this->catalog->models(
             providerSlug: $validated['provider_slug'],
@@ -77,12 +72,9 @@ final class CatalogController extends Controller
     /**
      * Get prefill data for a selected catalog model.
      */
-    public function prefill(Request $request): JsonResponse
+    public function prefill(PrefillCatalogModelRequest $request): JsonResponse
     {
-        $validated = $request->validate([
-            'provider_slug' => ['required', 'string', 'max:100'],
-            'model_id' => ['required', 'string', 'max:200'],
-        ]);
+        $validated = $request->validated();
 
         $prefill = app(CatalogPrefill::class)
             ->prefill($validated['provider_slug'], $validated['model_id']);

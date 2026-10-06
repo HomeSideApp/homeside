@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\IndexPendingProductImagesRequest;
 use App\Http\Resources\Assistant\AiRunResource;
 use App\Http\Resources\Products\AdminProductResource;
 use App\Jobs\GenerateProductImagesJob;
@@ -14,13 +15,9 @@ use Illuminate\Http\Request;
 
 final class AdminProductImageController extends Controller
 {
-    public function pending(Request $request): JsonResponse
+    public function pending(IndexPendingProductImagesRequest $request): JsonResponse
     {
-        $validated = $request->validate([
-            'search' => ['sometimes', 'string', 'max:100'],
-            'page' => ['sometimes', 'integer', 'min:1'],
-            'perPage' => ['sometimes', 'integer', 'between:1,100'],
-        ]);
+        $validated = $request->validated();
         $products = Product::query()->where('needs_image', true)->where('is_approved', false)
             ->with(['category', 'images'])
             ->when($validated['search'] ?? null, fn ($query, string $search) => $query->where('name', 'like', "%{$search}%"))

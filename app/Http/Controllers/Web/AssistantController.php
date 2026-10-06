@@ -13,7 +13,11 @@ use App\Actions\Recipes\CreateRecipe;
 use App\Ai\Execution\RecipeNormalizer;
 use App\Data\Recipes\CreateRecipeData;
 use App\Http\Controllers\Controller;
-use App\Http\Requests\StoreRecipeRequest;
+use App\Http\Requests\CreateRecipeFromAiSessionRequest;
+use App\Http\Requests\DeleteAiConversationRequest;
+use App\Http\Requests\SendAiMessageRequest;
+use App\Http\Requests\ViewAiConversationRequest;
+use App\Http\Requests\ViewAiProposalRequest;
 use App\Models\Product;
 use App\Models\User;
 use App\Services\Recipes\RecipeReferenceCatalog;
@@ -27,7 +31,6 @@ use HomeSide\AiAgents\Models\AiRun;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -80,9 +83,8 @@ final class AssistantController extends Controller
         return redirect()->route('assistant.show', $conversation->id);
     }
 
-    public function show(Request $request, AiConversation $conversation): Response
+    public function show(ViewAiConversationRequest $request, AiConversation $conversation): Response
     {
-        $this->authorize('view', $conversation);
 
         $conversation->load(['runs' => function ($query) {
             $query->latest()->limit(150);
@@ -120,16 +122,13 @@ final class AssistantController extends Controller
     }
 
     public function sendMessage(
-        Request $request,
+        SendAiMessageRequest $request,
         AiConversation $conversation,
         SendAiConversationMessage $action,
         UpdateAiConversationTitle $updateTitle,
     ): JsonResponse {
-        $this->authorize('view', $conversation);
 
-        $validated = $request->validate([
-            'message' => ['required', 'string', 'max:2000'],
-        ]);
+        $validated = $request->validated();
 
         try {
             $message = $validated['message'];
@@ -165,11 +164,10 @@ final class AssistantController extends Controller
     }
 
     public function destroy(
-        Request $request,
+        DeleteAiConversationRequest $request,
         AiConversation $conversation,
         DeleteAiConversation $action,
     ): RedirectResponse {
-        $this->authorize('delete', $conversation);
 
         $currentRecipeKey = $request->session()->get($this->currentRecipeSessionKey($conversation));
 
@@ -356,23 +354,13 @@ final class AssistantController extends Controller
     }
 
     public function createRecipe(
-        Request $request,
+        CreateRecipeFromAiSessionRequest $request,
         AiConversation $conversation,
         string $recipeRun,
         CreateRecipe $action,
     ): JsonResponse {
-        $this->authorize('view', $conversation);
 
-        $currentRecipeKey = $request->session()->get($this->currentRecipeSessionKey($conversation));
-        $draft = $request->session()->get("ai_recipe_{$recipeRun}");
-
-        if ($currentRecipeKey !== $recipeRun || ! is_array($draft)) {
-            return response()->json([
-                'message' => 'Esta propuesta ya no es la última receta generada.',
-            ], 409);
-        }
-
-        $validated = Validator::make($draft, (new StoreRecipeRequest)->rules())->validate();
+        $validated = $request->recipeData();
         $user = $this->authenticatedUser($request);
         $recipe = $action->execute(CreateRecipeData::fromArray($validated), $user);
         $recipeUrl = route('recipes.show', $recipe);
@@ -572,7 +560,7 @@ final class AssistantController extends Controller
     }
 
     public function acceptProposal(
-        Request $request,
+        ViewAiProposalRequest $request,
         AiActionProposal $proposal,
         AcceptAiActionProposal $action,
     ): RedirectResponse {
@@ -584,12 +572,8 @@ final class AssistantController extends Controller
         ]);
     }
 
-    public function rejectProposal(Request $request, AiActionProposal $proposal): RedirectResponse
+    public function rejectProposal(ViewAiProposalRequest $request, AiActionProposal $proposal): RedirectResponse
     {
-        if ($proposal->user_id !== $this->authenticatedUser($request)->id) {
-            abort(403);
-        }
-
         $proposal->reject();
 
         return back()->with('toast', [

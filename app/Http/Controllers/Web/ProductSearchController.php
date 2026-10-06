@@ -8,6 +8,7 @@ use App\Actions\ShoppingLists\AddListItem;
 use App\Actions\ShoppingLists\GetShoppingList;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\QuickCreateProductRequest;
+use App\Http\Requests\ViewShoppingListRequest;
 use App\Models\Household;
 use App\Models\ListItem;
 use App\Models\ShoppingList;
@@ -30,12 +31,10 @@ final class ProductSearchController extends Controller
      * @param  Household  $household  The household model instance.
      * @param  ShoppingList  $list  The shopping list model instance.
      * @param  SearchProducts  $action  The action responsible for the operation.
-     * @param  Request  $request  The incoming HTTP request.
      * @return Response The HTTP response.
      */
-    public function search(Household $household, ShoppingList $list, SearchProducts $action, Request $request): Response
+    public function search(Household $household, ShoppingList $list, SearchProducts $action, ViewShoppingListRequest $request): Response
     {
-        abort_unless($list->household_id === $household->id, 404);
 
         return $this->searchList($list, $action, $request, $household);
     }
@@ -43,9 +42,8 @@ final class ProductSearchController extends Controller
     /**
      * Search products for a personal shopping list.
      */
-    public function personalSearch(ShoppingList $list, SearchProducts $action, Request $request): Response
+    public function personalSearch(ShoppingList $list, SearchProducts $action, ViewShoppingListRequest $request): Response
     {
-        abort_unless($list->household_id === null, 404);
 
         return $this->searchList($list, $action, $request);
     }
@@ -56,7 +54,6 @@ final class ProductSearchController extends Controller
         Request $request,
         ?Household $household = null,
     ): Response {
-        $this->authorize('view', $list);
 
         $query = $request->string('q')->toString();
         $userId = $this->authenticatedUser($request)->id;
@@ -109,7 +106,6 @@ final class ProductSearchController extends Controller
         QuickCreateProduct $createAction,
         AddListItem $addItemAction,
     ): RedirectResponse {
-        abort_unless($list->household_id === $household->id, 404);
 
         return $this->quickCreateForList($list, $request, $createAction, $addItemAction, $household);
     }
@@ -123,7 +119,6 @@ final class ProductSearchController extends Controller
         QuickCreateProduct $createAction,
         AddListItem $addItemAction,
     ): RedirectResponse {
-        abort_unless($list->household_id === null, 404);
 
         return $this->quickCreateForList($list, $request, $createAction, $addItemAction);
     }
@@ -135,7 +130,6 @@ final class ProductSearchController extends Controller
         AddListItem $addItemAction,
         ?Household $household = null,
     ): RedirectResponse {
-        $this->authorize('view', $list);
         $user = $this->authenticatedUser($request);
 
         $product = $createAction->execute(

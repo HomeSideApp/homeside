@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers\Web;
 
-use App\Support\HouseholdAccess;
 use App\Actions\Icons\ListIcons;
 use App\Actions\ShoppingLists\CreateShoppingList;
 use App\Actions\ShoppingLists\DeleteShoppingList;
@@ -12,12 +11,15 @@ use App\Actions\ShoppingLists\UpdateShoppingList;
 use App\Data\ShoppingLists\CreateShoppingListData;
 use App\Data\ShoppingLists\UpdateShoppingListData;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\DeleteShoppingListRequest;
+use App\Http\Requests\FilterPersonalShoppingListsRequest;
+use App\Http\Requests\ManageShoppingListRequest;
 use App\Http\Requests\StoreListRequest;
 use App\Http\Requests\UpdateListRequest;
+use App\Http\Requests\ViewShoppingListRequest;
 use App\Models\ShoppingList;
+use App\Support\HouseholdAccess;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -26,13 +28,9 @@ use Inertia\Response;
  */
 final class PersonalShoppingListController extends Controller
 {
-    public function index(ListShoppingLists $action, Request $request): Response
+    public function index(ListShoppingLists $action, FilterPersonalShoppingListsRequest $request): Response
     {
-        $validated = $request->validate([
-            'search' => ['nullable', 'string', 'max:100'],
-            'scope' => ['nullable', Rule::in(['all', 'personal', 'household'])],
-            'household' => ['nullable', 'uuid'],
-        ]);
+        $validated = $request->validated();
         $user = $this->authenticatedUser($request);
         $filters = [
             'search' => trim($validated['search'] ?? ''),
@@ -77,10 +75,8 @@ final class PersonalShoppingListController extends Controller
         ShoppingList $list,
         GetShoppingList $action,
         ListIcons $listIcons,
-        Request $request,
+        ViewShoppingListRequest $request,
     ): Response {
-        $this->ensurePersonal($list);
-        $this->authorize('view', $list);
 
         return Inertia::render('lists/Show', [
             ...$action->execute($list, $this->authenticatedUser($request)->id),
@@ -89,10 +85,8 @@ final class PersonalShoppingListController extends Controller
         ]);
     }
 
-    public function edit(ShoppingList $list): Response
+    public function edit(ShoppingList $list, ManageShoppingListRequest $request): Response
     {
-        $this->ensurePersonal($list);
-        $this->authorize('manage', $list);
 
         return Inertia::render('lists/Edit', [
             'list' => $list,
@@ -102,8 +96,6 @@ final class PersonalShoppingListController extends Controller
 
     public function update(UpdateListRequest $request, ShoppingList $list, UpdateShoppingList $action): RedirectResponse
     {
-        $this->ensurePersonal($list);
-        $this->authorize('update', $list);
         $data = UpdateShoppingListData::fromArray($request->validated());
         $action->execute($list, $data);
 
@@ -112,19 +104,12 @@ final class PersonalShoppingListController extends Controller
         return to_route('lists.show', $list);
     }
 
-    public function destroy(ShoppingList $list, DeleteShoppingList $action): RedirectResponse
+    public function destroy(ShoppingList $list, DeleteShoppingList $action, DeleteShoppingListRequest $request): RedirectResponse
     {
-        $this->ensurePersonal($list);
-        $this->authorize('delete', $list);
         $action->execute($list);
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('app.toast.list_deleted')]);
 
         return to_route('lists.index');
-    }
-
-    private function ensurePersonal(ShoppingList $list): void
-    {
-        abort_unless($list->household_id === null, 404);
     }
 }

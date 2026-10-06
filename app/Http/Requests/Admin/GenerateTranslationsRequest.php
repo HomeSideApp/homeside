@@ -14,6 +14,11 @@ use Illuminate\Validation\Rule;
  */
 class GenerateTranslationsRequest extends FormRequest
 {
+    public function authorize(): bool
+    {
+        return $this->user()?->getPermissionRouteNames()->contains('admin.translations.generate') ?? false;
+    }
+
     /**
      * @return array<string, ValidationRule|array<mixed>|string>
      */

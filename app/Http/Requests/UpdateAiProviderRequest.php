@@ -6,16 +6,10 @@ use App\Enums\AiProviderModule;
 use HomeSide\AiAgents\Enums\AiDriver;
 use HomeSide\AiAgents\Enums\FallbackPolicy;
 use HomeSide\AiAgents\Enums\PrivacyLevel;
-use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
-class UpdateAiProviderRequest extends FormRequest
+class UpdateAiProviderRequest extends ManageHouseholdAiProviderRequest
 {
-    public function authorize(): bool
-    {
-        return $this->user()?->can('manage', $this->route('provider')) ?? false;
-    }
-
     /**
      * @return array<string, mixed>
      */

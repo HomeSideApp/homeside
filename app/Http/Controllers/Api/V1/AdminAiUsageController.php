@@ -3,21 +3,15 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\IndexAdminAiUsageRequest;
 use HomeSide\AiAgents\Models\AiRun;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
 
 final class AdminAiUsageController extends Controller
 {
-    public function index(Request $request): JsonResponse
+    public function index(IndexAdminAiUsageRequest $request): JsonResponse
     {
-        $validated = $request->validate([
-            'agent' => ['sometimes', 'string', 'max:255'], 'provider_name' => ['sometimes', 'string', 'max:255'],
-            'model_name' => ['sometimes', 'string', 'max:255'], 'status' => ['sometimes', Rule::in(['queued', 'running', 'ok', 'success', 'error', 'cancelled'])],
-            'date_from' => ['sometimes', 'date_format:Y-m-d'], 'date_to' => ['sometimes', 'date_format:Y-m-d', 'after_or_equal:date_from'],
-            'page' => ['sometimes', 'integer', 'min:1'], 'perPage' => ['sometimes', 'integer', 'between:1,100'],
-        ]);
+        $validated = $request->validated();
         $query = AiRun::query()
             ->when($validated['agent'] ?? null, fn ($query, string $value) => $query->where('agent', $value))
             ->when($validated['provider_name'] ?? null, fn ($query, string $value) => $query->where('provider_name', $value))

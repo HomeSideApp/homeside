@@ -8,7 +8,7 @@ class ForkRecipeRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return true;
+        return $this->user()?->can('fork', $this->route('recipe')) ?? false;
     }
 
     /** @return array<string, mixed> */

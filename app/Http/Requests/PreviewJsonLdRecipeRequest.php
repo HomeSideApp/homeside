@@ -2,13 +2,14 @@
 
 namespace App\Http\Requests;
 
+use App\Models\Recipe;
 use Illuminate\Foundation\Http\FormRequest;
 
 class PreviewJsonLdRecipeRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return true;
+        return $this->user()?->can('create', Recipe::class) ?? false;
     }
 
     /**

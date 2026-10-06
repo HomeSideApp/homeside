@@ -2,36 +2,41 @@
 
 namespace App\Http\Controllers\Web;
 
-use App\Models\HouseholdMember;
-use App\Support\HouseholdAccess;
 use App\Actions\Contacts\DiscoverContactCollections;
 use App\Actions\Contacts\SaveContactSource;
 use App\Actions\Contacts\SetContactCollectionEnabled;
 use App\Data\Contacts\ContactSourceData;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\DeleteContactSourceRequest;
+use App\Http\Requests\DiscoverContactServerRequest;
+use App\Http\Requests\IndexContactSourcesRequest;
+use App\Http\Requests\PreviewContactSourceRequest;
 use App\Http\Requests\SaveContactSourceRequest;
+use App\Http\Requests\SyncContactCollectionRequest;
+use App\Http\Requests\SyncContactSourceRequest;
+use App\Http\Requests\TestContactConnectionRequest;
+use App\Http\Requests\UpdateContactCollectionRequest;
 use App\Http\Resources\Contacts\ContactSourceResource;
 use App\Jobs\SyncContactCollectionJob;
 use App\Jobs\SyncContactSourceJob;
 use App\Models\ContactCollection;
 use App\Models\ContactSource;
+use App\Models\HouseholdMember;
 use App\Services\Contacts\ContactProviderRegistry;
 use App\Services\Contacts\Providers\CardDavContactProvider;
+use App\Support\HouseholdAccess;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Crypt;
-use Illuminate\Support\Facades\Gate;
-use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class ContactSourceController extends Controller
 {
-    public function index(Request $request, ContactProviderRegistry $registry): Response
+    public function index(IndexContactSourcesRequest $request, ContactProviderRegistry $registry): Response
     {
-        Gate::authorize('viewAny', ContactSource::class);
         $user = $this->authenticatedUser($request);
         $access = app(HouseholdAccess::class);
         $sources = ContactSource::query()
@@ -79,9 +84,8 @@ class ContactSourceController extends Controller
         return redirect()->route('contacts.sources.index');
     }
 
-    public function destroy(ContactSource $source): RedirectResponse
+    public function destroy(DeleteContactSourceRequest $request, ContactSource $source): RedirectResponse
     {
-        Gate::authorize('delete', $source);
         if ($source->provider === 'google') {
             $source->update(['encrypted_tokens' => null, 'token_expires_at' => null, 'sync_enabled' => false]);
         }
@@ -90,13 +94,9 @@ class ContactSourceController extends Controller
         return redirect()->route('contacts.sources.index');
     }
 
-    public function discoverServer(Request $request, CardDavContactProvider $provider): JsonResponse
+    public function discoverServer(DiscoverContactServerRequest $request, CardDavContactProvider $provider): JsonResponse
     {
-        $validated = $request->validate([
-            'domain' => ['required', 'string', 'max:2048'],
-            'username' => ['required', 'string', 'max:255'],
-            'app_password' => ['required', 'string', 'max:1000'],
-        ]);
+        $validated = $request->validated();
 
         try {
             $serverUrl = $provider->discoverServerUrl($validated['domain'], $validated['username'], $validated['app_password']);
@@ -109,35 +109,16 @@ class ContactSourceController extends Controller
         return response()->json(['server_url' => $serverUrl]);
     }
 
-    public function preview(Request $request, ContactProviderRegistry $registry): JsonResponse
+    public function preview(PreviewContactSourceRequest $request, ContactProviderRegistry $registry): JsonResponse
     {
-        $validated = $request->validate([
-            'provider' => ['required', Rule::in(['carddav'])],
-            'source_id' => ['nullable', 'uuid'],
-            'server_url' => ['required', 'url:http,https', 'max:2048'],
-            'username' => ['nullable', 'string', 'max:255'],
-            'app_password' => ['nullable', 'string', 'max:1000'],
-        ]);
+        $validated = $request->validated();
 
-        $source = null;
-        if (isset($validated['source_id'])) {
-            $source = ContactSource::query()->findOrFail($validated['source_id']);
-            Gate::authorize('update', $source);
-        } else {
-            Gate::authorize('create', ContactSource::class);
-        }
-
-        $existing = $source?->encrypted_credentials ?? [];
-        $username = $validated['username'] ?? $existing['username'] ?? null;
-        $password = $validated['app_password'] ?? $existing['password'] ?? null;
-        if (! is_string($username) || $username === '' || ! is_string($password) || $password === '') {
-            return response()->json(['message' => 'Introduce el usuario y la contraseña de aplicación.'], 422);
-        }
+        $credentials = $request->credentials();
 
         $candidate = new ContactSource([
             'provider' => $validated['provider'],
             'provider_configuration' => ['server_url' => $validated['server_url']],
-            'encrypted_credentials' => ['username' => $username, 'password' => $password],
+            'encrypted_credentials' => $credentials,
         ]);
 
         try {
@@ -164,9 +145,8 @@ class ContactSourceController extends Controller
      * @param  ContactProviderRegistry  $registry  The registry resolving the provider by key.
      * @return RedirectResponse The back redirect carrying the result toast.
      */
-    public function test(ContactSource $source, ContactProviderRegistry $registry): RedirectResponse
+    public function test(SyncContactSourceRequest $request, ContactSource $source, ContactProviderRegistry $registry): RedirectResponse
     {
-        Gate::authorize('sync', $source);
 
         return $this->probe($source, $registry);
     }
@@ -178,18 +158,12 @@ class ContactSourceController extends Controller
      * configuration before persisting it. The credentials only live in memory for the duration of
      * the request; nothing is written to the database.
      *
-     * @param  Request  $request  The incoming HTTP request with the draft connection settings.
      * @param  ContactProviderRegistry  $registry  The registry resolving the provider by key.
      * @return RedirectResponse The back redirect carrying the result toast.
      */
-    public function testConnection(Request $request, ContactProviderRegistry $registry): RedirectResponse
+    public function testConnection(TestContactConnectionRequest $request, ContactProviderRegistry $registry): RedirectResponse
     {
-        $validated = $request->validate([
-            'provider' => ['required', 'string', Rule::in(['carddav'])],
-            'server_url' => ['required', 'url:http,https', 'max:2048'],
-            'username' => ['required', 'string', 'max:255'],
-            'app_password' => ['required', 'string', 'max:1000'],
-        ]);
+        $validated = $request->validated();
 
         // Never persisted: instantiated only so the provider can read the same attributes it
         // reads from a stored source.
@@ -239,9 +213,8 @@ class ContactSourceController extends Controller
         return back();
     }
 
-    public function discover(ContactSource $source, DiscoverContactCollections $discover): RedirectResponse
+    public function discover(SyncContactSourceRequest $request, ContactSource $source, DiscoverContactCollections $discover): RedirectResponse
     {
-        Gate::authorize('sync', $source);
 
         try {
             $collections = $discover->execute($source);
@@ -269,26 +242,23 @@ class ContactSourceController extends Controller
         return back();
     }
 
-    public function sync(ContactSource $source): RedirectResponse
+    public function sync(SyncContactSourceRequest $request, ContactSource $source): RedirectResponse
     {
-        Gate::authorize('sync', $source);
         SyncContactSourceJob::dispatch($source->id);
 
         return back();
     }
 
-    public function syncCollection(ContactCollection $collection): RedirectResponse
+    public function syncCollection(SyncContactCollectionRequest $request, ContactCollection $collection): RedirectResponse
     {
-        Gate::authorize('sync', $collection);
         SyncContactCollectionJob::dispatch($collection->id);
 
         return back();
     }
 
-    public function updateCollection(Request $request, ContactCollection $collection, SetContactCollectionEnabled $setEnabled): RedirectResponse
+    public function updateCollection(UpdateContactCollectionRequest $request, ContactCollection $collection, SetContactCollectionEnabled $setEnabled): RedirectResponse
     {
-        Gate::authorize('update', $collection);
-        $data = $request->validate(['enabled' => ['required', 'boolean']]);
+        $data = $request->validated();
         $setEnabled->execute($collection, $data['enabled']);
 
         return back();

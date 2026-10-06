@@ -4,8 +4,8 @@ namespace App\Http\Requests;
 
 use App\Enums\RecurrenceFrequency;
 use App\Models\Household;
+use App\Support\HouseholdAccess;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
 
@@ -24,7 +24,7 @@ class StoreEconomicTransactionRequest extends FormRequest
             return $this->user() !== null;
         }
 
-        return $this->user()?->isMemberOf($household) ?? false;
+        return $this->user() !== null && app(HouseholdAccess::class)->allows($this->user(), $household, 'economy', true);
     }
 
     /**
@@ -82,12 +82,12 @@ class StoreEconomicTransactionRequest extends FormRequest
             'source_document_id' => ['nullable', 'uuid', Rule::exists('economic_documents', 'id')->where(
                 fn ($query) => $householdId === null
                     ? $query->whereNull('household_id')->where('uploaded_by', $userId)
-                    : $query->where('household_id', $householdId)
+                    : $query->where('household_id', $householdId)->where('uploaded_by', $userId)
             )],
             'contact_id' => ['nullable', 'uuid', Rule::exists('contacts', 'id')->where(
                 fn ($query) => $query
                     ->where('user_id', $userId)
-                    ->orWhereIn('household_id', DB::table('household_members')->where('user_id', $userId)->select('household_id'))
+                    ->orWhereIn('household_id', $this->user() !== null ? app(HouseholdAccess::class)->householdIds($this->user(), 'contacts') : [])
             )],
             'items' => ['nullable', 'array'],
             'items.*.name' => ['required_with:items', 'string', 'max:255'],

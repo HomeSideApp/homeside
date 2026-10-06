@@ -11,8 +11,11 @@ use App\Actions\ShoppingLists\UpdateShoppingList;
 use App\Data\ShoppingLists\CreateShoppingListData;
 use App\Data\ShoppingLists\UpdateShoppingListData;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\DeleteShoppingListRequest;
+use App\Http\Requests\ManageShoppingListRequest;
 use App\Http\Requests\StoreListRequest;
 use App\Http\Requests\UpdateListRequest;
+use App\Http\Requests\ViewShoppingListRequest;
 use App\Models\Household;
 use App\Models\ShoppingList;
 use Illuminate\Http\RedirectResponse;
@@ -30,7 +33,6 @@ final class ShoppingListController extends Controller
      *
      * @param  Household  $household  The household model instance.
      * @param  ListShoppingLists  $action  The action responsible for the operation.
-     * @param  Request  $request  The incoming HTTP request.
      * @return Response The HTTP response.
      */
     public function index(Household $household, ListShoppingLists $action, Request $request): Response
@@ -87,7 +89,6 @@ final class ShoppingListController extends Controller
      * @param  Household  $household  The household model instance.
      * @param  ShoppingList  $list  The shopping list model instance.
      * @param  GetShoppingList  $action  The action responsible for the operation.
-     * @param  Request  $request  The incoming HTTP request.
      * @return Response The HTTP response.
      */
     public function show(
@@ -95,9 +96,8 @@ final class ShoppingListController extends Controller
         ShoppingList $list,
         GetShoppingList $action,
         ListIcons $listIcons,
-        Request $request,
+        ViewShoppingListRequest $request,
     ): Response {
-        $this->authorize('view', $list);
 
         return Inertia::render('lists/Show', [
             ...$action->execute($list, $this->authenticatedUser($request)->id),
@@ -113,9 +113,8 @@ final class ShoppingListController extends Controller
      * @param  ShoppingList  $list  The shopping list model instance.
      * @return Response The HTTP response.
      */
-    public function edit(Household $household, ShoppingList $list): Response
+    public function edit(Household $household, ShoppingList $list, ManageShoppingListRequest $request): Response
     {
-        $this->authorize('manage', $list);
 
         return Inertia::render('lists/Edit', [
             'list' => $list,
@@ -134,7 +133,6 @@ final class ShoppingListController extends Controller
      */
     public function update(UpdateListRequest $request, Household $household, ShoppingList $list, UpdateShoppingList $action): RedirectResponse
     {
-        $this->authorize('update', $list);
         $data = UpdateShoppingListData::fromArray($request->validated());
         $action->execute($list, $data);
 
@@ -151,9 +149,8 @@ final class ShoppingListController extends Controller
      * @param  DeleteShoppingList  $action  The action responsible for the operation.
      * @return RedirectResponse The HTTP response.
      */
-    public function destroy(Household $household, ShoppingList $list, DeleteShoppingList $action): RedirectResponse
+    public function destroy(Household $household, ShoppingList $list, DeleteShoppingList $action, DeleteShoppingListRequest $request): RedirectResponse
     {
-        $this->authorize('delete', $list);
         $action->execute($list);
 
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Lista eliminada correctamente.']);

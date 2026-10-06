@@ -6,10 +6,10 @@ use App\Actions\ShoppingLists\AddListItem;
 use App\Actions\ShoppingLists\DeleteListItem;
 use App\Actions\ShoppingLists\UpdateListItem;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\DeleteListItemRequest;
 use App\Http\Requests\StoreListItemRequest;
 use App\Http\Requests\UpdateListItemRequest;
-use App\Models\Household;
-use App\Models\ListItem;
+use App\Http\Requests\ViewListItemRequest;
 use App\Models\ShoppingList;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -31,9 +31,7 @@ final class ListItemController extends Controller
      */
     public function store(StoreListItemRequest $request, AddListItem $action): RedirectResponse
     {
-        $list = $this->resolveShoppingList($request);
-        $this->ensureListMatchesRouteContext($request, $list);
-        $this->authorize('update', $list);
+        $list = $request->shoppingList();
         $action->execute($list, $request->validated(), $this->authenticatedUser($request)->id);
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('app.toast.list_item_added')]);
@@ -50,11 +48,8 @@ final class ListItemController extends Controller
      */
     public function update(UpdateListItemRequest $request, UpdateListItem $action): RedirectResponse
     {
-        $list = $this->resolveShoppingList($request);
-        $this->ensureListMatchesRouteContext($request, $list);
-        $item = ListItem::query()->whereKey($request->route('item'))->firstOrFail();
-        abort_if($item->list_id !== $list->id, 404);
-        $this->authorize('update', $list);
+        $list = $request->shoppingList();
+        $item = $request->listItem();
         $action->execute($item, $request->validated());
 
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Elemento actualizado correctamente.']);
@@ -65,17 +60,13 @@ final class ListItemController extends Controller
     /**
      * Delete a list item.
      *
-     * @param  Request  $request  The incoming HTTP request.
      * @param  DeleteListItem  $action  The action responsible for the operation.
      * @return RedirectResponse The HTTP response.
      */
-    public function destroy(Request $request, DeleteListItem $action): RedirectResponse
+    public function destroy(DeleteListItemRequest $request, DeleteListItem $action): RedirectResponse
     {
-        $list = $this->resolveShoppingList($request);
-        $this->ensureListMatchesRouteContext($request, $list);
-        $item = ListItem::query()->whereKey($request->route('item'))->firstOrFail();
-        abort_if($item->list_id !== $list->id, 404);
-        $this->authorize('delete', $list);
+        $list = $request->shoppingList();
+        $item = $request->listItem();
         $action->execute($item);
 
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Elemento eliminado correctamente.']);
@@ -86,13 +77,10 @@ final class ListItemController extends Controller
     /**
      * Serve an image attached to an item in an accessible list.
      */
-    public function image(Request $request): BinaryFileResponse
+    public function image(ViewListItemRequest $request): BinaryFileResponse
     {
-        $list = $this->resolveShoppingList($request);
-        $this->ensureListMatchesRouteContext($request, $list);
-        $item = ListItem::query()->whereKey($request->route('item'))->firstOrFail();
-        abort_if($item->list_id !== $list->id, 404);
-        $this->authorize('view', $list);
+        $list = $request->shoppingList();
+        $item = $request->listItem();
 
         abort_unless($item->image_url && Storage::disk('local')->exists($item->image_url), 404);
 
@@ -105,31 +93,6 @@ final class ListItemController extends Controller
     /**
      * Resolve the shopping list from the route.
      */
-    private function resolveShoppingList(Request $request): ShoppingList
-    {
-        $list = $request->route('list');
-
-        if ($list instanceof ShoppingList) {
-            return $list;
-        }
-
-        return ShoppingList::query()->whereKey($list)->firstOrFail();
-    }
-
-    private function ensureListMatchesRouteContext(Request $request, ShoppingList $list): void
-    {
-        $household = $request->route('household');
-        $householdId = $household instanceof Household ? $household->id : $household;
-
-        if ($householdId === null) {
-            abort_unless($list->household_id === null, 404);
-
-            return;
-        }
-
-        abort_unless(is_string($householdId) && $list->household_id === $householdId, 404);
-    }
-
     private function redirectToList(ShoppingList $list): RedirectResponse
     {
         if ($list->household_id === null) {

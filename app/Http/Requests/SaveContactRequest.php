@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Models\Contact;
+use App\Support\HouseholdAccess;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -16,16 +17,11 @@ class SaveContactRequest extends FormRequest
             return $this->user()?->can('update', $contact) ?? false;
         }
 
-        if (! ($this->user()?->can('create', Contact::class) ?? false)) {
-            return false;
+        if ($this->input('household_id') !== null) {
+            return $this->user() !== null && app(HouseholdAccess::class)->allows($this->user(), $this->input('household_id'), 'contacts', true);
         }
 
-        $householdId = $this->input('household_id');
-
-        return $householdId === null || (
-            $this->user()->getPermissionRouteNames()->contains('contacts.home.create')
-            && $this->user()->households()->whereKey($householdId)->exists()
-        );
+        return $this->user()?->can('create', Contact::class) ?? false;
     }
 
     /** @return array<string, array<int, mixed>> */

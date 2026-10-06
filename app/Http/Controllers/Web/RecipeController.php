@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers\Web;
 
-use App\Support\HouseholdAccess;
 use App\Actions\Recipes\CreateRecipe;
 use App\Actions\Recipes\DeleteRecipe;
 use App\Actions\Recipes\GetRecipe;
@@ -12,11 +11,15 @@ use App\Data\Recipes\CreateRecipeData;
 use App\Data\Recipes\RecipeData;
 use App\Enums\AiProviderModule;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\DeleteRecipeRequest;
+use App\Http\Requests\ManageRecipeRequest;
 use App\Http\Requests\StoreRecipeRequest;
 use App\Http\Requests\UpdateRecipeRequest;
+use App\Http\Requests\ViewRecipeRequest;
 use App\Models\Product;
 use App\Models\Recipe;
 use App\Models\RecipeCollection;
+use App\Support\HouseholdAccess;
 use HomeSide\AiAgents\Models\AiGlobalSetting;
 use HomeSide\AiAgents\Providers\ProviderResolver;
 use Illuminate\Http\RedirectResponse;
@@ -33,7 +36,6 @@ final class RecipeController extends Controller
      * List the user's recipes with filters.
      *
      * @param  ListRecipes  $action  The action responsible for the operation.
-     * @param  Request  $request  The incoming HTTP request.
      * @return Response The HTTP response.
      */
     public function index(ListRecipes $action, Request $request): Response
@@ -54,7 +56,6 @@ final class RecipeController extends Controller
     /**
      * Show the recipe creation form.
      *
-     * @param  Request  $request  The incoming HTTP request.
      * @return Response The HTTP response.
      */
     public function create(Request $request): Response
@@ -123,13 +124,11 @@ final class RecipeController extends Controller
      *
      * @param  Recipe  $recipe  The recipe model instance.
      * @param  GetRecipe  $action  The action responsible for the operation.
-     * @param  Request  $request  The incoming HTTP request.
      * @return Response The HTTP response.
      */
-    public function show(Recipe $recipe, GetRecipe $action, Request $request): Response
+    public function show(Recipe $recipe, GetRecipe $action, ViewRecipeRequest $request): Response
     {
         $user = $this->authenticatedUser($request);
-        abort_unless($user->can('view', $recipe), 403);
 
         $result = $action->execute($recipe, $this->authenticatedUser($request));
 
@@ -150,13 +149,11 @@ final class RecipeController extends Controller
      * Show the recipe editing form.
      *
      * @param  Recipe  $recipe  The recipe model instance.
-     * @param  Request  $request  The incoming HTTP request.
      * @return Response The HTTP response.
      */
-    public function edit(Recipe $recipe, Request $request): Response
+    public function edit(Recipe $recipe, ManageRecipeRequest $request): Response
     {
         $user = $this->authenticatedUser($request);
-        abort_unless($user->can('update', $recipe), 403);
 
         $recipe->load(['sections', 'ingredients.product', 'steps.timers', 'steps.recipeReferences.referencedRecipe' => fn ($query) => $query->visibleTo($user), 'cookware', 'tags', 'collection']);
 
@@ -197,7 +194,6 @@ final class RecipeController extends Controller
      */
     public function update(UpdateRecipeRequest $request, Recipe $recipe, UpdateRecipe $action): RedirectResponse
     {
-        abort_unless($this->authenticatedUser($request)->can('update', $recipe), 403);
 
         $data = RecipeData::fromArray(array_merge($request->validated(), ['id' => $recipe->id]));
         $action->execute($recipe, $data);
@@ -211,14 +207,12 @@ final class RecipeController extends Controller
      *
      * @param  Recipe  $recipe  The recipe model instance.
      * @param  DeleteRecipe  $action  The action responsible for the operation.
-     * @param  Request  $request  The incoming HTTP request.
      * @return RedirectResponse The HTTP response.
      */
-    public function destroy(Recipe $recipe, DeleteRecipe $action, Request $request): RedirectResponse
+    public function destroy(Recipe $recipe, DeleteRecipe $action, DeleteRecipeRequest $request): RedirectResponse
     {
-        abort_unless($this->authenticatedUser($request)->can('delete', $recipe), 403);
 
-        $action->execute($recipe, $this->authenticatedUser($request));
+        $action->execute($recipe);
 
         return redirect()->route('recipes.index')
             ->with('toast', ['type' => 'success', 'message' => 'Receta eliminada correctamente.']);
@@ -229,12 +223,10 @@ final class RecipeController extends Controller
      *
      * @param  Recipe  $recipe  The recipe model instance.
      * @param  GetRecipe  $action  The action responsible for the operation.
-     * @param  Request  $request  The incoming HTTP request.
      * @return Response The HTTP response.
      */
-    public function cook(Recipe $recipe, GetRecipe $action, Request $request): Response
+    public function cook(Recipe $recipe, GetRecipe $action, ViewRecipeRequest $request): Response
     {
-        abort_unless($this->authenticatedUser($request)->can('view', $recipe), 403);
 
         $result = $action->execute($recipe, $this->authenticatedUser($request));
 
