@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1\Auth;
 use App\Actions\Auth\ApiLogin;
 use App\Actions\Auth\ApiLoginOtp;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\LoginOtpRequest;
 use App\Http\Requests\LoginRequest;
 use Dedoc\Scramble\Attributes\Endpoint;
 use Dedoc\Scramble\Attributes\Group;
@@ -53,7 +54,6 @@ final class LoginController extends Controller
      * SANCTUM_TOKEN_EXPIRATION_MINUTES). Use `POST /auth/refresh` to rotate
      * before expiry.
      *
-     * @param  Request  $request  The incoming HTTP request.
      * @param  ApiLoginOtp  $action  The action responsible for the operation.
      * @return JsonResponse The JSON response.
      */
@@ -61,17 +61,10 @@ final class LoginController extends Controller
     #[Response(status: 200, description: 'Authentication successful. Returns the auth token and basic user info.')]
     #[Response(status: 401, description: 'Invalid or expired temp token.')]
     #[Response(status: 422, description: 'Invalid OTP code or OTP not configured.')]
-    public function loginOtp(Request $request, ApiLoginOtp $action): JsonResponse
+    public function loginOtp(LoginOtpRequest $request, ApiLoginOtp $action): JsonResponse
     {
-        $request->validate([
-            'code' => ['required', 'string', 'size:6'],
-        ]);
 
-        $user = $request->user();
-
-        if (! $user || ! $user->currentAccessToken()->can('otp-verify')) {
-            abort(401, __('app.errors.token_temporal_invalid'));
-        }
+        $user = $this->authenticatedUser($request);
 
         $result = $action->execute($user, $request->input('code'));
 

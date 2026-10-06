@@ -3,12 +3,12 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
-use App\Models\User;
+use App\Http\Requests\ConfirmGoogleOtpSetupRequest;
+use App\Http\Requests\GoogleLoginCallbackRequest;
+use App\Http\Requests\ShowGoogleOtpSetupRequest;
 use App\Services\Auth\GoogleIdentityService;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 use Laravel\Socialite\Facades\Socialite;
@@ -21,7 +21,7 @@ class GoogleAuthController extends Controller
         return Socialite::driver('google')->redirect();
     }
 
-    public function callback(Request $request, GoogleIdentityService $identities): RedirectResponse
+    public function callback(GoogleLoginCallbackRequest $request, GoogleIdentityService $identities): RedirectResponse
     {
         try {
             $google = Socialite::driver('google')->user();
@@ -47,7 +47,7 @@ class GoogleAuthController extends Controller
         }
 
         $user = $result['user'];
-        if ($user === null || ! $user->canAccessApplication()) {
+        if (! $request->canLogin($user)) {
             return to_route('login')->withErrors(['google' => 'Tu cuenta no tiene un rol asignado.']);
         }
 
@@ -60,13 +60,9 @@ class GoogleAuthController extends Controller
             : to_route('google.otp.setup');
     }
 
-    public function showOtpSetup(Request $request): Response|RedirectResponse
+    public function showOtpSetup(ShowGoogleOtpSetupRequest $request): Response|RedirectResponse
     {
-        $userId = $request->session()->get('google.setup_id');
-        $user = is_string($userId) ? User::query()->find($userId) : null;
-        if ($user === null || ! $user->canAccessApplication() || $user->hasEnabledTwoFactorAuthentication()) {
-            return to_route('login');
-        }
+        $user = $request->setupUser();
 
         $secret = (new Google2FA)->generateSecretKey();
         $request->session()->put('google.otp_secret', $secret);
@@ -78,18 +74,10 @@ class GoogleAuthController extends Controller
         ]);
     }
 
-    public function confirmOtpSetup(Request $request): Response|RedirectResponse
+    public function confirmOtpSetup(ConfirmGoogleOtpSetupRequest $request): Response|RedirectResponse
     {
-        $request->validate(['code' => ['required', 'digits:6']]);
-        $userId = $request->session()->get('google.setup_id');
+        $user = $request->setupUser();
         $secret = $request->session()->get('google.otp_secret');
-        $user = is_string($userId) ? User::query()->find($userId) : null;
-        if ($user === null || ! $user->canAccessApplication() || ! is_string($secret)) {
-            return to_route('login');
-        }
-        if (! (new Google2FA)->verifyKey($secret, $request->string('code')->toString())) {
-            throw ValidationException::withMessages(['code' => 'Código OTP incorrecto.']);
-        }
 
         $codes = collect(range(1, 8))->map(fn (): string => strtoupper(bin2hex(random_bytes(4))))->all();
         $user->update([

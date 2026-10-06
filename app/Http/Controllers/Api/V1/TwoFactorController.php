@@ -3,6 +3,10 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\ConfirmTwoFactorRequest;
+use App\Http\Requests\RegenerateRecoveryCodesRequest;
+use App\Http\Requests\SecurityConfirmedRequest;
+use App\Http\Requests\SetupTwoFactorRequest;
 use App\Models\User;
 use App\Support\SecurityConfirmation;
 use Illuminate\Http\JsonResponse;
@@ -24,36 +28,27 @@ final class TwoFactorController extends Controller
         ]]);
     }
 
-    public function setup(Request $request): JsonResponse
+    public function setup(SetupTwoFactorRequest $request): JsonResponse
     {
         $user = $this->authenticatedUser($request);
-        abort_if($user->hasEnabledTwoFactorAuthentication(), 409, 'Two-factor authentication is already enabled.');
 
         return $this->createChallenge($user, 'setup');
     }
 
-    public function reset(Request $request): JsonResponse
+    public function reset(SecurityConfirmedRequest $request): JsonResponse
     {
         $user = $this->authenticatedUser($request);
-        SecurityConfirmation::authorize($request, $user);
         $response = $this->createChallenge($user, 'reset');
         SecurityConfirmation::consume($request);
 
         return $response;
     }
 
-    public function confirm(Request $request): JsonResponse
+    public function confirm(ConfirmTwoFactorRequest $request): JsonResponse
     {
         $user = $this->authenticatedUser($request);
-        $validated = $request->validate([
-            'challenge_id' => ['required', 'uuid'],
-            'code' => ['required', 'digits:6'],
-        ]);
-        $challenge = Cache::get($this->challengeKey($validated['challenge_id']));
-        abort_unless(is_array($challenge) && hash_equals($user->id, (string) ($challenge['user_id'] ?? '')), 422, 'The challenge is invalid or expired.');
-        $expectedType = str_ends_with((string) $request->route()?->getName(), 'reset.confirm') ? 'reset' : 'setup';
-        abort_unless(($challenge['type'] ?? null) === $expectedType, 422, 'The challenge does not match this operation.');
-        abort_unless((new Google2FA)->verifyKey($challenge['secret'], $validated['code']), 422, 'The OTP code is invalid.');
+        $validated = $request->validated();
+        $challenge = $request->challenge();
 
         $recoveryCodes = $this->newRecoveryCodes();
         $user->update([
@@ -70,10 +65,9 @@ final class TwoFactorController extends Controller
         ]])->header('Cache-Control', 'no-store');
     }
 
-    public function recoveryCodes(Request $request): JsonResponse
+    public function recoveryCodes(SecurityConfirmedRequest $request): JsonResponse
     {
         $user = $this->authenticatedUser($request);
-        SecurityConfirmation::authorize($request, $user);
         $codes = $this->storedRecoveryCodes($user);
         SecurityConfirmation::consume($request);
 
@@ -81,11 +75,9 @@ final class TwoFactorController extends Controller
             ->header('Cache-Control', 'no-store');
     }
 
-    public function regenerateRecoveryCodes(Request $request): JsonResponse
+    public function regenerateRecoveryCodes(RegenerateRecoveryCodesRequest $request): JsonResponse
     {
         $user = $this->authenticatedUser($request);
-        SecurityConfirmation::authorize($request, $user);
-        abort_unless($user->hasEnabledTwoFactorAuthentication(), 409, 'Two-factor authentication is not enabled.');
         $codes = $this->newRecoveryCodes();
         $user->update(['two_factor_recovery_codes' => encrypt(json_encode($codes, JSON_THROW_ON_ERROR))]);
         SecurityConfirmation::consume($request);
@@ -94,10 +86,9 @@ final class TwoFactorController extends Controller
             ->header('Cache-Control', 'no-store');
     }
 
-    public function destroy(Request $request): Response
+    public function destroy(SecurityConfirmedRequest $request): Response
     {
         $user = $this->authenticatedUser($request);
-        SecurityConfirmation::authorize($request, $user);
         $user->update([
             'two_factor_secret' => null,
             'two_factor_confirmed_at' => null,

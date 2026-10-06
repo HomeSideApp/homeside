@@ -5,6 +5,7 @@ namespace App\Http\Middleware;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Laravel\Sanctum\PersonalAccessToken;
 use Symfony\Component\HttpFoundation\Response;
 
 class EnsureApprovedUser
@@ -31,7 +32,7 @@ class EnsureApprovedUser
 
         if ($isApi) {
             $token = $user->currentAccessToken();
-            $temporary = $token !== null && in_array($token->name, ['temp-otp', 'google-otp-setup'], true);
+            $temporary = $token instanceof PersonalAccessToken && in_array($token->name, ['temp-otp', 'google-otp-setup'], true);
             $allowedTemporaryRoutes = [
                 'api.v1.auth.login.otp',
                 'api.v1.auth.login.recovery-code',

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\ConfirmOtpRequest;
+use App\Http\Requests\SignedOtpSetupRequest;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
@@ -22,9 +23,8 @@ class OtpSetupController extends Controller
      * @param  User  $user  The authenticated user.
      * @return Response|RedirectResponse The HTTP response.
      */
-    public function show(User $user): Response|RedirectResponse
+    public function show(SignedOtpSetupRequest $request, User $user): Response|RedirectResponse
     {
-        abort_unless($user->canAccessApplication(), 403);
         if ($user->two_factor_secret && $user->two_factor_confirmed_at) {
             Auth::login($user);
 
@@ -59,21 +59,7 @@ class OtpSetupController extends Controller
      */
     public function confirm(ConfirmOtpRequest $request, User $user): Response|RedirectResponse
     {
-        abort_unless($user->canAccessApplication(), 403);
-        $validated = $request->validated();
-
-        $secret = session("otp_secret_{$user->id}");
-
-        if (! $secret) {
-            return back()->withErrors(['code' => __('app.errors.session_expired')]);
-        }
-
-        $google2fa = new Google2FA;
-        $valid = $google2fa->verifyKey($secret, $validated['code']);
-
-        if (! $valid) {
-            return back()->withErrors(['code' => __('app.errors.otp_code_invalid_verify')]);
-        }
+        $secret = $request->session()->get("otp_secret_{$user->id}");
 
         $recoveryCodes = [];
         for ($i = 0; $i < 8; $i++) {

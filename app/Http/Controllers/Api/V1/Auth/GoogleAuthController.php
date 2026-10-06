@@ -3,20 +3,21 @@
 namespace App\Http\Controllers\Api\V1\Auth;
 
 use App\Http\Controllers\Controller;
-use App\Models\User;
+use App\Http\Requests\ConfirmGoogleOtpApiRequest;
+use App\Http\Requests\GoogleIdTokenRequest;
+use App\Http\Requests\GoogleOtpSetupRequest;
 use App\Services\Auth\GoogleIdentityService;
 use App\Services\Auth\GoogleIdTokenVerifier;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 use PragmaRX\Google2FA\Google2FA;
 
 class GoogleAuthController extends Controller
 {
-    public function login(Request $request, GoogleIdTokenVerifier $verifier, GoogleIdentityService $identities): JsonResponse
+    public function login(GoogleIdTokenRequest $request, GoogleIdTokenVerifier $verifier, GoogleIdentityService $identities): JsonResponse
     {
-        $input = $request->validate(['id_token' => ['required', 'string', 'max:8192']]);
+        $input = $request->validated();
         $google = $verifier->verify($input['id_token']);
         $result = $identities->resolve($google['sub'], $google['email'], $google['name'], $google['email_verified']);
 
@@ -31,7 +32,7 @@ class GoogleAuthController extends Controller
         }
 
         $user = $result['user'];
-        abort_unless($user !== null && $user->canAccessApplication(), 403, 'Tu cuenta no tiene un rol asignado.');
+        $user = $request->authorizeAccount($user);
         $user->tokens()->whereIn('name', ['temp-otp', 'google-otp-setup'])->delete();
         $name = $user->hasEnabledTwoFactorAuthentication() ? 'temp-otp' : 'google-otp-setup';
         $ability = $name === 'temp-otp' ? 'otp-verify' : 'otp-setup';
@@ -44,9 +45,9 @@ class GoogleAuthController extends Controller
         ])->header('Cache-Control', 'no-store');
     }
 
-    public function setup(Request $request): JsonResponse
+    public function setup(GoogleOtpSetupRequest $request): JsonResponse
     {
-        $user = $this->setupUser($request);
+        $user = $this->authenticatedUser($request);
         $challengeId = (string) Str::uuid();
         $secret = (new Google2FA)->generateSecretKey();
         Cache::put('google-otp-setup:'.$challengeId, ['user_id' => $user->id, 'secret' => $secret], now()->addMinutes(5));
@@ -58,14 +59,12 @@ class GoogleAuthController extends Controller
         ]])->header('Cache-Control', 'no-store');
     }
 
-    public function confirm(Request $request): JsonResponse
+    public function confirm(ConfirmGoogleOtpApiRequest $request): JsonResponse
     {
-        $user = $this->setupUser($request);
-        $validated = $request->validate(['challenge_id' => ['required', 'uuid'], 'code' => ['required', 'digits:6']]);
+        $user = $this->authenticatedUser($request);
+        $validated = $request->validated();
         $key = 'google-otp-setup:'.$validated['challenge_id'];
-        $challenge = Cache::get($key);
-        abort_unless(is_array($challenge) && hash_equals($user->id, (string) ($challenge['user_id'] ?? '')), 422, 'Desafío caducado.');
-        abort_unless((bool) (new Google2FA)->verifyKey($challenge['secret'], $validated['code']), 422, 'Código OTP incorrecto.');
+        $challenge = $request->challenge();
 
         $codes = collect(range(1, 8))->map(fn (): string => strtoupper(bin2hex(random_bytes(4))))->all();
         $user->update([
@@ -81,16 +80,5 @@ class GoogleAuthController extends Controller
             'token' => $token->plainTextToken,
             'recovery_codes' => $codes,
         ]])->header('Cache-Control', 'no-store');
-    }
-
-    private function setupUser(Request $request): User
-    {
-        $user = $this->authenticatedUser($request);
-        abort_unless($user->canAccessApplication()
-            && $user->currentAccessToken()->name === 'google-otp-setup'
-            && $user->currentAccessToken()->can('otp-setup')
-            && ! $user->hasEnabledTwoFactorAuthentication(), 403);
-
-        return $user;
     }
 }

@@ -40,20 +40,7 @@ class LoginController extends Controller
         if (Auth::attempt($credentials, $request->boolean('remember'))) {
             $user = $this->authenticatedUser($request);
 
-            if (! $user->canAccessApplication()) {
-                Auth::logout();
-
-                return back()->withErrors(['email' => 'Tu cuenta no está aprobada o no tiene un rol asignado.'])->onlyInput('email');
-            }
-
-            // Si el usuario no tiene 2FA configurado, denegar login
-            if (! $user->hasEnabledTwoFactorAuthentication()) {
-                Auth::logout();
-
-                return back()->withErrors([
-                    'email' => __('app.auth.account_without_otp'),
-                ])->onlyInput('email');
-            }
+            $request->validateAuthenticatedAccount($user);
 
             // Redirigir al desafío OTP
             Auth::logout();

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\ConfirmResetOtpRequest;
+use App\Http\Requests\SignedOtpResetRequest;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\URL;
@@ -23,13 +24,8 @@ class ResetOtpController extends Controller
      * @param  User  $user  The authenticated user.
      * @return Response|RedirectResponse The HTTP response.
      */
-    public function show(User $user): Response|RedirectResponse
+    public function show(SignedOtpResetRequest $request, User $user): Response|RedirectResponse
     {
-        abort_unless($user->canAccessApplication(), 403);
-        if (! $user->hasEnabledTwoFactorAuthentication()) {
-            return back()->withErrors(['error' => __('app.auth.otp_not_configured')]);
-        }
-
         $google2fa = new Google2FA;
         $secret = $google2fa->generateSecretKey();
         $qrCodeUrl = $google2fa->getQRCodeUrl(
@@ -56,21 +52,7 @@ class ResetOtpController extends Controller
      */
     public function confirm(ConfirmResetOtpRequest $request, User $user): Response|RedirectResponse
     {
-        abort_unless($user->canAccessApplication(), 403);
-        $validated = $request->validated();
-
-        $secret = session("otp_reset_secret_{$user->id}");
-
-        if (! $secret) {
-            return back()->withErrors(['code' => __('app.auth.reset_session_expired')]);
-        }
-
-        $google2fa = new Google2FA;
-        $valid = $google2fa->verifyKey($secret, $validated['code']);
-
-        if (! $valid) {
-            return back()->withErrors(['code' => __('app.auth.invalid_otp')]);
-        }
+        $secret = $request->session()->get("otp_reset_secret_{$user->id}");
 
         // Generar nuevos códigos de recuperación
         $recoveryCodes = [];

@@ -2,8 +2,9 @@
 
 namespace App\Http\Controllers\Api\V1;
 
-use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\ConfirmAccountSecurityRequest;
+use App\Http\Requests\SecurityConfirmedRequest;
 use App\Http\Requests\Settings\PasswordUpdateRequest;
 use App\Http\Requests\Settings\ProfileUpdateRequest;
 use App\Http\Resources\Users\UserResource;
@@ -12,6 +13,7 @@ use App\Support\SecurityConfirmation;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\DB;
 
 final class MeAccountController extends Controller
 {
@@ -43,9 +45,8 @@ final class MeAccountController extends Controller
         return response()->noContent();
     }
 
-    public function confirmSecurity(Request $request): JsonResponse
+    public function confirmSecurity(ConfirmAccountSecurityRequest $request): JsonResponse
     {
-        $request->validate(['password' => ['required', 'string', 'current_password']]);
 
         return response()->json(['data' => SecurityConfirmation::issue($this->authenticatedUser($request))], 201);
     }
@@ -61,10 +62,9 @@ final class MeAccountController extends Controller
         return response()->json(['message' => 'If verification is required, a message has been sent.'], 202);
     }
 
-    public function destroy(Request $request): Response
+    public function destroy(SecurityConfirmedRequest $request): Response
     {
         $user = $this->authenticatedUser($request);
-        SecurityConfirmation::authorize($request, $user);
         DB::transaction(function () use ($user): void {
             $user->delete();
             $user->tokens()->delete();

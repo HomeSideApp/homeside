@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Settings;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\DeleteGoogleIdentityRequest;
 use App\Services\Auth\GoogleIdentityService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -44,10 +45,9 @@ class GoogleIdentityController extends Controller
         return to_route('profile.edit')->with('status', 'Cuenta Google vinculada.');
     }
 
-    public function destroy(Request $request): RedirectResponse
+    public function destroy(DeleteGoogleIdentityRequest $request): RedirectResponse
     {
         $user = $this->authenticatedUser($request);
-        abort_if($user->googleIdentity()->doesntExist(), 404);
         $user->googleIdentity()->delete();
 
         return to_route('profile.edit')->with('status', 'Cuenta Google desvinculada.');

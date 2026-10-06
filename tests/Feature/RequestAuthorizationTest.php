@@ -37,6 +37,55 @@ class RequestAuthorizationTest extends TestCase
         $this->assertFalse($target->hasRole('admin'));
     }
 
+    public function test_signed_otp_reset_validates_code_before_replacing_existing_secrets(): void
+    {
+        $this->seed(RolesAndPermissionsSeeder::class);
+        $user = User::factory()->create([
+            'two_factor_secret' => encrypt('existing-secret'),
+            'two_factor_confirmed_at' => now(),
+        ]);
+        $user->assignRole('user');
+        $url = URL::temporarySignedRoute('otp.reset.confirm', now()->addMinutes(30), ['user' => $user->id]);
+
+        $this->withSession(['otp_reset_secret_'.$user->id => 'pending-secret'])
+            ->postJson($url, ['code' => []])
+            ->assertUnprocessable()->assertJsonValidationErrors('code');
+
+        $this->assertSame('existing-secret', decrypt($user->refresh()->two_factor_secret));
+    }
+
+    #[TestWith(['en-US', 'The challenge is invalid or expired.'])]
+    #[TestWith(['es-ES', 'El desafío no es válido o ha caducado.'])]
+    public function test_expired_two_factor_challenge_uses_the_user_locale(string $locale, string $message): void
+    {
+        $user = User::factory()->create(['locale' => $locale]);
+
+        $this->actingAs($user)->postJson(route('api.v1.me.two-factor.confirm'), [
+            'challenge_id' => fake()->uuid(),
+            'code' => '123456',
+        ])->assertUnprocessable()->assertJsonPath('message', $message);
+
+        $this->assertNull($user->refresh()->two_factor_secret);
+    }
+
+    public function test_login_recovery_code_is_validated_and_consumed_before_session_authentication(): void
+    {
+        $this->seed(RolesAndPermissionsSeeder::class);
+        $user = User::factory()->create([
+            'two_factor_secret' => encrypt('existing-secret'),
+            'two_factor_confirmed_at' => now(),
+            'two_factor_recovery_codes' => encrypt(json_encode(['recover-once', 'remaining'], JSON_THROW_ON_ERROR)),
+        ]);
+        $user->assignRole('user');
+
+        $this->withSession(['login.id' => $user->id])
+            ->post(route('two-factor.login.store'), ['recovery_code' => 'recover-once'])
+            ->assertRedirect('/dashboard');
+
+        $this->assertAuthenticatedAs($user);
+        $this->assertSame(['remaining'], json_decode(decrypt($user->refresh()->two_factor_recovery_codes), true));
+    }
+
     #[TestWith(['en-US', 'api.v1.admin.roles.update', 409, 'System roles cannot be modified.'])]
     #[TestWith(['es-ES', 'api.v1.admin.roles.update', 409, 'No se puede modificar un rol del sistema.'])]
     #[TestWith(['en-US', 'admin.roles.update', 403, 'System roles cannot be modified.'])]
