@@ -451,20 +451,21 @@ defineOptions({
                 <CardContent
                     class="flex flex-col gap-2 text-sm text-muted-foreground"
                 >
-                    <p>
-                        {{
-                            t('lists.index.itemCount', {
-                                count: list.items_count,
-                            })
-                        }}
-                    </p>
-                    <p>
+                    <Badge
+                        :variant="
+                            list.pending_items_count > 0
+                                ? 'default'
+                                : 'secondary'
+                        "
+                        class="gap-2 px-3 py-1"
+                    >
+                        <ShoppingBasket aria-hidden="true" />
                         {{
                             t('lists.index.pendingCount', {
                                 count: list.pending_items_count,
                             })
                         }}
-                    </p>
+                    </Badge>
                     <p v-if="list.household">
                         {{
                             t('lists.index.createdBy', {
