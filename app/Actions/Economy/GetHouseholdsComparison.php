@@ -8,9 +8,9 @@ use App\Enums\TransactionType;
 use App\Models\EconomicTransaction;
 use App\Models\EconomicTransactionParticipant;
 use App\Models\Household;
-use App\Models\HouseholdMember;
 use App\Models\HouseholdModule;
 use App\Models\User;
+use App\Support\HouseholdAccess;
 use Illuminate\Support\Collection;
 
 /**
@@ -49,9 +49,7 @@ final class GetHouseholdsComparison
         $monthEnd = now()->endOfMonth();
         $month = $monthEnd->copy()->format('Y-m');
 
-        $memberships = HouseholdMember::query()
-            ->where('user_id', $user->id)
-            ->get(['id', 'household_id']);
+        $memberships = app(HouseholdAccess::class)->memberships($user)->whereIn('household_id', app(HouseholdAccess::class)->householdIds($user, 'economy'));
 
         $activeHouseholdIds = $this->householdsWithEconomyEnabled($memberships->pluck('household_id'));
 

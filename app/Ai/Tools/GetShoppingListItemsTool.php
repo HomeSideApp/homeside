@@ -6,6 +6,8 @@ namespace App\Ai\Tools;
 
 use App\Models\ListItem;
 use App\Models\ShoppingList;
+use App\Models\User;
+use App\Support\HouseholdAccess;
 use HomeSide\AiAgents\Execution\AiExecutionContextData;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Database\Eloquent\Builder;
@@ -75,14 +77,14 @@ class GetShoppingListItemsTool implements Tool
         );
 
         $userId = $this->context->userId;
+        $user = User::query()->findOrFail($userId);
+        app(HouseholdAccess::class)->forget($user->id);
 
         $accessibleList = ShoppingList::query()
             ->where('id', $listId)
-            ->where(function (Builder $query) use ($userId): void {
-                $query->where('created_by', $userId)
-                    ->orWhereHas('household.members', function (Builder $memberQuery) use ($userId): void {
-                        $memberQuery->where('user_id', $userId);
-                    });
+            ->where(function (Builder $query) use ($userId, $user): void {
+                $query->where(fn (Builder $private): Builder => $private->whereNull('household_id')->where('created_by', $userId))
+                    ->orWhereIn('household_id', app(HouseholdAccess::class)->householdIds($user, 'shopping_lists'));
             })
             ->first();
 

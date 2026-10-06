@@ -4,6 +4,7 @@ namespace App\Actions\ShoppingLists;
 
 use App\Models\ShoppingList;
 use App\Models\User;
+use App\Support\HouseholdAccess;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 
@@ -40,8 +41,7 @@ final class ListShoppingLists
                 $accessibleQuery->orWhere(function (Builder $householdQuery) use ($user): void {
                     $householdQuery
                         ->whereNotNull('household_id')
-                        ->whereHas('household.members', fn (Builder $membersQuery): Builder => $membersQuery
-                            ->where('user_id', $user->id))
+                        ->whereIn('household_id', app(HouseholdAccess::class)->householdIds($user, 'shopping_lists'))
                         ->whereHas('household.modules', fn (Builder $modulesQuery): Builder => $modulesQuery
                             ->where('module', 'shopping_lists')
                             ->where('enabled', true));

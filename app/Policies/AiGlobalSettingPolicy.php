@@ -20,7 +20,7 @@ final class AiGlobalSettingPolicy
      */
     public function view(User $user): bool
     {
-        return $user->hasRole('admin');
+        return $user->getPermissionRouteNames()->contains('admin.ai-providers');
     }
 
     /**
@@ -31,6 +31,6 @@ final class AiGlobalSettingPolicy
      */
     public function manage(User $user): bool
     {
-        return $user->hasRole('admin');
+        return $user->getPermissionRouteNames()->contains('admin.ai-providers');
     }
 }

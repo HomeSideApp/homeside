@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Web;
 
+use App\Support\HouseholdAccess;
 use App\Actions\Recipes\CreateRecipe;
 use App\Actions\Recipes\DeleteRecipe;
 use App\Actions\Recipes\GetRecipe;
@@ -130,9 +131,9 @@ final class RecipeController extends Controller
         $user = $this->authenticatedUser($request);
         abort_unless($user->can('view', $recipe), 403);
 
-        $result = $action->execute($recipe);
+        $result = $action->execute($recipe, $this->authenticatedUser($request));
 
-        $recipe->load('households');
+        $recipe->load(['households' => fn ($query) => $query->whereIn('households.id', app(HouseholdAccess::class)->householdIds($user, 'recipes'))]);
 
         return Inertia::render('recipes/Show', [
             ...$result,
@@ -157,7 +158,7 @@ final class RecipeController extends Controller
         $user = $this->authenticatedUser($request);
         abort_unless($user->can('update', $recipe), 403);
 
-        $recipe->load(['sections', 'ingredients.product', 'steps.timers', 'steps.recipeReferences.referencedRecipe', 'cookware', 'tags', 'collection']);
+        $recipe->load(['sections', 'ingredients.product', 'steps.timers', 'steps.recipeReferences.referencedRecipe' => fn ($query) => $query->visibleTo($user), 'cookware', 'tags', 'collection']);
 
         return Inertia::render('recipes/Edit', [
             'recipe' => $recipe,
@@ -217,7 +218,7 @@ final class RecipeController extends Controller
     {
         abort_unless($this->authenticatedUser($request)->can('delete', $recipe), 403);
 
-        $action->execute($recipe);
+        $action->execute($recipe, $this->authenticatedUser($request));
 
         return redirect()->route('recipes.index')
             ->with('toast', ['type' => 'success', 'message' => 'Receta eliminada correctamente.']);
@@ -235,7 +236,7 @@ final class RecipeController extends Controller
     {
         abort_unless($this->authenticatedUser($request)->can('view', $recipe), 403);
 
-        $result = $action->execute($recipe);
+        $result = $action->execute($recipe, $this->authenticatedUser($request));
 
         return Inertia::render('recipes/Cook', [
             ...$result,

@@ -4,6 +4,7 @@ namespace App\Policies;
 
 use App\Models\EconomicImport;
 use App\Models\User;
+use App\Support\HouseholdAccess;
 
 /**
  * Class EconomicImportPolicy
@@ -22,7 +23,8 @@ final class EconomicImportPolicy
             return $import->created_by === $user->id;
         }
 
-        return $import->household->isMember($user);
+        return $import->created_by === $user->id
+            && app(HouseholdAccess::class)->allows($user, $import->household_id, 'economy', true);
     }
 
     /**

@@ -4,6 +4,7 @@ namespace App\Policies;
 
 use App\Models\Contact;
 use App\Models\User;
+use App\Support\HouseholdAccess;
 
 class ContactPolicy
 {
@@ -65,14 +66,8 @@ class ContactPolicy
 
     private function allowed(User $user, Contact $contact, string $operation): bool
     {
-        $permission = $contact->household_id === null ? 'contacts.'.$operation : 'contacts.home.'.$operation;
-
-        if (! $user->getPermissionRouteNames()->contains($permission)) {
-            return false;
-        }
-
         return $contact->household_id === null
             ? $contact->user_id === $user->id
-            : $contact->household?->isMember($user) === true;
+            : app(HouseholdAccess::class)->allows($user, $contact->household_id, 'contacts', $operation !== 'view');
     }
 }

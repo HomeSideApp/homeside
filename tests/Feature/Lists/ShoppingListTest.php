@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Lists;
 
+use App\Enums\HouseholdAccessProfile;
 use App\Models\Household;
 use App\Models\HouseholdMember;
 use App\Models\Permission;
@@ -158,10 +159,11 @@ class ShoppingListTest extends TestCase
         $this->assertDatabaseMissing('shopping_lists', ['id' => $list->id]);
     }
 
-    public function test_readonly_user_cannot_create_list()
+    public function test_reader_membership_cannot_create_list()
     {
-        $user = $this->createUserWithRole('readonly', ['view lists', 'view list']);
+        $user = $this->createUserWithRole('user', ['view lists', 'view list']);
         $household = $this->createHouseholdForUser($user);
+        $household->members()->where('user_id', $user->id)->firstOrFail()->update(['role' => 'member', 'access_profile' => 'reader', 'module_access' => HouseholdAccessProfile::Reader->permissions()]);
 
         $response = $this->actingAs($user)->get(route('households.lists.create', $household));
 

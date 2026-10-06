@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Web;
 
+use App\Support\HouseholdAccess;
 use App\Actions\Economy\GetAccountBalances;
 use App\Actions\Economy\GetHouseholdEconomyOverview;
 use App\Actions\Economy\GetHouseholdsComparison;
@@ -331,8 +332,8 @@ final class HouseholdController extends Controller
         $economyModuleEnabled = in_array(HouseholdModule::Economy->value, $enabledModules, true);
         $shoppingListsModuleEnabled = in_array(HouseholdModule::ShoppingLists->value, $enabledModules, true);
         $recipesModuleEnabled = in_array(HouseholdModule::Recipes->value, $enabledModules, true);
-        $canViewHouseholdEconomy = $economyModuleEnabled
-            && $permissions->contains('households.economy.index');
+        $access = app(HouseholdAccess::class);
+        $canViewHouseholdEconomy = $access->allows($user, $household, 'economy');
         $canViewPersonalEconomy = $permissions->contains('economy.me.index');
 
         $props = [
@@ -343,15 +344,14 @@ final class HouseholdController extends Controller
             'can' => [
                 'householdEconomy' => $canViewHouseholdEconomy,
                 'personalEconomy' => $canViewPersonalEconomy,
-                'createHouseholdExpense' => $economyModuleEnabled && $permissions->contains('economy.create'),
-                'importHouseholdTicket' => $economyModuleEnabled && $permissions->contains('economy.imports.create'),
+                'createHouseholdExpense' => $access->allows($user, $household, 'economy', true),
+                'importHouseholdTicket' => $access->allows($user, $household, 'economy', true),
                 'createPersonalExpense' => $permissions->contains('economy.me.store'),
                 'importPersonalTicket' => $permissions->contains('economy.me.create'),
                 'accounts' => $permissions->contains('economy.me.accounts.index'),
-                'lists' => $shoppingListsModuleEnabled && $permissions->contains('households.lists.index'),
-                'recipes' => $recipesModuleEnabled && $permissions->contains('households.recipes.index'),
-                // Contacts is a global module (not per-household), so only the permission gates it.
-                'contacts' => $permissions->contains('contacts.view'),
+                'lists' => $access->allows($user, $household, 'shopping_lists'),
+                'recipes' => $access->allows($user, $household, 'recipes'),
+                'contacts' => $access->allows($user, $household, 'contacts'),
             ],
         ];
 
@@ -376,11 +376,11 @@ final class HouseholdController extends Controller
             );
             $props['pendingImports'] = Inertia::defer(fn (): array => [
                 'personal' => $this->pendingImportsCount($user),
-                'household' => $economyModuleEnabled
+                'household' => $canViewHouseholdEconomy
                     ? $this->pendingImportsCount($user, $household)
                     : 0,
                 'failed_personal' => $this->failedImportsCount($user),
-                'failed_household' => $economyModuleEnabled
+                'failed_household' => $canViewHouseholdEconomy
                     ? $this->failedImportsCount($user, $household)
                     : 0,
             ]);

@@ -4,6 +4,7 @@ namespace App\Policies;
 
 use App\Models\ContactSource;
 use App\Models\User;
+use App\Support\HouseholdAccess;
 
 class ContactSourcePolicy
 {
@@ -70,12 +71,8 @@ class ContactSourcePolicy
 
     private function allowed(User $user, ContactSource $source, string $operation): bool
     {
-        if (! $user->getPermissionRouteNames()->contains('contacts.sources.'.$operation)) {
-            return false;
-        }
-
         return $source->household_id === null
             ? $source->user_id === $user->id
-            : $source->household?->isMember($user) === true;
+            : app(HouseholdAccess::class)->manages($user, $source->household_id);
     }
 }

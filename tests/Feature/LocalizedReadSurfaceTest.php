@@ -228,6 +228,6 @@ class LocalizedReadSurfaceTest extends TestCase
         $response = $this->get(route('households.lists.show', [$household, $list]));
 
         $response->assertOk();
-        $this->assertStringContainsString('Lácteos', (string) $response->getContent());
+        $response->assertInertia(fn ($page) => $page->where('categories.0.name', 'Lácteos'));
     }
 }

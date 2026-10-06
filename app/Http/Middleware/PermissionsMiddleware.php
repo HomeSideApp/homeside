@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Models\Permission;
+use App\Support\HouseholdAccess;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -36,20 +37,27 @@ class PermissionsMiddleware
             abort(404, __('app.errors.route_permission_not_configured'));
         }
 
-        $cacheKey = 'permission:route:'.implode('|', $permissionRouteNames);
-        $permissionId = Cache::remember($cacheKey, now()->addDay(), function () use ($permissionRouteNames) {
-            foreach ($permissionRouteNames as $routeName) {
-                $permissionId = Permission::where('route_name', $routeName)->value('id');
+        $decision = app(HouseholdAccess::class)->routeDecision($request, $permissionRouteName ?? '');
+        if ($decision !== null) {
+            abort_unless($decision, 403);
 
-                if ($permissionId !== null) {
-                    return $permissionId;
+            return $next($request);
+        }
+
+        $cacheKey = 'permission:route:v2:'.implode('|', $permissionRouteNames);
+        $permissionName = Cache::remember($cacheKey, now()->addDay(), function () use ($permissionRouteNames) {
+            foreach ($permissionRouteNames as $routeName) {
+                $permissionName = Permission::where('route_name', $routeName)->value('route_name');
+
+                if ($permissionName !== null) {
+                    return $permissionName;
                 }
             }
 
             return null;
         });
 
-        if (! $permissionId) {
+        if (! $permissionName) {
             abort(404, __('app.errors.route_permission_not_configured'));
         }
 
@@ -58,11 +66,7 @@ class PermissionsMiddleware
             abort(401);
         }
 
-        $hasPermission = $user->roles()
-            ->whereHas('permissions', function ($query) use ($permissionId) {
-                $query->where('permissions.id', $permissionId);
-            })
-            ->exists();
+        $hasPermission = $user->getPermissionRouteNames()->contains($permissionName);
 
         if (! $hasPermission) {
             abort(403, __('app.errors.permission_denied'));

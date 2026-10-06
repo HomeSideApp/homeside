@@ -5,6 +5,7 @@ namespace App\Actions\Contacts;
 use App\Models\Contact;
 use App\Models\ContactSource;
 use App\Models\User;
+use App\Support\HouseholdAccess;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Support\Collection as SupportCollection;
@@ -41,7 +42,7 @@ final class MarkFavoriteContacts
             ->whereNull('contacts.deleted_at')
             ->where(fn (QueryBuilder $contacts): QueryBuilder => $contacts
                 ->where('contacts.user_id', $user->id)
-                ->orWhereIn('contacts.household_id', $user->households()->select('households.id')))
+                ->orWhereIn('contacts.household_id', app(HouseholdAccess::class)->householdIds($user, 'contacts')))
             ->pluck('contact_labels_link.contact_id');
 
         foreach ($favoriteLabelsBySource as $sourceId => $favoriteLabel) {

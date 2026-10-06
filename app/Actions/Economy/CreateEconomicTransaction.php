@@ -96,7 +96,7 @@ final class CreateEconomicTransaction
             $documentIsAccessible = EconomicDocument::query()
                 ->whereKey($data->source_document_id)
                 ->where('household_id', $household?->id)
-                ->when($household === null, fn ($query) => $query->where('uploaded_by', $user->id))
+                ->where('uploaded_by', $user->id)
                 ->exists();
 
             if (! $documentIsAccessible) {

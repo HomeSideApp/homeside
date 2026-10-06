@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\HouseholdAccessProfile;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -18,6 +19,8 @@ use Illuminate\Support\Carbon;
  * @property string $id The unique identifier for the link (UUID).
  * @property string $household_id The id of the household the link belongs to.
  * @property string $created_by The id of the user who created the link.
+ * @property HouseholdAccessProfile|null $access_profile
+ * @property array<string, string>|null $module_access
  * @property string $token The public token used to open the registration page.
  * @property Carbon|null $expires_at The timestamp when the link stops working, if limited.
  * @property int|null $max_uses The maximum number of registrations, if limited.
@@ -44,6 +47,8 @@ class HouseholdInviteLink extends Model
         'max_uses',
         'uses_count',
         'revoked_at',
+        'access_profile',
+        'module_access',
     ];
 
     /**
@@ -54,6 +59,8 @@ class HouseholdInviteLink extends Model
     protected function casts(): array
     {
         return [
+            'access_profile' => HouseholdAccessProfile::class,
+            'module_access' => 'array',
             'expires_at' => 'datetime',
             'revoked_at' => 'datetime',
             'max_uses' => 'integer',

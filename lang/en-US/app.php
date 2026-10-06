@@ -20,6 +20,8 @@ return [
         'two_factor_recovery_code_invalid' => 'The provided recovery code was invalid.',
     ],
     'permissions' => [
+        'owner_transfer_required' => 'Transfer ownership or delete the affected households before continuing.',
+        'last_platform_admin' => 'At least one approved platform administrator must remain.',
         'household_economy_import_create' => [
             'name' => 'Create household economy import form',
             'description' => 'Open the household economic document import form.',

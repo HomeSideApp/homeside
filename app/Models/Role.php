@@ -2,11 +2,13 @@
 
 namespace App\Models;
 
+use App\Support\PlatformAccess;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Class Role
@@ -69,6 +71,20 @@ class Role extends Model
         return $this->belongsToMany(User::class);
     }
 
+    protected static function booted(): void
+    {
+        static::deleting(fn (self $role) => app(PlatformAccess::class)->ensureRoleChange($role));
+    }
+
+    public function forgetCapabilities(): void
+    {
+        foreach (array_keys(request()->attributes->all()) as $key) {
+            if (str_starts_with($key, 'global_permissions.')) {
+                request()->attributes->remove($key);
+            }
+        }
+    }
+
     /**
      * Sync permissions for the role by permission names or Permission models.
      *
@@ -84,7 +100,11 @@ class Role extends Model
             return Permission::where('name', $permission)->first()?->id;
         })->filter()->values()->all();
 
-        $this->permissions()->sync($permissionIds);
+        DB::transaction(function () use ($permissionIds): void {
+            app(PlatformAccess::class)->ensureRoleChange($this, $permissionIds);
+            $this->permissions()->sync($permissionIds);
+            $this->forgetCapabilities();
+        }, 3);
     }
 
     /**
@@ -103,6 +123,7 @@ class Role extends Model
         })->filter()->values()->all();
 
         $this->permissions()->syncWithoutDetaching($permissionIds);
+        $this->forgetCapabilities();
     }
 
     /**

@@ -4,6 +4,7 @@ namespace App\Policies;
 
 use App\Models\ShoppingList;
 use App\Models\User;
+use App\Support\HouseholdAccess;
 
 final class ShoppingListPolicy
 {
@@ -32,7 +33,7 @@ final class ShoppingListPolicy
      */
     public function update(User $user, ShoppingList $list): bool
     {
-        return $this->canAccess($user, $list);
+        return $this->canAccess($user, $list, true);
     }
 
     /**
@@ -46,7 +47,7 @@ final class ShoppingListPolicy
      */
     public function delete(User $user, ShoppingList $list): bool
     {
-        return $this->canAccess($user, $list);
+        return $this->canAccess($user, $list, true);
     }
 
     /**
@@ -60,13 +61,13 @@ final class ShoppingListPolicy
      */
     public function manage(User $user, ShoppingList $list): bool
     {
-        return $this->canAccess($user, $list);
+        return $this->canAccess($user, $list, true);
     }
 
     /**
      * Resolve access from the list's current ownership scope.
      */
-    private function canAccess(User $user, ShoppingList $list): bool
+    private function canAccess(User $user, ShoppingList $list, bool $write = false): bool
     {
         if ($list->household_id === null) {
             return $list->created_by === $user->id;
@@ -76,8 +77,6 @@ final class ShoppingListPolicy
             return false;
         }
 
-        return $user->householdMemberships()
-            ->where('household_id', $list->household_id)
-            ->exists();
+        return app(HouseholdAccess::class)->allows($user, $list->household_id, 'shopping_lists', $write);
     }
 }

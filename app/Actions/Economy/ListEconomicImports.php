@@ -7,6 +7,7 @@ use App\Enums\EconomicImportStatus;
 use App\Models\EconomicImport;
 use App\Models\Household;
 use App\Models\User;
+use App\Support\HouseholdAccess;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 
@@ -45,7 +46,8 @@ final class ListEconomicImports
      */
     public function executeHousehold(Household $household, User $user, ImportFiltersData $filters): LengthAwarePaginator
     {
-        $query = EconomicImport::query()->where('household_id', $household->id);
+        abort_unless(app(HouseholdAccess::class)->allows($user, $household, 'economy'), 403);
+        $query = EconomicImport::query()->where('household_id', $household->id)->where('created_by', $user->id);
 
         if ($filters->created_by !== null) {
             $query->where('created_by', $filters->created_by);
@@ -83,6 +85,7 @@ final class ListEconomicImports
     public function countByStatuses(User $user, array $statuses, ?Household $household = null): int
     {
         return EconomicImport::query()
+            ->where('created_by', $user->id)
             ->when(
                 $household === null,
                 fn ($query) => $query

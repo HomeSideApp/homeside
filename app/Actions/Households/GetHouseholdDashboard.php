@@ -6,6 +6,7 @@ use App\Actions\ShoppingLists\ListShoppingLists;
 use App\Models\Household;
 use App\Models\ListItem;
 use App\Models\User;
+use App\Support\HouseholdAccess;
 
 /**
  * Gathers the summary data shown on the household dashboard.
@@ -26,7 +27,8 @@ final class GetHouseholdDashboard
      */
     public function execute(Household $household, User $user): array
     {
-        $listIds = $household->lists()->pluck('id');
+        $access = app(HouseholdAccess::class);
+        $listIds = $access->allows($user, $household, 'shopping_lists') ? $household->lists()->pluck('id') : collect();
 
         $householdPendingItemsCount = $listIds->isEmpty()
             ? 0
@@ -52,7 +54,7 @@ final class GetHouseholdDashboard
             'pending_items_count' => (int) $pendingItemsCount,
             'active_lists_count' => $activeListsCount,
             // Recipes shared with this household, used by the module access tiles.
-            'household_recipes_count' => $household->recipes()->count(),
+            'household_recipes_count' => $access->allows($user, $household, 'recipes') ? $household->recipes()->count() : 0,
             'enabled_modules' => $enabledModules,
         ];
     }

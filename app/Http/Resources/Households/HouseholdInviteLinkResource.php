@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources\Households;
 
+use App\Enums\HouseholdAccessProfile;
 use App\Models\HouseholdInviteLink;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -19,6 +20,8 @@ final class HouseholdInviteLinkResource extends JsonResource
     {
         return [
             'id' => $this->id,
+            'access_profile' => $this->access_profile !== null ? $this->access_profile->value : 'member',
+            'module_access' => $this->module_access ?? HouseholdAccessProfile::Member->permissions(),
             'token' => $this->token,
             'url' => route('invite-links.show', $this->token),
             'expires_at' => $this->expires_at?->toISOString(),

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\HouseholdAccess;
 use Database\Factories\RecipeFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
@@ -227,9 +228,7 @@ class Recipe extends Model
             $q->where('owner_id', $user->id)
                 ->orWhere('created_by', $user->id)
                 ->orWhereHas('households', function (Builder $hq) use ($user) {
-                    $hq->whereHas('members', function (Builder $mq) use ($user) {
-                        $mq->where('user_id', $user->id);
-                    });
+                    $hq->whereIn('households.id', app(HouseholdAccess::class)->householdIds($user, 'recipes'));
                 });
         });
     }

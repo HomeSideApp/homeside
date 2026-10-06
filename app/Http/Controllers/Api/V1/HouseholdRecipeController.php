@@ -66,7 +66,7 @@ final class HouseholdRecipeController extends Controller
             $this->authorize('unshare', $recipe);
         }
 
-        $action->execute($recipe, $household);
+        $action->execute($recipe, $household, $this->authenticatedUser($request));
 
         return response()->noContent();
     }

@@ -7,8 +7,10 @@ use App\Models\ListItem;
 use App\Models\Recipe;
 use App\Models\ShoppingList;
 use App\Models\User;
+use App\Support\HouseholdAccess;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 
 /**
  * Adds a recipe's ingredients, scaled to the requested servings, into a
@@ -25,6 +27,10 @@ final class AddToShoppingList
      */
     public function execute(Recipe $recipe, ShoppingList $list, AddToListData $data, User $user): Collection
     {
+        Gate::forUser($user)->authorize('view', $recipe);
+        abort_unless($recipe->owner_id === $user->id || $recipe->householdShares()
+            ->whereIn('household_id', app(HouseholdAccess::class)->householdIds($user, 'recipes', true))->exists(), 403);
+        Gate::forUser($user)->authorize('update', $list);
         $factor = $recipe->servings > 0
             ? $data->target_servings / $recipe->servings
             : 1;
@@ -62,6 +68,7 @@ final class AddToShoppingList
             return;
         }
 
+        Gate::forUser($user)->authorize('view', $recipe);
         $ancestors[$recipe->id] = true;
         $recipe->loadMissing(['ingredients', 'references.referencedRecipe']);
 

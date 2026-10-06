@@ -11,6 +11,7 @@ use App\Http\Requests\StoreRecipeApiRequest;
 use App\Models\Recipe;
 use App\Models\ShoppingList;
 use App\Models\User;
+use App\Support\HouseholdAccess;
 use HomeSide\AiAgents\Models\AiActionProposal;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
@@ -37,11 +38,13 @@ class AcceptAiActionProposal
      */
     public function execute(User $user, AiActionProposal $proposal): array
     {
-        abort_unless($proposal->user_id === $user->id, 404);
-        abort_if($proposal->expires_at?->isPast(), 409, 'The proposal has expired.');
-        abort_unless($proposal->isPending(), 409, 'Only pending proposals can be accepted.');
+        app(HouseholdAccess::class)->forget($user->id);
 
         return DB::transaction(function () use ($proposal, $user): array {
+            $proposal = AiActionProposal::query()->lockForUpdate()->findOrFail($proposal->id);
+            abort_unless($proposal->user_id === $user->id, 404);
+            abort_if($proposal->expires_at?->isPast(), 409, 'The proposal has expired.');
+            abort_unless($proposal->isPending(), 409, 'Only pending proposals can be accepted.');
             $result = match ($proposal->type) {
                 'add_shopping_items' => $this->addShoppingItems($user, $proposal),
                 'create_recipe' => $this->createRecipeFromProposal($user, $proposal),
@@ -50,7 +53,7 @@ class AcceptAiActionProposal
             $proposal->accept();
 
             return $result;
-        });
+        }, 3);
     }
 
     /**

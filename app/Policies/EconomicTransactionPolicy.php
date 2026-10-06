@@ -5,6 +5,7 @@ namespace App\Policies;
 use App\Enums\TransactionScope;
 use App\Models\EconomicTransaction;
 use App\Models\User;
+use App\Support\HouseholdAccess;
 
 /**
  * Class EconomicTransactionPolicy
@@ -27,7 +28,7 @@ final class EconomicTransactionPolicy
             return $transaction->created_by === $user->id;
         }
 
-        if (! $transaction->household->isMember($user)) {
+        if (! app(HouseholdAccess::class)->allows($user, $transaction->household_id, 'economy')) {
             return false;
         }
 
@@ -51,7 +52,7 @@ final class EconomicTransactionPolicy
             return $transaction->created_by === $user->id;
         }
 
-        return $transaction->household->isMember($user)
+        return app(HouseholdAccess::class)->allows($user, $transaction->household_id, 'economy', true)
             && $transaction->created_by === $user->id;
     }
 

@@ -4,6 +4,7 @@ namespace App\Policies;
 
 use App\Models\EconomicDocument;
 use App\Models\User;
+use App\Support\HouseholdAccess;
 
 /**
  * Class EconomicDocumentPolicy
@@ -26,7 +27,8 @@ final class EconomicDocumentPolicy
             return $document->uploaded_by === $user->id;
         }
 
-        return $document->household->isMember($user);
+        return app(HouseholdAccess::class)->allows($user, $document->household_id, 'economy')
+            && ($document->uploaded_by === $user->id || $document->transactions()->where('scope', 'shared')->exists());
     }
 
     /**
@@ -43,6 +45,6 @@ final class EconomicDocumentPolicy
         }
 
         return $document->uploaded_by === $user->id
-            || $document->household->isAdmin($user);
+            && app(HouseholdAccess::class)->allows($user, $document->household_id, 'economy', true);
     }
 }

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Web;
 
+use App\Support\HouseholdAccess;
 use App\Actions\Icons\ListIcons;
 use App\Actions\ShoppingLists\CreateShoppingList;
 use App\Actions\ShoppingLists\DeleteShoppingList;
@@ -38,14 +39,13 @@ final class PersonalShoppingListController extends Controller
             'scope' => $validated['scope'] ?? 'all',
             'household' => $validated['household'] ?? null,
         ];
+        $access = app(HouseholdAccess::class);
         $households = $user->households_enabled
             ? $user->households()
                 ->select(['households.id', 'households.name', 'households.color', 'households.image_url'])
-                ->whereHas('modules', fn ($query) => $query
-                    ->where('module', 'shopping_lists')
-                    ->where('enabled', true))
+                ->whereIn('households.id', $access->householdIds($user, 'shopping_lists'))
                 ->orderBy('households.name')
-                ->get()
+                ->get()->each(fn ($household) => $household->setAttribute('can_write', $access->allows($user, $household, 'shopping_lists', true)))
             : collect();
 
         return Inertia::render('lists/Index', [

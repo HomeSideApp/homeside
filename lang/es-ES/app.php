@@ -20,6 +20,8 @@ return [
         'two_factor_recovery_code_invalid' => 'El código de recuperación no es válido.',
     ],
     'permissions' => [
+        'owner_transfer_required' => 'Transfiere la titularidad o elimina los hogares afectados antes de continuar.',
+        'last_platform_admin' => 'Debe conservarse un administrador de plataforma con acceso aprobado.',
         'household_economy_import_create' => [
             'name' => 'Abrir importación económica del hogar',
             'description' => 'Abre el formulario para importar un documento económico del hogar.',

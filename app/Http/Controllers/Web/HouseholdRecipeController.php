@@ -44,9 +44,9 @@ final class HouseholdRecipeController extends Controller
         return back()->with('toast', ['type' => 'success', 'message' => 'Receta compartida con el hogar.']);
     }
 
-    public function unshare(Household $household, Recipe $recipe, UnshareRecipe $action): RedirectResponse
+    public function unshare(Household $household, Recipe $recipe, UnshareRecipe $action, Request $request): RedirectResponse
     {
-        $action->execute($recipe, $household);
+        $action->execute($recipe, $household, $this->authenticatedUser($request));
 
         return back()->with('toast', ['type' => 'success', 'message' => __('app.toast.recipe_unshared')]);
     }

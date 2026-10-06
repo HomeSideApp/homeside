@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\Web;
 
+use App\Models\HouseholdMember;
+use App\Support\HouseholdAccess;
 use App\Actions\Contacts\DiscoverContactCollections;
 use App\Actions\Contacts\SaveContactSource;
 use App\Actions\Contacts\SetContactCollectionEnabled;
@@ -30,6 +32,8 @@ class ContactSourceController extends Controller
     public function index(Request $request, ContactProviderRegistry $registry): Response
     {
         Gate::authorize('viewAny', ContactSource::class);
+        $user = $this->authenticatedUser($request);
+        $access = app(HouseholdAccess::class);
         $sources = ContactSource::query()
             ->visibleTo($this->authenticatedUser($request))
             ->with('collections')->orderBy('name')->get();
@@ -45,7 +49,7 @@ class ContactSourceController extends Controller
                 return is_array($draft) && $draft['user_id'] === $request->user()->id
                     ? ['email' => $draft['email']] : null;
             })(),
-            'households' => $this->authenticatedUser($request)->households()->get(['households.id', 'households.name']),
+            'households' => $user->households()->whereIn('households.id', $access->memberships($user)->filter(fn (HouseholdMember $member): bool => $access->manages($user, $member->household_id))->pluck('household_id'))->get(['households.id', 'households.name']),
         ]);
     }
 

@@ -4,6 +4,7 @@ namespace App\Policies;
 
 use App\Models\Recipe;
 use App\Models\User;
+use App\Support\HouseholdAccess;
 
 final class RecipePolicy
 {
@@ -25,9 +26,7 @@ final class RecipePolicy
 
         // Household member where recipe is shared
         return $recipe->householdShares()
-            ->whereHas('household.members', function ($query) use ($user) {
-                $query->where('user_id', $user->id);
-            })
+            ->whereIn('household_id', app(HouseholdAccess::class)->householdIds($user, 'recipes'))
             ->exists();
     }
 

@@ -38,6 +38,17 @@ class HouseholdModule extends Model
 
     protected $fillable = ['household_id', 'module', 'enabled', 'settings'];
 
+    protected static function booted(): void
+    {
+        static::saved(function (): void {
+            foreach (array_keys(request()->attributes->all()) as $key) {
+                if (str_starts_with($key, 'household_access.')) {
+                    request()->attributes->remove($key);
+                }
+            }
+        });
+    }
+
     /**
      * Get the attribute casts for the model.
      *

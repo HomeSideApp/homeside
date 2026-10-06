@@ -17,7 +17,7 @@ final class RecipeExportController extends Controller
     {
         abort_unless($this->authenticatedUser($request)->can('export', $recipe), 403);
 
-        $recipeData = $action->execute($recipe)['recipe'];
+        $recipeData = $action->execute($recipe, $this->authenticatedUser($request))['recipe'];
 
         $recipeDataDto = RecipeData::fromModel($recipeData);
 

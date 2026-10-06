@@ -4,6 +4,7 @@ namespace App\Policies;
 
 use App\Models\Household;
 use App\Models\User;
+use App\Support\HouseholdAccess;
 
 final class HouseholdRecipePolicy
 {
@@ -18,7 +19,7 @@ final class HouseholdRecipePolicy
      */
     public function view(User $user, Household $household): bool
     {
-        return $household->isMember($user);
+        return app(HouseholdAccess::class)->allows($user, $household, 'recipes');
     }
 
     /**
@@ -32,7 +33,7 @@ final class HouseholdRecipePolicy
      */
     public function share(User $user, Household $household): bool
     {
-        return $household->isMember($user);
+        return app(HouseholdAccess::class)->allows($user, $household, 'recipes', true);
     }
 
     /**
@@ -46,6 +47,6 @@ final class HouseholdRecipePolicy
      */
     public function unshare(User $user, Household $household): bool
     {
-        return $household->isMember($user);
+        return app(HouseholdAccess::class)->allows($user, $household, 'recipes', true);
     }
 }

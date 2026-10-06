@@ -6,6 +6,8 @@ use App\Models\Household;
 use App\Models\HouseholdRecipe;
 use App\Models\Recipe;
 use App\Models\User;
+use App\Support\HouseholdAccess;
+use Illuminate\Support\Facades\Gate;
 
 /**
  * Shares a recipe with a household, keeping the share idempotent.
@@ -20,6 +22,8 @@ final class ShareRecipe
      */
     public function execute(Recipe $recipe, Household $household, User $actor): HouseholdRecipe
     {
+        Gate::forUser($actor)->authorize('share', $recipe);
+        abort_unless(app(HouseholdAccess::class)->allows($actor, $household, 'recipes', true), 403);
         // Check if already shared
         $existing = HouseholdRecipe::where('household_id', $household->id)
             ->where('recipe_id', $recipe->id)

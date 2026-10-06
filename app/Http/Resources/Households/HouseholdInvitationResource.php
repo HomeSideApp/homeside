@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources\Households;
 
+use App\Enums\HouseholdAccessProfile;
 use App\Enums\InvitationStatus;
 use App\Models\HouseholdInvitation;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -21,6 +22,8 @@ final class HouseholdInvitationResource extends JsonResource
 
         return [
             'id' => $this->id,
+            'access_profile' => $this->access_profile !== null ? $this->access_profile->value : 'member',
+            'module_access' => $this->module_access ?? HouseholdAccessProfile::Member->permissions(),
             'email' => $this->email,
             'status' => $status->value,
             'status_label' => $status->label(),

@@ -23,12 +23,18 @@ final class ApiOperationPermissions
         return collect(RouteFacade::getRoutes()->getRoutes())
             ->filter(fn (Route $route): bool => Str::startsWith((string) $route->getName(), 'api.v1.'))
             ->filter(fn (Route $route): bool => in_array('auth:sanctum', $route->middleware(), true))
-            ->filter(function (Route $route) use ($permissionRouteNames): bool {
+            ->filter(function (Route $route) use ($permissionRouteNames, $user): bool {
                 if (! in_array('api.permission', $route->middleware(), true)) {
                     return true;
                 }
 
                 $domainRouteName = Str::after((string) $route->getName(), 'api.v1.');
+                if (in_array($domainRouteName, ['households.create', 'households.store', 'households.configuration.show'], true)) {
+                    return $user->can_create_households && $user->households_enabled;
+                }
+                if (str_starts_with($domainRouteName, 'households.')) {
+                    return true;
+                }
                 $candidates = array_filter([
                     $domainRouteName,
                     ApiPermissionsMiddleware::PERMISSION_ALIASES[$domainRouteName] ?? null,

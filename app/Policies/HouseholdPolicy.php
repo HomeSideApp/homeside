@@ -47,7 +47,7 @@ final class HouseholdPolicy
      */
     public function delete(User $user, Household $household): bool
     {
-        return $household->isAdmin($user);
+        return $household->owner_id === $user->id && $household->isAdmin($user);
     }
 
     /**
@@ -84,6 +84,10 @@ final class HouseholdPolicy
      */
     public function removeMember(User $user, Household $household, HouseholdMember $member): bool
     {
+        if ($member->household_id !== $household->id) {
+            return false;
+        }
+
         if ($household->isAdmin($user)) {
             return true;
         }

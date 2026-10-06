@@ -6,8 +6,8 @@ use App\Enums\TransactionType;
 use App\Models\EconomicTransaction;
 use App\Models\EconomicTransactionParticipant;
 use App\Models\Household;
-use App\Models\HouseholdMember;
 use App\Models\User;
+use App\Support\HouseholdAccess;
 use Illuminate\Support\Carbon;
 
 /**
@@ -30,7 +30,7 @@ final class GetPersonalTotalsStats
     public function execute(User $user, ?string $period = null): array
     {
         [$start, $end] = $this->resolveRange($period);
-        $memberships = HouseholdMember::where('user_id', $user->id)->get(['id', 'household_id']);
+        $memberships = app(HouseholdAccess::class)->memberships($user)->whereIn('household_id', app(HouseholdAccess::class)->householdIds($user, 'economy'));
         $membershipIds = $memberships->pluck('id');
         $householdIds = $memberships->pluck('household_id');
 

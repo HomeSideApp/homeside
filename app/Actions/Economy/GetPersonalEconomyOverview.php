@@ -8,9 +8,9 @@ use App\Enums\TransactionType;
 use App\Models\EconomicTransaction;
 use App\Models\EconomicTransactionParticipant;
 use App\Models\Household;
-use App\Models\HouseholdMember;
 use App\Models\HouseholdModule;
 use App\Models\User;
+use App\Support\HouseholdAccess;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Collection;
 
@@ -51,9 +51,7 @@ final class GetPersonalEconomyOverview
         $windowEnd = now()->endOfMonth();
         $currentMonth = $windowEnd->copy()->format('Y-m');
 
-        $memberships = HouseholdMember::query()
-            ->where('user_id', $user->id)
-            ->get(['id', 'household_id']);
+        $memberships = app(HouseholdAccess::class)->memberships($user)->whereIn('household_id', app(HouseholdAccess::class)->householdIds($user, 'economy'));
 
         // Only households that still have the economy module enabled contribute to the personal
         // overview: a household that turned the module off must stop feeding these figures.

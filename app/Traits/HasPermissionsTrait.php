@@ -26,13 +26,20 @@ trait HasPermissionsTrait
      */
     public function getPermissionRouteNames(): Collection
     {
-        return $this->roles()
+        $key = 'global_permissions.'.$this->id;
+        if (request()->attributes->has($key)) {
+            return request()->attributes->get($key);
+        }
+        $permissions = $this->roles()
             ->with('permissions:id,route_name')
             ->get()
             ->flatMap(fn (Role $role) => $role->permissions)
             ->pluck('route_name')
             ->unique()
             ->values();
+        request()->attributes->set($key, $permissions);
+
+        return $permissions;
     }
 
     /**

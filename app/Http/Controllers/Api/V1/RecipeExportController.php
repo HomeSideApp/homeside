@@ -27,7 +27,7 @@ final class RecipeExportController extends Controller
     ): Response {
         $this->authorize('export', $recipe);
 
-        $recipe = $action->execute($recipe)['recipe'];
+        $recipe = $action->execute($recipe, $this->authenticatedUser($request))['recipe'];
         $data = RecipeData::fromModel($recipe);
 
         $filename = Str::slug($data->name).'.cook';

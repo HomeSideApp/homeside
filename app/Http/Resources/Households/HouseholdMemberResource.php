@@ -19,6 +19,9 @@ final class HouseholdMemberResource extends JsonResource
 
         return [
             'id' => $this->id,
+            'access_profile' => $this->access_profile !== null ? $this->access_profile->value : ($this->role->value === 'admin' ? 'admin' : 'member'),
+            'module_access' => $this->resource->permissions(),
+            'is_customized' => $this->access_profile !== null && $this->resource->permissions() !== $this->access_profile->permissions(),
             'role' => $this->role->value,
             'joined_at' => $this->joined_at?->toISOString(),
             'user' => [

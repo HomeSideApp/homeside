@@ -490,7 +490,7 @@ class AssistantTest extends TestCase
             ->postJson(route('assistant.create-recipe', [$conversation, $oldRunId]));
 
         $response->assertConflict()
-            ->assertJsonPath('message', 'Esta propuesta ya no es la última receta generada.');
+            ->assertJsonPath('message', __('app.errors.last_proposal_not_recipe'));
         $this->assertDatabaseMissing('recipes', ['name' => 'Pastel de boniato']);
     }
 

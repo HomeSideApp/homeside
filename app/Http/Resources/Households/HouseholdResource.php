@@ -6,6 +6,7 @@ use App\Enums\HouseholdModule;
 use App\Enums\HouseholdRole;
 use App\Models\Household;
 use App\Models\HouseholdModule as HouseholdModuleModel;
+use App\Support\HouseholdAccess;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -37,6 +38,10 @@ final class HouseholdResource extends JsonResource
             'invite_code' => $this->when($isMemberAdmin, $this->invite_code),
             'settings' => $this->settings,
             'created_by' => $this->created_by,
+            'owner_id' => $this->owner_id,
+            'capabilities' => $currentUser ? app(HouseholdAccess::class)->capabilities($currentUser, $this->resource) : [],
+            'operation_authorization' => 'household',
+            'can_manage' => $currentUser ? app(HouseholdAccess::class)->manages($currentUser, $this->resource) : false,
             // Lets the client build the transaction destination selector without issuing one
             // request per household. Omitted when the modules relation was not loaded.
             'economy_module_enabled' => $this->whenLoaded(

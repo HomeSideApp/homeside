@@ -72,7 +72,7 @@ final class RecipeController extends Controller
     {
         abort_unless($this->authenticatedUser($request)->can('view', $recipe), 403);
 
-        $result = $action->execute($recipe);
+        $result = $action->execute($recipe, $this->authenticatedUser($request));
 
         return new RecipeResource($result['recipe']);
     }
@@ -99,7 +99,7 @@ final class RecipeController extends Controller
     {
         abort_unless($this->authenticatedUser($request)->can('delete', $recipe), 403);
 
-        $action->execute($recipe);
+        $action->execute($recipe, $this->authenticatedUser($request));
 
         return response()->noContent();
     }

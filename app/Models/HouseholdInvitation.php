@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\HouseholdAccessProfile;
 use App\Enums\InvitationStatus;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
@@ -22,6 +23,8 @@ use Illuminate\Support\Carbon;
  * @property string $invited_by The id of the user who sent the invitation.
  * @property string|null $email The email address of the invited user, if any.
  * @property string|null $contact_id The inviter's contact linked to the invitation, if any.
+ * @property HouseholdAccessProfile|null $access_profile
+ * @property array<string, string>|null $module_access
  * @property InvitationStatus $status The status of the invitation.
  * @property string $token The unique token used to accept the invitation.
  * @property Carbon $expires_at The timestamp when the invitation expires.
@@ -40,7 +43,7 @@ class HouseholdInvitation extends Model
 {
     use HasUuids;
 
-    protected $fillable = ['household_id', 'invited_by', 'email', 'contact_id', 'status', 'token', 'expires_at', 'accepted_at'];
+    protected $fillable = ['household_id', 'invited_by', 'email', 'contact_id', 'status', 'token', 'expires_at', 'accepted_at', 'access_profile', 'module_access'];
 
     /**
      * Get the attribute casts for the model.
@@ -50,6 +53,8 @@ class HouseholdInvitation extends Model
     protected function casts(): array
     {
         return [
+            'access_profile' => HouseholdAccessProfile::class,
+            'module_access' => 'array',
             'status' => InvitationStatus::class,
             'expires_at' => 'datetime',
             'accepted_at' => 'datetime',

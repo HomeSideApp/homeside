@@ -102,7 +102,8 @@ final class HouseholdInviteLinkTest extends TestCase
         $user = User::where('email', 'rafael@example.com')->firstOrFail();
         $this->assertSame('Rafael Ortega', $user->name);
         $this->assertNotNull($user->email_verified_at);
-        $this->assertTrue($user->hasRole('user-invitation'));
+        $this->assertTrue($user->hasRole('user'));
+        $this->assertFalse($user->can_create_households);
 
         $member = HouseholdMember::where('household_id', $this->household->id)
             ->where('user_id', $user->id)

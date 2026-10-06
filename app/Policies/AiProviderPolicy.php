@@ -26,7 +26,7 @@ final class AiProviderPolicy
     public function view(User $user, AiProvider $provider): bool
     {
         if ($provider->isGlobal()) {
-            return $user->hasRole('admin');
+            return $user->getPermissionRouteNames()->contains('admin.ai-providers');
         }
 
         if ($provider->isUser()) {
@@ -46,7 +46,7 @@ final class AiProviderPolicy
     public function manage(User $user, AiProvider $provider): bool
     {
         if ($provider->isGlobal()) {
-            return $user->hasRole('admin');
+            return $user->getPermissionRouteNames()->contains('admin.ai-providers');
         }
 
         if ($provider->isUser()) {

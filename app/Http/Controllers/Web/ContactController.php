@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Web;
 
+use App\Support\HouseholdAccess;
 use App\Actions\Contacts\FindContactDuplicates;
 use App\Actions\Contacts\MarkFavoriteContacts;
 use App\Actions\Contacts\SaveLocalContact;
@@ -60,7 +61,7 @@ class ContactController extends Controller
             'filters' => ['search' => $search, 'label' => $labelId],
             'duplicate_count' => fn (): int => count($duplicates->execute($user)),
             'labels' => fn (): Collection => $this->labelsQuery($user),
-            'households' => fn () => $user->households()->get(['households.id', 'households.name']),
+            'households' => fn () => $user->households()->whereIn('households.id', app(HouseholdAccess::class)->householdIds($user, 'contacts', true))->get(['households.id', 'households.name']),
         ]);
     }
 
@@ -85,7 +86,7 @@ class ContactController extends Controller
             'contacts' => fn (): array => $this->contactsPayload($request, $user, $search, $labelId, $favorites, $household->id),
             'filters' => ['search' => $search, 'label' => $labelId],
             'labels' => fn (): Collection => $this->labelsQuery($user),
-            'households' => fn () => $user->households()->get(['households.id', 'households.name']),
+            'households' => fn () => $user->households()->whereIn('households.id', app(HouseholdAccess::class)->householdIds($user, 'contacts', true))->get(['households.id', 'households.name']),
         ]);
     }
 

@@ -30,6 +30,7 @@ use Illuminate\Support\Str;
  * @property string $name The name of the household.
  * @property string|null $invite_code The invite code used to join the household.
  * @property array<string, mixed> $settings The settings of the household.
+ * @property string|null $owner_id The current owner of the household.
  * @property string|null $created_by The id of the user who created the household.
  * @property string|null $description The description of the household.
  * @property string|null $image_url The URL of the household image.
@@ -59,7 +60,20 @@ class Household extends Model
     /** @use HasFactory<HouseholdFactory> */
     use HasFactory, HasUuids;
 
-    protected $fillable = ['name', 'invite_code', 'settings', 'created_by', 'description', 'image_url', 'color'];
+    protected $fillable = ['name', 'invite_code', 'settings', 'created_by', 'owner_id', 'description', 'image_url', 'color'];
+
+    protected static function booted(): void
+    {
+        static::creating(function (self $household): void {
+            $household->owner_id ??= $household->created_by;
+        });
+    }
+
+    /** @return BelongsTo<User, $this> */
+    public function owner(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'owner_id');
+    }
 
     /**
      * Get the attribute casts for the model.

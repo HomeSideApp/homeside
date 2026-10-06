@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\AppLocale;
 use App\Notifications\InviteUserNotification;
+use App\Support\PlatformAccess;
 use App\Traits\HasPermissionsTrait;
 use Database\Factories\UserFactory;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
@@ -13,6 +14,7 @@ use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -40,6 +42,7 @@ use Laravel\Sanctum\HasApiTokens;
  * @property string $password The hashed password of the user.
  * @property string|null $remember_token The token used to remember the user.
  * @property string|null $active_household_id The id of the currently active household.
+ * @property bool $can_create_households
  * @property bool $households_enabled Whether household features are enabled for the user.
  * @property Carbon|null $created_at The timestamp when the user was created.
  * @property Carbon|null $updated_at The timestamp when the user was last updated.
@@ -50,7 +53,7 @@ use Laravel\Sanctum\HasApiTokens;
  *
  * @mixin Model
  */
-#[Fillable(['name', 'email', 'email_verified_at', 'locale', 'password', 'two_factor_secret', 'two_factor_confirmed_at', 'two_factor_recovery_codes', 'active_household_id', 'households_enabled', 'shares_personal_products', 'approval_status', 'approved_at'])]
+#[Fillable(['name', 'email', 'email_verified_at', 'locale', 'password', 'two_factor_secret', 'two_factor_confirmed_at', 'two_factor_recovery_codes', 'active_household_id', 'households_enabled', 'can_create_households', 'shares_personal_products', 'approval_status', 'approved_at'])]
 #[Hidden(['password', 'remember_token', 'two_factor_secret', 'two_factor_confirmed_at', 'two_factor_recovery_codes'])]
 class User extends Authenticatable implements HasLocalePreference, MustVerifyEmail
 {
@@ -62,6 +65,7 @@ class User extends Authenticatable implements HasLocalePreference, MustVerifyEma
         'locale' => 'en-US',
         'approval_status' => 'approved',
         'households_enabled' => true,
+        'can_create_households' => true,
     ];
 
     /**
@@ -77,6 +81,7 @@ class User extends Authenticatable implements HasLocalePreference, MustVerifyEma
             'two_factor_confirmed_at' => 'datetime',
             'password' => 'hashed',
             'households_enabled' => 'boolean',
+            'can_create_households' => 'boolean',
             'shares_personal_products' => 'boolean',
         ];
     }
@@ -92,6 +97,13 @@ class User extends Authenticatable implements HasLocalePreference, MustVerifyEma
     public function preferredLocale(): string
     {
         return AppLocale::resolve($this->locale)->value;
+    }
+
+    protected static function booted(): void
+    {
+        static::deleting(function (self $user): void {
+            app(PlatformAccess::class)->ensureCanDelete($user);
+        });
     }
 
     /** @return BelongsToMany<Household, $this> */
@@ -168,6 +180,7 @@ class User extends Authenticatable implements HasLocalePreference, MustVerifyEma
         }
 
         $this->roles()->syncWithoutDetaching([$role->id]);
+        request()->attributes->remove('global_permissions.'.$this->id);
     }
 
     /**
@@ -177,6 +190,7 @@ class User extends Authenticatable implements HasLocalePreference, MustVerifyEma
     {
         $role = Role::where('slug', $roleSlug)->firstOrFail();
         $this->roles()->sync([$role->id]);
+        request()->attributes->remove('global_permissions.'.$this->id);
     }
 
     /**

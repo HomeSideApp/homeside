@@ -102,9 +102,10 @@ final class EconomicImportWebTest extends TestCase
      *
      * @return void This test method does not return a value.
      */
-    public function test_readonly_user_cannot_submit_private_import(): void
+    public function test_household_reader_can_submit_private_import(): void
     {
-        $user = $this->authenticateUser('readonly');
+        $user = $this->authenticateUser();
+        HouseholdMember::factory()->create(['user_id' => $user->id, 'access_profile' => 'reader']);
 
         $response = $this->actingAs($user)->post(route('economy.me.imports.store'), [
             'file' => UploadedFile::fake()->image('receipt.jpg'),
@@ -116,9 +117,10 @@ final class EconomicImportWebTest extends TestCase
             ],
         ]);
 
-        $response->assertForbidden();
-        $this->assertDatabaseCount('economic_documents', 0);
-        $this->assertDatabaseCount('economic_imports', 0);
+        $response->assertRedirect();
+        $response->assertSessionHasNoErrors();
+        $this->assertDatabaseCount('economic_documents', 1);
+        $this->assertDatabaseCount('economic_imports', 1);
     }
 
     /**

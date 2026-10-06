@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\HouseholdAccess;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
@@ -59,7 +60,7 @@ class Contact extends Model
     {
         return $query->where(function (Builder $query) use ($user): void {
             $query->where('user_id', $user->id)
-                ->orWhereIn('household_id', $user->households()->select('households.id'));
+                ->orWhereIn('household_id', app(HouseholdAccess::class)->householdIds($user, 'contacts'));
         });
     }
 }

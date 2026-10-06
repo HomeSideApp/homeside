@@ -261,122 +261,163 @@ class RolesAndPermissionsSeeder extends Seeder
         Permission::firstOrCreate(['route_name' => 'jobs-monitor.show'], ['name' => 'view job run', 'description' => 'Ver detalle de una ejecución de job', 'permission_group_id' => $jobMonitoringGroup->id]);
         Permission::firstOrCreate(['route_name' => 'jobs-monitor.retry'], ['name' => 'retry failed jobs', 'description' => 'Reintentar jobs fallidos', 'permission_group_id' => $jobMonitoringGroup->id]);
 
-        // Roles
-        $admin = Role::firstOrCreate(['slug' => 'admin'], ['name' => 'Admin', 'is_system' => true]);
-        $admin->givePermissionTo(Permission::all());
+        foreach (['households.members.permissions', 'households.ownership.transfer', 'admin.users.assign-roles', 'admin.personal-products.index', 'admin.personal-products.show', 'admin.personal-products.promote', 'admin.personal-products.generate-icon'] as $routeName) {
+            Permission::firstOrCreate(['route_name' => $routeName], [
+                'name' => $routeName, 'description' => $routeName,
+                'permission_group_id' => str_starts_with($routeName, 'admin.') ? $adminGroup->id : $hogaresGroup->id,
+            ]);
+        }
 
-        $user = Role::firstOrCreate(['slug' => 'user'], ['name' => 'User', 'is_system' => true]);
-        $user->givePermissionTo(Permission::whereIn('route_name', [
+        $baseRoutes = [
+            'contacts.create',
+            'contacts.delete',
+            'contacts.home.create',
+            'contacts.home.delete',
+            'contacts.home.update',
+            'contacts.home.view',
+            'contacts.sources.create',
+            'contacts.sources.delete',
+            'contacts.sources.sync',
+            'contacts.sources.update',
+            'contacts.sources.view',
+            'contacts.update',
+            'contacts.view',
             'dashboard',
-            'households.lists.index', 'households.lists.show', 'households.lists.create', 'households.lists.store', 'households.lists.edit', 'households.lists.update', 'households.lists.destroy', 'households.lists.share',
-            'households.lists.items.store', 'households.lists.items.update', 'households.lists.items.destroy',
-            'households.lists.search-products', 'households.lists.search-products.quick-create',
-            'households.products.store', 'households.products.quick-create',
-            'recipes.index', 'recipes.create', 'recipes.store', 'recipes.show', 'recipes.edit', 'recipes.update', 'recipes.destroy',
-            'recipes.import', 'recipes.import.json-ld', 'recipes.import.cooklang', 'recipes.import.review',
-            'recipes.export.cooklang', 'recipes.fork', 'recipes.cook',
-            'households.recipes.index', 'households.recipes.share', 'households.recipes.unshare', 'households.recipes.add-to-list',
-            'households.economy.index', 'households.economy.create', 'households.economy.store', 'households.economy.show',
-            'households.economy.edit', 'households.economy.update', 'households.economy.destroy',
-            'households.economy.imports.create',
-            'economy.me.index', 'economy.me.create', 'economy.me.store', 'economy.me.show',
-            'economy.me.edit', 'economy.me.update', 'economy.me.destroy',
+            'economy.me.accounts.archive',
+            'economy.me.accounts.create',
+            'economy.me.accounts.destroy',
+            'economy.me.accounts.edit',
+            'economy.me.accounts.index',
+            'economy.me.accounts.show',
+            'economy.me.accounts.store',
+            'economy.me.accounts.update',
+            'economy.me.create',
+            'economy.me.destroy',
+            'economy.me.documents.destroy',
+            'economy.me.documents.index',
+            'economy.me.documents.show',
+            'economy.me.documents.store',
+            'economy.me.documents.update',
+            'economy.me.edit',
+            'economy.me.imports.confirm',
             'economy.me.imports.create',
-            'households.economy.transactions.index', 'households.economy.transactions.store', 'households.economy.transactions.show', 'households.economy.transactions.update', 'households.economy.transactions.destroy',
-            'households.economy.documents.index', 'households.economy.documents.store', 'households.economy.documents.show', 'households.economy.documents.update', 'households.economy.documents.destroy',
-            'households.economy.imports.index', 'households.economy.imports.store', 'households.economy.imports.show', 'households.economy.imports.update', 'households.economy.imports.destroy', 'households.economy.imports.retry', 'households.economy.imports.confirm', 'households.economy.imports.discard',
-            'economy.me.transactions.index', 'economy.me.transactions.store', 'economy.me.transactions.show', 'economy.me.transactions.update', 'economy.me.transactions.destroy',
-            'economy.me.documents.index', 'economy.me.documents.store', 'economy.me.documents.show', 'economy.me.documents.update', 'economy.me.documents.destroy',
-            'economy.me.imports.index', 'economy.me.imports.store', 'economy.me.imports.show', 'economy.me.imports.update', 'economy.me.imports.destroy', 'economy.me.imports.retry', 'economy.me.imports.confirm', 'economy.me.imports.discard',
+            'economy.me.imports.destroy',
+            'economy.me.imports.discard',
+            'economy.me.imports.index',
+            'economy.me.imports.reprocess',
+            'economy.me.imports.retry',
+            'economy.me.imports.show',
+            'economy.me.imports.store',
+            'economy.me.imports.update',
+            'economy.me.index',
+            'economy.me.payment-methods.destroy',
+            'economy.me.payment-methods.index',
+            'economy.me.payment-methods.store',
+            'economy.me.payment-methods.update',
+            'economy.me.show',
+            'economy.me.store',
             'economy.me.totals',
-            'households.index', 'households.create', 'households.store',
-            'households.show', 'households.switch',
-        ])->get());
-
-        $readonly = Role::firstOrCreate(['slug' => 'readonly'], ['name' => 'Readonly', 'is_system' => true]);
-        $readonly->givePermissionTo(Permission::whereIn('route_name', [
-            'dashboard', 'households.lists.index', 'households.lists.show', 'recipes.index', 'recipes.show',
-            'households.economy.index', 'households.economy.show', 'economy.me.index', 'economy.me.show',
-            'households.economy.transactions.index', 'households.economy.transactions.show',
-            'economy.me.transactions.index', 'economy.me.transactions.show', 'economy.me.totals',
-        ])->get());
-
-        $listsReader = Role::firstOrCreate(['slug' => 'lists-reader'], ['name' => 'Lectura de listas', 'is_system' => true]);
-        $listsReader->givePermissionTo(Permission::whereIn('route_name', [
-            'dashboard',
-            'households.lists.index', 'households.lists.show',
-            'households.recipes.index', 'households.recipes.show',
-        ])->get());
-
-        $listsEditor = Role::firstOrCreate(['slug' => 'lists-editor'], ['name' => 'Lectura y edición de listas', 'is_system' => true]);
-        $listsEditor->givePermissionTo(Permission::whereIn('route_name', [
-            'dashboard',
-            'households.lists.index', 'households.lists.show', 'households.lists.create', 'households.lists.store', 'households.lists.edit', 'households.lists.update', 'households.lists.destroy', 'households.lists.share',
-            'households.lists.items.store', 'households.lists.items.update', 'households.lists.items.destroy',
-            'households.lists.search-products', 'households.lists.search-products.quick-create',
-            'recipes.index', 'recipes.show', 'households.recipes.index',
-        ])->get());
-
-        // User - Invitation: puede usar la app pero NO puede crear hogares
-        $userInvitation = Role::firstOrCreate(
-            ['slug' => 'user-invitation'],
-            ['name' => 'User - Invitation', 'is_system' => true]
-        );
-        $userInvitation->givePermissionTo(Permission::whereIn('route_name', [
-            'dashboard',
-            'households.lists.index', 'households.lists.show', 'households.lists.create', 'households.lists.store', 'households.lists.edit', 'households.lists.update', 'households.lists.destroy', 'households.lists.share',
-            'households.lists.items.store', 'households.lists.items.update', 'households.lists.items.destroy',
-            'households.lists.search-products', 'households.lists.search-products.quick-create',
-            'households.products.store', 'households.products.quick-create',
-            'recipes.index', 'recipes.create', 'recipes.store', 'recipes.show', 'recipes.edit', 'recipes.update', 'recipes.destroy',
-            'recipes.import', 'recipes.import.json-ld', 'recipes.import.cooklang', 'recipes.import.review',
-            'recipes.export', 'recipes.export.cooklang', 'recipes.fork', 'recipes.cook',
-            'households.recipes.index', 'households.recipes.share', 'households.recipes.unshare', 'households.recipes.add-to-list',
-            'households.economy.index', 'households.economy.create', 'households.economy.store', 'households.economy.show',
-            'households.economy.edit', 'households.economy.update', 'households.economy.destroy',
+            'economy.me.transactions.destroy',
+            'economy.me.transactions.index',
+            'economy.me.transactions.show',
+            'economy.me.transactions.store',
+            'economy.me.transactions.update',
+            'economy.me.update',
+            'households.ai-providers.destroy',
+            'households.ai-providers.index',
+            'households.ai-providers.store',
+            'households.ai-providers.test',
+            'households.ai-providers.test-config',
+            'households.ai-providers.update',
+            'households.create',
+            'households.destroy',
+            'households.economy.create',
+            'households.economy.destroy',
+            'households.economy.documents.destroy',
+            'households.economy.documents.index',
+            'households.economy.documents.show',
+            'households.economy.documents.store',
+            'households.economy.documents.update',
+            'households.economy.edit',
+            'households.economy.imports.confirm',
             'households.economy.imports.create',
-            'economy.me.index', 'economy.me.create', 'economy.me.store', 'economy.me.show',
-            'economy.me.edit', 'economy.me.update', 'economy.me.destroy',
-            'economy.me.imports.create',
-            'households.economy.transactions.index', 'households.economy.transactions.store', 'households.economy.transactions.show', 'households.economy.transactions.update', 'households.economy.transactions.destroy',
-            'households.economy.documents.index', 'households.economy.documents.store', 'households.economy.documents.show', 'households.economy.documents.update', 'households.economy.documents.destroy',
-            'households.economy.imports.index', 'households.economy.imports.store', 'households.economy.imports.show', 'households.economy.imports.update', 'households.economy.imports.destroy', 'households.economy.imports.retry', 'households.economy.imports.confirm', 'households.economy.imports.discard',
-            'economy.me.transactions.index', 'economy.me.transactions.store', 'economy.me.transactions.show', 'economy.me.transactions.update', 'economy.me.transactions.destroy',
-            'economy.me.documents.index', 'economy.me.documents.store', 'economy.me.documents.show', 'economy.me.documents.update', 'economy.me.documents.destroy',
-            'economy.me.imports.index', 'economy.me.imports.store', 'economy.me.imports.show', 'economy.me.imports.update', 'economy.me.imports.destroy', 'economy.me.imports.retry', 'economy.me.imports.confirm', 'economy.me.imports.discard',
-            'economy.me.totals',
-            'households.index', 'households.show', 'households.switch',
-            // Sin households.create ni households.store
-        ])->get());
-
-        // Economía — cuentas y métodos de pago (web y API) para los roles con economía privada
-        $accountPermissions = Permission::whereIn('route_name', [
-            'economy.me.accounts.index', 'economy.me.accounts.create', 'economy.me.accounts.store',
-            'economy.me.accounts.show', 'economy.me.accounts.edit', 'economy.me.accounts.update',
-            'economy.me.accounts.archive', 'economy.me.accounts.destroy',
-            'economy.me.payment-methods.index', 'economy.me.payment-methods.store',
-            'economy.me.payment-methods.update', 'economy.me.payment-methods.destroy',
-            'economy.me.imports.index', 'households.economy.imports.index',
-            'economy.me.imports.reprocess', 'households.economy.imports.reprocess',
-            'economy.me.attachments.store', 'economy.me.attachments.destroy',
-            'economy.me.attachments.file',
-            'households.economy.attachments.store', 'households.economy.attachments.destroy',
-            'households.economy.attachments.file',
-        ])->get();
-        $user->givePermissionTo($accountPermissions);
-        $userInvitation->givePermissionTo($accountPermissions);
-        $readonly->givePermissionTo($accountPermissions->filter(
-            fn (Permission $permission): bool => in_array($permission->route_name, [
-                'economy.me.accounts.index', 'economy.me.accounts.show',
-                'economy.me.payment-methods.index',
-            ], true),
-        ));
-
-        $contactPermissions = Permission::where('route_name', 'like', 'contacts.%')->get();
-        $admin->givePermissionTo($contactPermissions);
-        $user->givePermissionTo($contactPermissions);
-        $userInvitation->givePermissionTo($contactPermissions);
-        $readonly->givePermissionTo($contactPermissions->filter(fn (Permission $permission): bool => in_array($permission->route_name, ['contacts.view', 'contacts.home.view', 'contacts.sources.view'], true)));
-
+            'households.economy.imports.destroy',
+            'households.economy.imports.discard',
+            'households.economy.imports.index',
+            'households.economy.imports.reprocess',
+            'households.economy.imports.retry',
+            'households.economy.imports.show',
+            'households.economy.imports.store',
+            'households.economy.imports.update',
+            'households.economy.index',
+            'households.economy.show',
+            'households.economy.store',
+            'households.economy.transactions.destroy',
+            'households.economy.transactions.index',
+            'households.economy.transactions.show',
+            'households.economy.transactions.store',
+            'households.economy.transactions.update',
+            'households.economy.update',
+            'households.edit',
+            'households.index',
+            'households.invite',
+            'households.invite-links.destroy',
+            'households.invite-links.store',
+            'households.lists.create',
+            'households.lists.destroy',
+            'households.lists.edit',
+            'households.lists.index',
+            'households.lists.items.destroy',
+            'households.lists.items.store',
+            'households.lists.items.update',
+            'households.lists.search-products',
+            'households.lists.search-products.quick-create',
+            'households.lists.share',
+            'households.lists.show',
+            'households.lists.store',
+            'households.lists.update',
+            'households.members.permissions',
+            'households.ownership.transfer',
+            'households.products.quick-create',
+            'households.products.store',
+            'households.recipes.add-to-list',
+            'households.recipes.index',
+            'households.recipes.share',
+            'households.recipes.unshare',
+            'households.remove',
+            'households.settings.edit',
+            'households.settings.update',
+            'households.show',
+            'households.store',
+            'households.switch',
+            'households.update',
+            'recipes.cook',
+            'recipes.create',
+            'recipes.destroy',
+            'recipes.edit',
+            'recipes.export',
+            'recipes.export.cooklang',
+            'recipes.fork',
+            'recipes.import',
+            'recipes.import.cooklang',
+            'recipes.import.json-ld',
+            'recipes.import.review',
+            'recipes.index',
+            'recipes.show',
+            'recipes.store',
+            'recipes.update',
+        ];
+        $permissions = Permission::all();
+        $definitions = [
+            'user' => ['Usuario', $permissions->whereIn('route_name', $baseRoutes)],
+            'admin' => ['Administrador de plataforma', $permissions],
+            'catalog-manager' => ['Gestor de catálogo', $permissions->filter(fn (Permission $permission): bool => preg_match('/^admin\\.(products|categories|images|personal-products)($|\\.)/', $permission->route_name) === 1)],
+            'translation-manager' => ['Gestor de traducciones', $permissions->filter(fn (Permission $permission): bool => str_starts_with($permission->route_name, 'admin.translations'))],
+            'technical-operator' => ['Operador técnico', $permissions->filter(fn (Permission $permission): bool => str_starts_with($permission->route_name, 'jobs-monitor.'))],
+        ];
+        foreach ($definitions as $slug => [$name, $rolePermissions]) {
+            $role = Role::updateOrCreate(['slug' => $slug], ['name' => $name, 'is_system' => true]);
+            $role->permissions()->sync($rolePermissions->pluck('id'));
+        }
     }
 }

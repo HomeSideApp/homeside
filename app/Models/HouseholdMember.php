@@ -2,7 +2,9 @@
 
 namespace App\Models;
 
+use App\Enums\HouseholdAccessProfile;
 use App\Enums\HouseholdRole;
+use App\Support\HouseholdAccess;
 use Database\Factories\HouseholdMemberFactory;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -21,6 +23,8 @@ use Illuminate\Support\Carbon;
  * @property string $id The unique identifier for the membership (UUID).
  * @property string $household_id The id of the household the membership belongs to.
  * @property string $user_id The id of the user the membership belongs to.
+ * @property HouseholdAccessProfile|null $access_profile
+ * @property array<string, string>|null $module_access
  * @property HouseholdRole $role The role of the user within the household.
  * @property Carbon|null $joined_at The timestamp when the user joined the household, if any.
  * @property string|null $contact_id The contact linked to this member, if any.
@@ -39,7 +43,27 @@ class HouseholdMember extends Model
     /** @use HasFactory<HouseholdMemberFactory> */
     use HasFactory, HasUuids;
 
-    protected $fillable = ['household_id', 'user_id', 'role', 'joined_at', 'contact_id'];
+    protected $fillable = ['household_id', 'user_id', 'role', 'joined_at', 'contact_id', 'access_profile', 'module_access'];
+
+    protected static function booted(): void
+    {
+        static::creating(function (self $member): void {
+            $profile = $member->access_profile ?? ($member->role === HouseholdRole::Admin ? HouseholdAccessProfile::Admin : HouseholdAccessProfile::Member);
+            $member->access_profile = $profile;
+            $member->role = $profile->role();
+            $member->module_access = array_replace($profile->permissions(), $member->module_access ?? []);
+        });
+        static::saved(fn (self $member) => app(HouseholdAccess::class)->forget($member->user_id));
+        static::deleted(fn (self $member) => app(HouseholdAccess::class)->forget($member->user_id));
+    }
+
+    /** @return array<string, string> */
+    public function permissions(): array
+    {
+        $profile = $this->access_profile ?? ($this->role === HouseholdRole::Admin ? HouseholdAccessProfile::Admin : HouseholdAccessProfile::Member);
+
+        return array_replace($profile->permissions(), $this->module_access ?? []);
+    }
 
     /**
      * Get the attribute casts for the model.
@@ -50,6 +74,8 @@ class HouseholdMember extends Model
     {
         return [
             'role' => HouseholdRole::class,
+            'access_profile' => HouseholdAccessProfile::class,
+            'module_access' => 'array',
             'joined_at' => 'datetime',
         ];
     }

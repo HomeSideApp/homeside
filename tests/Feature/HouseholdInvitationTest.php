@@ -97,7 +97,8 @@ class HouseholdInvitationTest extends TestCase
 
         $newUser = User::where('email', 'newuser@example.com')->first();
         $this->assertNotNull($newUser);
-        $this->assertTrue($newUser->hasRole('user-invitation'));
+        $this->assertTrue($newUser->hasRole('user'));
+        $this->assertFalse($newUser->can_create_households);
 
         Notification::assertSentTo(
             $newUser,

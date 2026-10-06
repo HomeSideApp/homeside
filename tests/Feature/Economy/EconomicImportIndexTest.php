@@ -85,7 +85,7 @@ class EconomicImportIndexTest extends TestCase
         $this->assertNotSame($mine->id, $theirs->id);
     }
 
-    public function test_household_index_is_visible_to_every_member(): void
+    public function test_household_index_hides_another_members_imports(): void
     {
         $import = $this->importFor($this->owner, $this->household, EconomicImportStatus::Processing);
 
@@ -95,9 +95,8 @@ class EconomicImportIndexTest extends TestCase
         $response->assertOk();
         $response->assertInertia(
             fn ($page) => $page
-                ->has('imports.data', 1)
-                ->where('imports.data.0.id', $import->id)
-                ->where('pendingCount', 1)
+                ->has('imports.data', 0)
+                ->where('pendingCount', 0)
         );
     }
 

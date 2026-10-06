@@ -176,10 +176,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('products/pending', [AdminProductController::class, 'pending'])->middleware('permission:admin.products.pending')->name('products.pending');
         Route::post('products/{product}/generate-images', [AdminProductController::class, 'generateImages'])->middleware('permission:admin.products.generate-images')->name('products.generate-images');
         Route::post('images/{image}/approve', [AdminProductController::class, 'approveImage'])->middleware('permission:admin.images.approve')->name('images.approve');
-        Route::get('personal-products', [AdminPersonalProductController::class, 'index'])->name('personal-products');
-        Route::get('personal-products/{product}', [AdminPersonalProductController::class, 'show'])->name('personal-products.show');
-        Route::post('personal-products/{product}/promote', [AdminPersonalProductController::class, 'promote'])->name('personal-products.promote');
-        Route::post('personal-products/generate-icon', [AdminPersonalProductController::class, 'generateIcon'])->name('personal-products.generate-icon');
+        Route::get('personal-products', [AdminPersonalProductController::class, 'index'])->middleware('permission:admin.personal-products.index')->name('personal-products');
+        Route::get('personal-products/{product}', [AdminPersonalProductController::class, 'show'])->middleware('permission:admin.personal-products.show')->name('personal-products.show');
+        Route::post('personal-products/{product}/promote', [AdminPersonalProductController::class, 'promote'])->middleware('permission:admin.personal-products.promote')->name('personal-products.promote');
+        Route::post('personal-products/generate-icon', [AdminPersonalProductController::class, 'generateIcon'])->middleware('permission:admin.personal-products.generate-icon')->name('personal-products.generate-icon');
     });
 
     // Admin: IA Global (no necesitan household)
