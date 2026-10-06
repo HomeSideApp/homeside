@@ -27,47 +27,49 @@ const searchComplete = ref(false);
 const addingProductIds = ref(new Set<string>());
 const isCreatingProduct = ref(false);
 let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+let searchVersion = 0;
 
 const listRoutes = useShoppingListRoutes(computed(() => props.householdId));
 
-// Keep local state in sync when Inertia updates initialResults via partial reload
-watch(
-    () => props.initialResults,
-    (newResults) => {
-        searchResults.value = newResults ?? [];
-        searchComplete.value = true;
-        isSearching.value = searchQuery.value.length > 0;
-    },
-);
+watch(searchQuery, search);
 
-function search() {
+function search(query: string) {
+    const version = ++searchVersion;
+
     if (debounceTimer) {
         clearTimeout(debounceTimer);
     }
 
-    if (searchQuery.value.length < 1) {
-        searchResults.value = [];
+    searchResults.value = [];
+    searchComplete.value = false;
+
+    if (query.length < 1) {
         isSearching.value = false;
-        searchComplete.value = false;
 
         return;
     }
 
     isSearching.value = true;
-    searchComplete.value = false;
 
     debounceTimer = setTimeout(() => {
         // Use Inertia partial reload — renders the same lists/Show component
         // and requests only the searchResults prop back.
-        router.visit(
-            listRoutes.searchProducts(props.listId, searchQuery.value),
-            {
-                only: ['searchResults'],
-                preserveState: true,
-                preserveScroll: true,
-                replace: true,
+        router.visit(listRoutes.searchProducts(props.listId, query), {
+            only: ['searchResults'],
+            preserveState: true,
+            preserveScroll: true,
+            replace: true,
+            onSuccess: (page) => {
+                if (version !== searchVersion || query !== searchQuery.value) {
+                    return;
+                }
+
+                searchResults.value =
+                    (page.props.searchResults as ListProduct[] | undefined) ??
+                    [];
+                searchComplete.value = true;
             },
-        );
+        });
     }, 200);
 }
 
@@ -86,9 +88,7 @@ function selectProduct(product: ListProduct) {
             preserveScroll: true,
             onSuccess: () => {
                 emit('productAdded');
-                searchQuery.value = '';
-                searchResults.value = [];
-                isSearching.value = false;
+                clearSearch();
             },
             onFinish: () => addingProductIds.value.delete(product.id),
         },
@@ -112,9 +112,7 @@ function createAndAddProduct() {
             preserveScroll: true,
             onSuccess: () => {
                 emit('productAdded');
-                searchQuery.value = '';
-                searchResults.value = [];
-                isSearching.value = false;
+                clearSearch();
             },
             onFinish: () => {
                 isCreatingProduct.value = false;
@@ -124,6 +122,11 @@ function createAndAddProduct() {
 }
 
 function clearSearch() {
+    if (debounceTimer) {
+        clearTimeout(debounceTimer);
+    }
+
+    searchVersion++;
     searchQuery.value = '';
     searchResults.value = [];
     isSearching.value = false;
@@ -145,6 +148,8 @@ function handleKeydown(e: KeyboardEvent) {
 }
 
 onUnmounted(() => {
+    searchVersion++;
+
     if (debounceTimer) {
         clearTimeout(debounceTimer);
     }
@@ -159,7 +164,6 @@ onUnmounted(() => {
                 v-model="searchQuery"
                 type="text"
                 :placeholder="t('lists.searchPlaceholder')"
-                @input="search"
                 @keydown="handleKeydown"
             />
             <Button
