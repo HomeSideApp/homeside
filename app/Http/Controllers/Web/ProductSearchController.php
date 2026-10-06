@@ -9,6 +9,7 @@ use App\Actions\ShoppingLists\GetShoppingList;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\QuickCreateProductRequest;
 use App\Http\Requests\ViewShoppingListRequest;
+use App\Http\Resources\ShoppingLists\ShoppingListResource;
 use App\Models\Household;
 use App\Models\ListItem;
 use App\Models\ShoppingList;
@@ -79,7 +80,7 @@ final class ProductSearchController extends Controller
         // Wrap non-search props in closures so they are only evaluated
         // when the client does NOT use partial `only: ['searchResults']`.
         return Inertia::render('lists/Show', [
-            'list' => fn () => app(GetShoppingList::class)->execute($list, $userId)['list'],
+            'list' => fn () => ShoppingListResource::make(app(GetShoppingList::class)->execute($list, $userId)['list'])->response($request)->getData(true)['data'],
             'categories' => Inertia::optional(fn () => app(GetShoppingList::class)->execute($list, $userId)['categories']),
             'recentProducts' => Inertia::optional(fn () => app(GetShoppingList::class)->execute($list, $userId)['recentProducts']),
             'stores' => Inertia::optional(fn () => app(GetShoppingList::class)->execute($list, $userId)['stores']),

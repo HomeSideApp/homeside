@@ -17,9 +17,24 @@ final class QuickCreateProduct
      */
     public function execute(string $name, string $userId): Product
     {
-        $slug = Str::slug($name);
+        $existing = Product::query()->visibleToUser($userId)->matchingName($name, exact: true)->first();
 
-        return Product::firstOrCreate(
+        if ($existing !== null) {
+            return $existing;
+        }
+
+        $slug = Str::slug($name);
+        $slugMatch = Product::query()->where('slug', $slug)->first();
+
+        if ($slugMatch !== null) {
+            if (! $slugMatch->is_personal || $slugMatch->created_by === $userId) {
+                return $slugMatch;
+            }
+
+            $slug = Str::limit($slug, 218, '').'-'.Str::uuid();
+        }
+
+        return Product::query()->visibleToUser($userId)->firstOrCreate(
             ['slug' => $slug],
             [
                 'name' => $name,

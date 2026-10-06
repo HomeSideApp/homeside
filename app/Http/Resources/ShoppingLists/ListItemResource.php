@@ -18,6 +18,11 @@ final class ListItemResource extends JsonResource
     {
         $household = $request->route('household');
         $householdId = $household instanceof Household ? $household->getRouteKey() : $household;
+        $imageRoute = $request->routeIs('api.v1.*') ? 'api.v1.' : '';
+        $imageRoute .= is_string($householdId) ? 'households.lists.items.image' : 'lists.items.image';
+        $imageParameters = is_string($householdId)
+            ? [$householdId, $this->list_id, $this->id]
+            : [$this->list_id, $this->id];
 
         return [
             'id' => $this->id,
@@ -29,8 +34,8 @@ final class ListItemResource extends JsonResource
             'is_checked' => $this->is_checked,
             'notes' => $this->notes,
             'icon' => $this->icon,
-            'image_url' => $this->image_url && is_string($householdId)
-                ? route('api.v1.households.lists.items.image', [$householdId, $this->list_id, $this->id])
+            'image_url' => $this->image_url
+                ? route($imageRoute, $imageParameters)
                 : null,
             'store_id' => $this->store_id,
             'category_id' => $this->category_id,

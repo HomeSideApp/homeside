@@ -2,6 +2,8 @@
 
 namespace App\Actions\ShoppingLists;
 
+use App\Http\Resources\ShoppingLists\ProductResource;
+use App\Http\Resources\ShoppingLists\StoreResource;
 use App\Models\Category;
 use App\Models\ListItem;
 use App\Models\Product;
@@ -111,8 +113,8 @@ final class GetShoppingList
         return [
             'list' => $list,
             'categories' => $categories,
-            'recentProducts' => $recentProducts,
-            'stores' => $stores,
+            'recentProducts' => ProductResource::collection($recentProducts)->response()->getData(true)['data'],
+            'stores' => StoreResource::collection($stores)->response()->getData(true)['data'],
         ];
     }
 

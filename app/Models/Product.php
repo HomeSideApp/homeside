@@ -4,7 +4,10 @@ namespace App\Models;
 
 use App\Concerns\Translatable;
 use App\Contracts\Translatable as TranslatableContract;
+use App\Enums\AppLocale;
+use App\Enums\TranslationEntityStatus;
 use Database\Factories\ProductFactory;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -53,6 +56,42 @@ class Product extends Model implements TranslatableContract
     protected array $translatable = ['name'];
 
     protected $fillable = ['name', 'slug', 'category_id', 'icon', 'image_url', 'needs_image', 'is_approved', 'is_active', 'is_personal', 'created_by'];
+
+    /** @param Builder<self> $query */
+    public function scopeMatchingName(Builder $query, string $name, bool $exact = false): void
+    {
+        $operator = $exact ? '=' : 'like';
+        $value = $exact ? $name : "%{$name}%";
+        $locales = array_unique([
+            AppLocale::resolve(app()->getLocale())->value,
+            AppLocale::resolve(config('app.fallback_locale'))->value,
+        ]);
+
+        $query->where(function (Builder $names) use ($operator, $value, $locales): void {
+            $names->where('name', $operator, $value);
+
+            foreach ($locales as $locale) {
+                $names->orWhere(function (Builder $translated) use ($operator, $value, $locale): void {
+                    $translated->whereHas('translationStatus', fn (Builder $statuses) => $statuses->where('locale', $locale)
+                        ->where('status', TranslationEntityStatus::Published->value))
+                        ->whereHas('translations', fn (Builder $translations) => $translations->where('locale', $locale)
+                            ->where('field', 'name')->where('value', $operator, $value));
+                });
+            }
+        });
+    }
+
+    /** @param Builder<self> $query */
+    public function scopeVisibleToUser(Builder $query, ?string $userId): void
+    {
+        $query->where(function (Builder $visible) use ($userId): void {
+            $visible->where('is_personal', false);
+
+            if ($userId !== null) {
+                $visible->orWhere(fn (Builder $personal) => $personal->where('is_personal', true)->where('created_by', $userId));
+            }
+        });
+    }
 
     /**
      * Get the attribute casts for the model.

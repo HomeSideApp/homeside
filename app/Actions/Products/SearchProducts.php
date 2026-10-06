@@ -24,18 +24,8 @@ final class SearchProducts
 
         return Product::withTranslationData()
             ->with(['category' => fn ($query) => $query->withTranslationData()])
-            ->where('name', 'LIKE', "%{$query}%")
-            ->where(function ($queryBuilder) use ($userId) {
-                // Non-personal products are always visible
-                $queryBuilder->where('is_personal', false)
-                    // Personal products of the user are also visible
-                    ->orWhere(function ($q) use ($userId) {
-                        $q->where('is_personal', true);
-                        if ($userId !== null) {
-                            $q->where('created_by', $userId);
-                        }
-                    });
-            })
+            ->matchingName($query)
+            ->visibleToUser($userId)
             ->limit(20)
             ->get()
             ->map(fn (Product $product): array => [

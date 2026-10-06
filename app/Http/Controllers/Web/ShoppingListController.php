@@ -16,6 +16,7 @@ use App\Http\Requests\ManageShoppingListRequest;
 use App\Http\Requests\StoreListRequest;
 use App\Http\Requests\UpdateListRequest;
 use App\Http\Requests\ViewShoppingListRequest;
+use App\Http\Resources\ShoppingLists\ShoppingListResource;
 use App\Models\Household;
 use App\Models\ShoppingList;
 use Illuminate\Http\RedirectResponse;
@@ -99,9 +100,11 @@ final class ShoppingListController extends Controller
         ListIcons $listIcons,
         ViewShoppingListRequest $request,
     ): Response {
+        $data = $action->execute($list, $this->authenticatedUser($request)->id);
 
         return Inertia::render('lists/Show', [
-            ...$action->execute($list, $this->authenticatedUser($request)->id),
+            ...$data,
+            'list' => ShoppingListResource::make($data['list'])->response($request)->getData(true)['data'],
             'household' => $household,
             'icons' => Inertia::optional(fn () => $listIcons->execute())->once(),
         ]);

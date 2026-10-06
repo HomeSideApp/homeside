@@ -89,12 +89,12 @@ class ProductSearchController extends Controller
 
         return response()->json([
             'id' => $product->id,
-            'name' => $product->name,
+            'name' => $product->localized('name'),
             'slug' => $product->slug,
             'icon' => $product->icon,
             'category' => $product->category ? [
                 'id' => $product->category->id,
-                'name' => $product->category->name,
+                'name' => $product->category->localized('name'),
                 'color' => $product->category->color,
             ] : null,
         ]);
