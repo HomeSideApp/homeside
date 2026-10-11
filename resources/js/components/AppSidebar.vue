@@ -202,6 +202,12 @@ const mainNavItems = computed<NavItem[]>(() => [
                 permission: 'admin.translations',
             },
             {
+                title: t('sidebar.saasAdmin'),
+                href: '/admin/saas',
+                icon: CreditCard,
+                permission: 'admin.saas.billing.view',
+            },
+            {
                 title: 'Job Monitoring',
                 href: jobsMonitorIndex(),
                 icon: Activity,
