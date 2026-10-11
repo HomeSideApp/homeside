@@ -9,6 +9,7 @@ use App\Models\EconomicDocument;
 use App\Models\EconomicImport;
 use App\Models\Household;
 use App\Models\User;
+use HomeSide\Saas\Support\FeatureGate;
 
 /**
  * Creates an economic import for the user's document and dispatches the
@@ -43,7 +44,11 @@ final class CreateEconomicImport
             'requested_sections' => $data->requested_sections,
         ]);
 
-        AnalyzeEconomicDocumentJob::dispatch($import->id);
+        // Meter one AI recognition credit before enqueueing; denied or
+        // exhausted quotas never reach the queue (inert while SaaS disabled).
+        $reservation = app(FeatureGate::class)->reserveTicketRecognition($user, $import->id);
+
+        AnalyzeEconomicDocumentJob::dispatch($import->id, $reservation->operationId);
 
         return $import;
     }

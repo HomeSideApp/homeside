@@ -6,6 +6,7 @@ use App\Data\Households\CreateHouseholdData;
 use App\Enums\HouseholdRole;
 use App\Models\Household;
 use App\Models\User;
+use HomeSide\Saas\Support\FeatureGate;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
@@ -23,6 +24,10 @@ final class CreateHousehold
     public function execute(CreateHouseholdData $data, User $user): Household
     {
         return DB::transaction(function () use ($data, $user) {
+            // Enforce the households_own quota inside the transaction so a
+            // denial rolls back atomically (no-op while SaaS is disabled).
+            app(FeatureGate::class)->assertHouseholdOwnershipCapacity($user);
+
             $household = Household::create([
                 'name' => $data->name,
                 'description' => $data->description,

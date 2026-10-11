@@ -8,6 +8,7 @@ use App\Models\EconomicImport;
 use App\Services\Economy\TicketAnalyzer;
 use HomeSide\AiAgents\Exceptions\NoAiProviderException;
 use HomeSide\AiAgents\Execution\AiExecutionContextData;
+use HomeSide\Saas\Support\FeatureGate;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -34,10 +35,12 @@ class AnalyzeEconomicDocumentJob implements ShouldQueue
      * Create a queued document analysis job.
      *
      * @param  string  $economicImportId  The identifier of the import to analyze.
+     * @param  string|null  $operationId  The SaaS usage operation id reserved for this analysis attempt, when metered.
      * @return void This constructor does not return a value.
      */
     public function __construct(
         public string $economicImportId,
+        public ?string $operationId = null,
     ) {}
 
     /**
@@ -67,6 +70,7 @@ class AnalyzeEconomicDocumentJob implements ShouldQueue
 
         $import->refresh();
 
+        $gate = app(FeatureGate::class);
         $context = new AiExecutionContextData(
             userId: $import->created_by,
             tenantId: $import->household_id,
@@ -87,7 +91,12 @@ class AnalyzeEconomicDocumentJob implements ShouldQueue
                 'ai_run_id' => $result->runId,
                 'finished_at' => now(),
             ]);
+
+            // Persist the reserved usage credit for this analysis attempt.
+            $gate->commit($this->usageOperationId());
         } catch (IncompleteAnalysisException $e) {
+            $this->releaseUsageReservation($gate);
+
             $import->update([
                 'status' => EconomicImportStatus::Failed,
                 'error_code' => 'incomplete_response',
@@ -95,7 +104,32 @@ class AnalyzeEconomicDocumentJob implements ShouldQueue
                 'finished_at' => now(),
             ]);
         } catch (RuntimeException $e) {
+            $this->releaseUsageReservation($gate);
+
             $this->failFromProvider($import, $e);
+        }
+    }
+
+    /**
+     * The SaaS usage operation id for this analysis attempt. The dispatcher
+     * passes the reserved operation id; the default derives the first attempt
+     * deterministically from the import id.
+     */
+    private function usageOperationId(): string
+    {
+        return $this->operationId ?? "ticket:{$this->economicImportId}:1";
+    }
+
+    /**
+     * Free the reserved usage credit after a failed analysis. Committing or
+     * releasing twice must stay silent no-ops.
+     */
+    private function releaseUsageReservation(FeatureGate $gate): void
+    {
+        try {
+            $gate->release($this->usageOperationId());
+        } catch (\RuntimeException) {
+            // Already committed — the credit was legitimately consumed.
         }
     }
 
@@ -148,6 +182,14 @@ class AnalyzeEconomicDocumentJob implements ShouldQueue
      */
     public function failed(\Throwable $exception): void
     {
+        // Free any still-reserved credit; a committed or released entry is a
+        // silent no-op on the gate.
+        try {
+            app(FeatureGate::class)->release($this->usageOperationId());
+        } catch (\RuntimeException) {
+            // Already committed — the credit was legitimately consumed.
+        }
+
         $import = EconomicImport::find($this->economicImportId);
 
         if ($import && $import->status === EconomicImportStatus::Processing) {

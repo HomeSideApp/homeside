@@ -5,6 +5,7 @@ namespace App\Actions\Economy;
 use App\Enums\EconomicImportStatus;
 use App\Jobs\AnalyzeEconomicDocumentJob;
 use App\Models\EconomicImport;
+use HomeSide\Saas\Support\FeatureGate;
 
 /**
  * Resets a failed import back to pending and dispatches the analysis job
@@ -30,7 +31,12 @@ final class RetryEconomicImport
             'error_message' => null,
         ]);
 
-        AnalyzeEconomicDocumentJob::dispatch($import->id);
+        // A manual retry is a fresh analysis attempt: it meters a new credit
+        // (inert while SaaS disabled).
+        $reservation = app(FeatureGate::class)
+            ->reserveTicketRecognition($import->creator, $import->id);
+
+        AnalyzeEconomicDocumentJob::dispatch($import->id, $reservation->operationId);
 
         return $import->fresh();
     }

@@ -5,6 +5,7 @@ namespace App\Actions\Households;
 use App\Enums\HouseholdRole;
 use App\Models\Household;
 use App\Models\User;
+use HomeSide\Saas\Support\FeatureGate;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -20,6 +21,11 @@ final class TransferHouseholdOwnership
             if ($member->role !== HouseholdRole::Admin || $member->user_id === $actor->id || $target->approval_status !== 'approved' || ! $target->households_enabled) {
                 throw ValidationException::withMessages(['member_id' => __('validation.in', ['attribute' => 'member_id'])]);
             }
+
+            // Enforce the target's households_own quota inside the transaction
+            // so a denial rolls back atomically (no-op while SaaS is disabled).
+            app(FeatureGate::class)->assertHouseholdOwnershipCapacity($target);
+
             $locked->update(['owner_id' => $member->user_id]);
 
             return $locked;

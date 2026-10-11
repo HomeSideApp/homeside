@@ -234,7 +234,7 @@ Route::prefix('v1')->as('api.v1.')->middleware(['auth:sanctum', 'locale'])->grou
 });
 
 // === Cookbook personal (fuera de household context) ===
-Route::prefix('v1/recipes')->as('api.v1.recipes.')->middleware(['auth:sanctum', 'locale', 'api.permission'])->group(function () {
+Route::prefix('v1/recipes')->as('api.v1.recipes.')->middleware(['auth:sanctum', 'locale', 'api.permission', 'saas.feature:recipes'])->group(function () {
     Route::get('/', [RecipeController::class, 'index'])->name('index');
     Route::post('/', [RecipeController::class, 'store'])->middleware('idempotency:optional')->name('store');
 
@@ -325,7 +325,7 @@ Route::prefix('v1')->as('api.v1.')->middleware(['auth:sanctum', 'locale', 'api.p
         });
 
         // Household shared recipes (requires recipes module enabled)
-        Route::middleware('module:recipes')->group(function () {
+        Route::middleware(['module:recipes', 'saas.feature:recipes'])->group(function () {
             Route::get('recipes', [HouseholdRecipeController::class, 'index'])->name('recipes.index');
             Route::post('recipes/{recipe}/share', [HouseholdRecipeController::class, 'share'])->name('recipes.share');
             Route::delete('recipes/{recipe}/share', [HouseholdRecipeController::class, 'unshare'])->name('recipes.unshare');
