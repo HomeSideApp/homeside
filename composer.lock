@@ -2438,7 +2438,7 @@
             "dist": {
                 "type": "path",
                 "url": "../saas",
-                "reference": "20458b1b3f815f1a86756353f750054bfff49d7d"
+                "reference": "0b00f05d6890c1a30199c84edb57a89546d769e4"
             },
             "require": {
                 "illuminate/support": "^13.0",
@@ -2455,7 +2455,8 @@
             "autoload": {
                 "psr-4": {
                     "HomeSide\\Saas\\": "src/",
-                    "HomeSide\\Saas\\Database\\Seeders\\": "database/seeders/"
+                    "HomeSide\\Saas\\Database\\Seeders\\": "database/seeders/",
+                    "HomeSide\\Saas\\Database\\Factories\\": "database/factories/"
                 }
             },
             "autoload-dev": {
