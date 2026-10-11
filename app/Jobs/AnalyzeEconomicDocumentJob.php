@@ -128,7 +128,7 @@ class AnalyzeEconomicDocumentJob implements ShouldQueue
     {
         try {
             $gate->release($this->usageOperationId());
-        } catch (\RuntimeException) {
+        } catch (RuntimeException) {
             // Already committed — the credit was legitimately consumed.
         }
     }
@@ -186,7 +186,7 @@ class AnalyzeEconomicDocumentJob implements ShouldQueue
         // silent no-op on the gate.
         try {
             app(FeatureGate::class)->release($this->usageOperationId());
-        } catch (\RuntimeException) {
+        } catch (RuntimeException) {
             // Already committed — the credit was legitimately consumed.
         }
 

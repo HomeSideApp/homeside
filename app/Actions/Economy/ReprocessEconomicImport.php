@@ -6,6 +6,7 @@ use App\Data\Economy\ImageProcessingData;
 use App\Enums\EconomicImportStatus;
 use App\Jobs\AnalyzeEconomicDocumentJob;
 use App\Models\EconomicImport;
+use App\Models\User;
 use HomeSide\Saas\Support\FeatureGate;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
@@ -117,11 +118,18 @@ final class ReprocessEconomicImport
         ]);
 
         // A reprocess is a fresh analysis attempt: it meters a new credit
-        // (inert while SaaS disabled).
-        $reservation = app(FeatureGate::class)
-            ->reserveTicketRecognition($import->creator, $import->id);
+        // (inert while SaaS disabled). AI consumption belongs to the user
+        // initiating the operation, falling back to the import creator when
+        // the action runs outside an authenticated session. When no user is
+        // resolvable at all, skip metering entirely and let the job run with
+        // a null operationId as designed — never reserve against a null user.
+        $actor = auth()->user() ?? $import->creator;
 
-        AnalyzeEconomicDocumentJob::dispatch($import->id, $reservation->operationId);
+        $operationId = $actor instanceof User
+            ? app(FeatureGate::class)->reserveTicketRecognition($actor, $import->id)->operationId
+            : null;
+
+        AnalyzeEconomicDocumentJob::dispatch($import->id, $operationId);
 
         return $import->refresh();
     }
