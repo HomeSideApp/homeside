@@ -56,6 +56,7 @@ import { index as paymentMethodsIndex } from '@/routes/economy/me/payment-method
 import { index as householdEconomyIndex } from '@/routes/households/economy';
 import { index as jobsMonitorIndex } from '@/routes/jobs-monitor';
 import { index as recipeCollectionsIndex } from '@/routes/recipes/collections';
+import { index as saasPlansIndex } from '@/routes/saas/plans';
 import type { NavItem } from '@/types';
 
 const { t } = useI18n();
@@ -174,6 +175,12 @@ const mainNavItems = computed<NavItem[]>(() => [
               },
           ]
         : []),
+    {
+        title: t('sidebar.saas'),
+        href: saasPlansIndex(),
+        icon: CreditCard,
+        permission: 'saas.plans.index',
+    },
     {
         title: t('sidebar.admin'),
         href: '#',
