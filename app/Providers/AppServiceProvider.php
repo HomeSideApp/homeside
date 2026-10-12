@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Contracts\CryptoPriceFetcher;
+use App\Contracts\EntitlementGate;
 use App\Enums\AppLocale;
 use App\Http\Middleware\SecureHttpMiddleware;
 use App\Http\Requests\StoreRecipeApiRequest;
@@ -20,6 +21,7 @@ use App\Observers\StoreObserver;
 use App\Policies\AiConversationPolicy;
 use App\Policies\AiProviderPolicy;
 use App\Services\Economy\CoinGeckoPriceFetcher;
+use App\Support\NullEntitlementGate;
 use App\Support\OpenApi\DiscriminatedOneOfType;
 use Carbon\CarbonImmutable;
 use Dedoc\Scramble\Scramble;
@@ -58,7 +60,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->configureEntitlements();
     }
 
     /**
@@ -101,6 +103,22 @@ class AppServiceProvider extends ServiceProvider
     protected function configureCryptoPrices(): void
     {
         $this->app->bind(CryptoPriceFetcher::class, CoinGeckoPriceFetcher::class);
+    }
+
+    /**
+     * Bind the entitlement gate behind its app-owned port.
+     *
+     * Community owns the contract and its null fallback: a self-hosted install has nothing to
+     * meter, so every check passes. Using `bindIf` instead of `bind` makes the registration
+     * order-independent. Package-discovered providers register before the app's own providers, so
+     * when a commercial package is installed its `bind` runs first and this `bindIf` yields; if the
+     * order were ever reversed, this `bindIf` would register the null gate and the package's `bind`
+     * would overwrite it. Either way the package wins, which is why Community never needs to know
+     * whether that package exists.
+     */
+    protected function configureEntitlements(): void
+    {
+        $this->app->bindIf(EntitlementGate::class, NullEntitlementGate::class);
     }
 
     /**
