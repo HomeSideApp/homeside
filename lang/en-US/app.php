@@ -58,6 +58,7 @@ return [
         'attachment_deleted' => 'Image deleted successfully.',
         'invitation_sent' => 'Invitation sent successfully.',
         'invitation_cancelled' => 'Invitation cancelled.',
+        'registration_settings_updated' => 'Registration policy updated.',
         'household_settings_updated' => 'Household settings updated.',
         'collection_created' => 'Collection created successfully.',
         'collection_renamed' => 'Collection renamed successfully.',

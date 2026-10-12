@@ -58,6 +58,7 @@ return [
         'attachment_deleted' => 'Imagen eliminada correctamente.',
         'invitation_sent' => 'Invitación enviada correctamente.',
         'invitation_cancelled' => 'Invitación cancelada.',
+        'registration_settings_updated' => 'Política de registro actualizada.',
         'household_settings_updated' => 'Configuración del hogar actualizada.',
         'collection_created' => 'Colección creada correctamente.',
         'collection_renamed' => 'Colección renombrada correctamente.',

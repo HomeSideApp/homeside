@@ -996,6 +996,7 @@ export default {
         translations: 'Traducciones',
         saas: 'Planes y facturación',
         saasAdmin: 'Admin SaaS',
+        registrationSettings: 'Registro',
     },
     saas: {
         plans: {
@@ -1299,6 +1300,75 @@ export default {
             namePlaceholder: 'Nombre del producto global',
             searchIcons: 'Buscar icono...',
             generatedIcon: 'Icono generado {number}',
+        },
+        registrations: {
+            settings: {
+                title: 'Política de registro',
+                description:
+                    'Quién puede iniciar un registro en esta instalación, por canal.',
+                save: 'Guardar',
+                policyNote:
+                    'Estas son políticas de registro de toda la instalación. Deciden si una identidad puede iniciar un registro; no sustituyen a los roles y nunca otorgan capacidad de hogar.',
+                values: {
+                    disabled: 'Deshabilitado',
+                    approval_required: 'Requiere aprobación',
+                    open: 'Abierto (sin aprobación)',
+                    existing_only: 'Solo identidades existentes',
+                    enabled: 'Habilitado',
+                    allowed: 'Permitido',
+                    denied: 'Denegado',
+                },
+                groups: {
+                    registration: {
+                        title: 'Canales de registro',
+                        description:
+                            'Si una identidad nueva puede registrarse y si un administrador debe aprobarlo.',
+                    },
+                    invitations: {
+                        title: 'Invitaciones',
+                        description:
+                            'Si los flujos de invitación pueden iniciar un registro.',
+                    },
+                    household: {
+                        title: 'Creación de hogares',
+                        description:
+                            'Si los miembros de esta instalación autoalojada pueden crear sus propios hogares.',
+                    },
+                },
+                fields: {
+                    web: {
+                        label: 'Registro con contraseña (web)',
+                        note: 'El formulario de registro de este sitio. Deshabilitado por defecto porque es el canal más fácil de abusar.',
+                    },
+                    api: {
+                        label: 'Registro por API',
+                        note: 'El endpoint público POST /api/v1/auth/register. Deshabilitado por defecto; es accesible sin navegador.',
+                    },
+                    google: {
+                        label: 'Registro con Google',
+                        note: 'Inicio de sesión con una cuenta de Google. "Solo identidades existentes" vincula cuentas conocidas sin admitir nuevas.',
+                    },
+                    household_invitation: {
+                        label: 'Invitaciones de hogar',
+                        note: 'El enlace reutilizable /invite/{token}. Deshabilitarlo rechaza el enlace sin borrarlo, por lo que puede reactivarse después.',
+                    },
+                    admin_invitation: {
+                        label: 'Invitaciones de administrador',
+                        note: 'La invitación que se envía cuando un administrador crea una cuenta. Deshabilitarla rechaza la invitación sin borrar la cuenta.',
+                    },
+                    household_creation: {
+                        label: 'Creación de hogares autoalojada',
+                        note: 'El valor por defecto de la instalación. Denegado rechaza la creación aunque la anulación por usuario sea nula; permitido sigue delegando en la anulación y en cualquier derecho.',
+                    },
+                },
+                warning: {
+                    title: 'Hay un canal accesible sin aprobación',
+                    description:
+                        'Estos canales están abiertos: {channels}. Cualquiera que llegue a ellos puede registrarse sin aprobación de un administrador.',
+                    channel:
+                        'Abierto: cualquiera que llegue a este canal se registra sin aprobación.',
+                },
+            },
         },
         roles: {
             indexTitle: 'Gestión de Roles',

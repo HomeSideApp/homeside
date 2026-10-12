@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\RegistrationChannel;
 use App\Http\Controllers\Admin\AdminAiProviderController;
 use App\Http\Controllers\Admin\AdminCategoryController;
 use App\Http\Controllers\Admin\AdminPersonalProductController;
@@ -8,6 +9,7 @@ use App\Http\Controllers\Admin\AdminRoleController;
 use App\Http\Controllers\Admin\AdminTranslationController;
 use App\Http\Controllers\Admin\AdminUserController;
 use App\Http\Controllers\Admin\GoogleApprovalController;
+use App\Http\Controllers\Admin\RegistrationSettingsController;
 use App\Http\Controllers\HouseholdMemberPermissionController;
 use App\Http\Controllers\HouseholdOwnershipController;
 use App\Http\Controllers\InvitationController;
@@ -48,6 +50,7 @@ use App\Http\Controllers\Web\RecipeExportController;
 use App\Http\Controllers\Web\RecipeImportController;
 use App\Http\Controllers\Web\RecipeShoppingListController;
 use App\Http\Controllers\Web\ShoppingListController;
+use App\Http\Middleware\EnsureRegistrationInvitationsEnabled;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -58,8 +61,10 @@ Route::get('/', function () {
 })->name('home');
 
 // === Enlaces de invitación públicos (registro vía enlace) ===
-Route::get('invite/{token}', [InviteLinkController::class, 'show'])->name('invite-links.show');
-Route::post('invite/{token}', [InviteLinkController::class, 'store'])->middleware('throttle:10,1')->name('invite-links.store');
+Route::middleware(EnsureRegistrationInvitationsEnabled::class.':'.RegistrationChannel::HouseholdInvitation->value)->group(function (): void {
+    Route::get('invite/{token}', [InviteLinkController::class, 'show'])->name('invite-links.show');
+    Route::post('invite/{token}', [InviteLinkController::class, 'store'])->middleware('throttle:10,1')->name('invite-links.store');
+});
 
 Route::middleware(['auth', 'verified'])->group(function () {
 
@@ -133,6 +138,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::delete('users/{user}', [AdminUserController::class, 'destroy'])->middleware('permission:admin.users.destroy')->name('users.destroy');
         Route::post('users/{user}/approve', [GoogleApprovalController::class, 'approve'])->middleware('permission:admin.users.update')->name('users.approve');
         Route::post('users/{user}/reject', [GoogleApprovalController::class, 'reject'])->middleware('permission:admin.users.update')->name('users.reject');
+    });
+
+    // Admin: Políticas de registro (no necesita household)
+    Route::prefix('admin')->name('admin.')->group(function () {
+        Route::get('registrations/settings', [RegistrationSettingsController::class, 'edit'])
+            ->middleware(['permission:admin.registrations.manage-settings', 'can:registration-settings.view'])
+            ->name('registrations.settings');
+        Route::put('registrations/settings', [RegistrationSettingsController::class, 'update'])
+            ->middleware(['permission:admin.registrations.manage-settings', 'can:registration-settings.update'])
+            ->name('registrations.settings.update');
     });
 
     // Admin: Roles (no necesitan household)
@@ -432,8 +447,10 @@ require __DIR__.'/settings.php';
 require __DIR__.'/auth.php';
 
 // Invitación (sin auth, con URL firmada)
-Route::get('invitation/{user}', [InvitationController::class, 'show'])->middleware(['signed'])->name('invitation.show');
-Route::post('invitation', [InvitationController::class, 'store'])->middleware(['signed'])->name('invitation.store');
+Route::middleware([EnsureRegistrationInvitationsEnabled::class.':'.RegistrationChannel::AdminInvitation->value, 'signed'])->group(function (): void {
+    Route::get('invitation/{user}', [InvitationController::class, 'show'])->name('invitation.show');
+    Route::post('invitation', [InvitationController::class, 'store'])->name('invitation.store');
+});
 
 // OTP Setup (con URL firmada, sin auth - parte del flujo de onboarding)
 Route::get('otp/setup/{user}', [OtpSetupController::class, 'show'])->middleware(['signed'])->name('otp.setup');

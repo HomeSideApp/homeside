@@ -24,6 +24,7 @@ use App\Observers\StoreObserver;
 use App\Policies\AiConversationPolicy;
 use App\Policies\AiProviderPolicy;
 use App\Policies\RegistrationApprovalPolicy;
+use App\Policies\RegistrationSettingsPolicy;
 use App\Services\Auth\SelfHostedRegistrationGate;
 use App\Services\Economy\CoinGeckoPriceFetcher;
 use App\Support\NullEntitlementGate;
@@ -165,6 +166,8 @@ class AppServiceProvider extends ServiceProvider
         Gate::define('registrations.reject', fn (User $actor, User $target): bool => app(RegistrationApprovalPolicy::class)->reject($actor, $target));
         Gate::define('registrations.release-rejection', fn (User $actor, User $target): bool => app(RegistrationApprovalPolicy::class)->releaseRejection($actor, $target));
         Gate::define('registrations.manage-settings', fn (User $actor, ?User $target = null): bool => app(RegistrationApprovalPolicy::class)->manageSettings($actor, $target));
+        Gate::define('registration-settings.view', fn (User $actor): bool => app(RegistrationSettingsPolicy::class)->view($actor));
+        Gate::define('registration-settings.update', fn (User $actor): bool => app(RegistrationSettingsPolicy::class)->update($actor));
     }
 
     /**

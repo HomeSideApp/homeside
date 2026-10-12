@@ -9,6 +9,7 @@ use App\Exceptions\EntitlementQuotaExceededException;
 use App\Models\Household;
 use App\Models\Role;
 use App\Models\User;
+use App\Services\Auth\RegistrationSettings;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -58,7 +59,9 @@ final class PlatformAccess
     /**
      * Decide whether the user may create a new household.
      *
-     * The decision is delegated, never defaulted. `null` on
+     * The decision is delegated, never defaulted. The installation policy can
+     * only refuse: `denied` returns false regardless of anything else, while
+     * `allowed` leaves the rest of the decision untouched. `null` on
      * `can_create_households_override` means "ask the policy and the
      * entitlement gate", `false` is an explicit prohibition, and the
      * deliberately absent `true` state is not a grant. A null override is
@@ -67,6 +70,10 @@ final class PlatformAccess
      */
     public function canCreateHouseholds(User $user): bool
     {
+        if (! app(RegistrationSettings::class)->householdCreationPolicy()->allowsCreation()) {
+            return false;
+        }
+
         if (! $user->households_enabled
             || $user->account_status !== AccountStatus::Active
             || $user->can_create_households_override === false) {

@@ -977,6 +977,7 @@ export default {
         translations: 'Translations',
         saas: 'Plans & Billing',
         saasAdmin: 'SaaS Admin',
+        registrationSettings: 'Registration',
     },
     saas: {
         plans: {
@@ -1281,6 +1282,75 @@ export default {
             namePlaceholder: 'Global product name',
             searchIcons: 'Search icon...',
             generatedIcon: 'Generated icon {number}',
+        },
+        registrations: {
+            settings: {
+                title: 'Registration policy',
+                description:
+                    'Who may start a registration on this installation, per channel.',
+                save: 'Save',
+                policyNote:
+                    'These are installation-wide registration policies. They decide whether an identity may start a registration; they do not replace roles and they never grant household capacity.',
+                values: {
+                    disabled: 'Disabled',
+                    approval_required: 'Approval required',
+                    open: 'Open (no approval)',
+                    existing_only: 'Existing identities only',
+                    enabled: 'Enabled',
+                    allowed: 'Allowed',
+                    denied: 'Denied',
+                },
+                groups: {
+                    registration: {
+                        title: 'Registration channels',
+                        description:
+                            'Whether a new identity may sign up, and whether an administrator must approve it.',
+                    },
+                    invitations: {
+                        title: 'Invitations',
+                        description:
+                            'Whether the invitation flows may start a registration.',
+                    },
+                    household: {
+                        title: 'Household creation',
+                        description:
+                            'Whether members of this self-hosted installation may create households of their own.',
+                    },
+                },
+                fields: {
+                    web: {
+                        label: 'Password (web) registration',
+                        note: 'The sign-up form on this site. Disabled by default because it is the easiest channel to abuse.',
+                    },
+                    api: {
+                        label: 'API registration',
+                        note: 'The public POST /api/v1/auth/register endpoint. Disabled by default; it is reachable without a browser.',
+                    },
+                    google: {
+                        label: 'Google registration',
+                        note: 'Sign-in with a Google account. "Existing identities only" links known accounts without admitting new ones.',
+                    },
+                    household_invitation: {
+                        label: 'Household invitations',
+                        note: 'The reusable /invite/{token} link. Disabling it refuses the link without deleting it, so it can be re-enabled later.',
+                    },
+                    admin_invitation: {
+                        label: 'Admin invitations',
+                        note: 'The invitation sent when an administrator creates an account. Disabling it refuses the invitation without deleting the account.',
+                    },
+                    household_creation: {
+                        label: 'Self-hosted household creation',
+                        note: 'The installation default. Denied refuses creation even when the per-user override is null; allowed still delegates to the override and any entitlement.',
+                    },
+                },
+                warning: {
+                    title: 'A channel is reachable without approval',
+                    description:
+                        'These channels are currently open: {channels}. Anyone reaching them can register without an administrator approving.',
+                    channel:
+                        'Open: anyone reaching this channel registers without approval.',
+                },
+            },
         },
         roles: {
             indexTitle: 'Role Management',
