@@ -2,12 +2,12 @@
 
 namespace App\Actions\Economy;
 
+use App\Contracts\EntitlementGate;
 use App\Data\Economy\ImageProcessingData;
 use App\Enums\EconomicImportStatus;
 use App\Jobs\AnalyzeEconomicDocumentJob;
 use App\Models\EconomicImport;
 use App\Models\User;
-use HomeSide\Saas\Support\FeatureGate;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 use Intervention\Image\Drivers\Gd\Driver as GdDriver;
@@ -19,6 +19,10 @@ use Intervention\Image\ImageManager;
  */
 final class ReprocessEconomicImport
 {
+    public function __construct(
+        private readonly EntitlementGate $entitlements,
+    ) {}
+
     /**
      * Rebuild the AI version of the import document and queue a new analysis.
      *
@@ -126,7 +130,7 @@ final class ReprocessEconomicImport
         $actor = auth()->user() ?? $import->creator;
 
         $operationId = $actor instanceof User
-            ? app(FeatureGate::class)->reserveTicketRecognition($actor, $import->id)->operationId
+            ? $this->entitlements->reserveTicketRecognition($actor, $import->id)
             : null;
 
         AnalyzeEconomicDocumentJob::dispatch($import->id, $operationId);

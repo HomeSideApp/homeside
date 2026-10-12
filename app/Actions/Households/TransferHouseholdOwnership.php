@@ -2,15 +2,19 @@
 
 namespace App\Actions\Households;
 
+use App\Contracts\EntitlementGate;
 use App\Enums\HouseholdRole;
 use App\Models\Household;
 use App\Models\User;
-use HomeSide\Saas\Support\FeatureGate;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 final class TransferHouseholdOwnership
 {
+    public function __construct(
+        private readonly EntitlementGate $entitlements,
+    ) {}
+
     public function execute(Household $household, User $actor, string $memberId): Household
     {
         return DB::transaction(function () use ($household, $actor, $memberId): Household {
@@ -24,7 +28,7 @@ final class TransferHouseholdOwnership
 
             // Enforce the target's households_own quota inside the transaction
             // so a denial rolls back atomically (no-op while SaaS is disabled).
-            app(FeatureGate::class)->assertHouseholdOwnershipCapacity($target);
+            $this->entitlements->assertHouseholdOwnershipCapacity($target);
 
             $locked->update(['owner_id' => $member->user_id]);
 

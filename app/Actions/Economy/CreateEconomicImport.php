@@ -2,6 +2,7 @@
 
 namespace App\Actions\Economy;
 
+use App\Contracts\EntitlementGate;
 use App\Data\Economy\CreateEconomicImportData;
 use App\Enums\EconomicImportStatus;
 use App\Jobs\AnalyzeEconomicDocumentJob;
@@ -9,7 +10,6 @@ use App\Models\EconomicDocument;
 use App\Models\EconomicImport;
 use App\Models\Household;
 use App\Models\User;
-use HomeSide\Saas\Support\FeatureGate;
 
 /**
  * Creates an economic import for the user's document and dispatches the
@@ -17,6 +17,10 @@ use HomeSide\Saas\Support\FeatureGate;
  */
 final class CreateEconomicImport
 {
+    public function __construct(
+        private readonly EntitlementGate $entitlements,
+    ) {}
+
     /**
      * Create an economic import and enqueue its document analysis.
      *
@@ -46,9 +50,9 @@ final class CreateEconomicImport
 
         // Meter one AI recognition credit before enqueueing; denied or
         // exhausted quotas never reach the queue (inert while SaaS disabled).
-        $reservation = app(FeatureGate::class)->reserveTicketRecognition($user, $import->id);
+        $operationId = $this->entitlements->reserveTicketRecognition($user, $import->id);
 
-        AnalyzeEconomicDocumentJob::dispatch($import->id, $reservation->operationId);
+        AnalyzeEconomicDocumentJob::dispatch($import->id, $operationId);
 
         return $import;
     }

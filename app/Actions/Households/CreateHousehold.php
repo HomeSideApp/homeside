@@ -2,11 +2,11 @@
 
 namespace App\Actions\Households;
 
+use App\Contracts\EntitlementGate;
 use App\Data\Households\CreateHouseholdData;
 use App\Enums\HouseholdRole;
 use App\Models\Household;
 use App\Models\User;
-use HomeSide\Saas\Support\FeatureGate;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
@@ -16,6 +16,10 @@ use Illuminate\Support\Str;
  */
 final class CreateHousehold
 {
+    public function __construct(
+        private readonly EntitlementGate $entitlements,
+    ) {}
+
     /**
      * @param  CreateHouseholdData  $data  The data for the new household
      * @param  User  $user  The user creating the household
@@ -26,7 +30,7 @@ final class CreateHousehold
         return DB::transaction(function () use ($data, $user) {
             // Enforce the households_own quota inside the transaction so a
             // denial rolls back atomically (no-op while SaaS is disabled).
-            app(FeatureGate::class)->assertHouseholdOwnershipCapacity($user);
+            $this->entitlements->assertHouseholdOwnershipCapacity($user);
 
             $household = Household::create([
                 'name' => $data->name,

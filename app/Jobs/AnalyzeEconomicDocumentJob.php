@@ -2,13 +2,13 @@
 
 namespace App\Jobs;
 
+use App\Contracts\EntitlementGate;
 use App\Enums\EconomicImportStatus;
 use App\Exceptions\IncompleteAnalysisException;
 use App\Models\EconomicImport;
 use App\Services\Economy\TicketAnalyzer;
 use HomeSide\AiAgents\Exceptions\NoAiProviderException;
 use HomeSide\AiAgents\Execution\AiExecutionContextData;
-use HomeSide\Saas\Support\FeatureGate;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -70,7 +70,7 @@ class AnalyzeEconomicDocumentJob implements ShouldQueue
 
         $import->refresh();
 
-        $gate = app(FeatureGate::class);
+        $gate = app(EntitlementGate::class);
         $context = new AiExecutionContextData(
             userId: $import->created_by,
             tenantId: $import->household_id,
@@ -93,7 +93,7 @@ class AnalyzeEconomicDocumentJob implements ShouldQueue
             ]);
 
             // Persist the reserved usage credit for this analysis attempt.
-            $gate->commit($this->usageOperationId());
+            $gate->commitUsage($this->usageOperationId());
         } catch (IncompleteAnalysisException $e) {
             $this->releaseUsageReservation($gate);
 
@@ -124,10 +124,10 @@ class AnalyzeEconomicDocumentJob implements ShouldQueue
      * Free the reserved usage credit after a failed analysis. Committing or
      * releasing twice must stay silent no-ops.
      */
-    private function releaseUsageReservation(FeatureGate $gate): void
+    private function releaseUsageReservation(EntitlementGate $gate): void
     {
         try {
-            $gate->release($this->usageOperationId());
+            $gate->releaseUsage($this->usageOperationId());
         } catch (RuntimeException) {
             // Already committed — the credit was legitimately consumed.
         }
@@ -185,7 +185,7 @@ class AnalyzeEconomicDocumentJob implements ShouldQueue
         // Free any still-reserved credit; a committed or released entry is a
         // silent no-op on the gate.
         try {
-            app(FeatureGate::class)->release($this->usageOperationId());
+            app(EntitlementGate::class)->releaseUsage($this->usageOperationId());
         } catch (RuntimeException) {
             // Already committed — the credit was legitimately consumed.
         }

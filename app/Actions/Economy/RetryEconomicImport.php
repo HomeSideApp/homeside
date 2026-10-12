@@ -2,11 +2,11 @@
 
 namespace App\Actions\Economy;
 
+use App\Contracts\EntitlementGate;
 use App\Enums\EconomicImportStatus;
 use App\Jobs\AnalyzeEconomicDocumentJob;
 use App\Models\EconomicImport;
 use App\Models\User;
-use HomeSide\Saas\Support\FeatureGate;
 
 /**
  * Resets a failed import back to pending and dispatches the analysis job
@@ -14,6 +14,10 @@ use HomeSide\Saas\Support\FeatureGate;
  */
 final class RetryEconomicImport
 {
+    public function __construct(
+        private readonly EntitlementGate $entitlements,
+    ) {}
+
     /**
      * Reset a failed economic import and enqueue another analysis attempt.
      *
@@ -41,7 +45,7 @@ final class RetryEconomicImport
         $actor = auth()->user() ?? $import->creator;
 
         $operationId = $actor instanceof User
-            ? app(FeatureGate::class)->reserveTicketRecognition($actor, $import->id)->operationId
+            ? $this->entitlements->reserveTicketRecognition($actor, $import->id)
             : null;
 
         AnalyzeEconomicDocumentJob::dispatch($import->id, $operationId);
