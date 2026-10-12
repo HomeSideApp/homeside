@@ -4,6 +4,7 @@ import {
     Activity,
     Bot,
     BookUser,
+    type LucideIcon,
     ClipboardList,
     ContactRound,
     CookingPot,
@@ -56,13 +57,77 @@ import { index as paymentMethodsIndex } from '@/routes/economy/me/payment-method
 import { index as householdEconomyIndex } from '@/routes/households/economy';
 import { index as jobsMonitorIndex } from '@/routes/jobs-monitor';
 import { index as recipeCollectionsIndex } from '@/routes/recipes/collections';
-import { index as saasPlansIndex } from '@/routes/saas/plans';
 import type { NavItem } from '@/types';
+import { usePage } from '@inertiajs/vue3';
 
 const { t } = useI18n();
 const { householdUrl, activeHousehold } = useHousehold();
 const listRoutes = useShoppingListRoutes(
     computed(() => activeHousehold.value?.id ?? null),
+);
+
+// Package-provided navigation, consumed from the shared `saas` Inertia prop.
+// The commercial package owns these entries; when it is absent the prop is
+// undefined, both lists stay empty and no SaaS entry renders.
+type SaasNavItemProp = {
+    title?: string;
+    href?: string;
+    permission?: string | null;
+    icon?: string | null;
+};
+
+type SaasProps = {
+    navItems?: SaasNavItemProp[];
+    adminNavItems?: SaasNavItemProp[];
+};
+
+const page = usePage();
+
+const saasProps = computed<SaasProps>(() => {
+    const saas = (page.props as Record<string, unknown>).saas;
+
+    return saas && typeof saas === 'object' ? (saas as SaasProps) : {};
+});
+
+const saasIconMap: Record<string, LucideIcon> = {
+    Activity,
+    BookUser,
+    Bot,
+    ClipboardList,
+    CreditCard,
+    FileText,
+    KeyRound,
+    LayoutGrid,
+    Package,
+    PiggyBank,
+    Server,
+    ShieldCheck,
+    ShoppingCart,
+    Tags,
+    Users,
+    Wallet,
+};
+
+function toSaasNavItems(items: SaasNavItemProp[] | undefined): NavItem[] {
+    if (!Array.isArray(items)) {
+        return [];
+    }
+
+    return items.map(
+        (item): NavItem => ({
+            title: item.title ?? '',
+            href: item.href ?? '#',
+            icon: (item.icon ? saasIconMap[item.icon] : undefined) ?? Activity,
+            ...(item.permission ? { permission: item.permission } : {}),
+        }),
+    );
+}
+
+const saasNavItems = computed<NavItem[]>(() =>
+    toSaasNavItems(saasProps.value.navItems),
+);
+const saasAdminNavItems = computed<NavItem[]>(() =>
+    toSaasNavItems(saasProps.value.adminNavItems),
 );
 
 const mainNavItems = computed<NavItem[]>(() => [
@@ -175,12 +240,7 @@ const mainNavItems = computed<NavItem[]>(() => [
               },
           ]
         : []),
-    {
-        title: t('sidebar.saas'),
-        href: saasPlansIndex(),
-        icon: CreditCard,
-        permission: 'saas.plans.index',
-    },
+    ...saasNavItems.value,
     {
         title: t('sidebar.admin'),
         href: '#',
@@ -192,6 +252,10 @@ const mainNavItems = computed<NavItem[]>(() => [
             'admin.products',
             'admin.ai-providers',
             'admin.translations',
+            'admin.saas.billing.view',
+            'admin.saas.plans.manage',
+            'admin.saas.grants.manage',
+            'admin.saas.promotions.manage',
             'jobs-monitor.index',
         ],
         children: [
@@ -201,12 +265,22 @@ const mainNavItems = computed<NavItem[]>(() => [
                 icon: Languages,
                 permission: 'admin.translations',
             },
-            {
-                title: t('sidebar.saasAdmin'),
-                href: '/admin/saas',
-                icon: CreditCard,
-                permission: 'admin.saas.billing.view',
-            },
+            ...(saasAdminNavItems.value.length > 0
+                ? [
+                      {
+                          title: t('sidebar.saasAdmin'),
+                          href: '#',
+                          icon: ShieldCheck,
+                          permission: [
+                              'admin.saas.billing.view',
+                              'admin.saas.plans.manage',
+                              'admin.saas.grants.manage',
+                              'admin.saas.promotions.manage',
+                          ],
+                          children: saasAdminNavItems.value,
+                      },
+                  ]
+                : []),
             {
                 title: 'Job Monitoring',
                 href: jobsMonitorIndex(),
