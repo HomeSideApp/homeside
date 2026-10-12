@@ -20,6 +20,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 import {
     Table,
     TableBody,
@@ -63,12 +64,26 @@ interface PlanView {
     versions: PlanVersionView[];
 }
 
-interface EditorRow {
+interface CapabilityFeature {
     key: string;
-    value: string;
+    label: string;
+    module: string | null;
+    metric: string | null;
+    permissions: string[];
 }
 
-const props = defineProps<{ plans: PlanView[] }>();
+interface CapabilityQuota {
+    key: string;
+    label: string;
+    unit: string;
+}
+
+interface Capabilities {
+    features: CapabilityFeature[];
+    quotas: CapabilityQuota[];
+}
+
+const props = defineProps<{ plans: PlanView[]; capabilities: Capabilities }>();
 
 const { t } = useI18n();
 
@@ -80,8 +95,11 @@ const creating = ref(false);
 const newPlan = ref({ key: '', name: '', visibility: 'public', sort_order: 0 });
 
 const editedPlanId = ref<string | null>(null);
-const featureRows = ref<EditorRow[]>([]);
-const quotaRows = ref<EditorRow[]>([]);
+
+// The editor state is keyed by the DECLARED catalog keys only. Unknown or
+// legacy keys are never rendered, so a typo can never be submitted.
+const featureValues = ref<Record<string, boolean>>({});
+const quotaValues = ref<Record<string, string>>({});
 const priceRow = ref({ currency: 'USD', interval: 'month', amount_cents: 0 });
 
 function draftOf(plan: PlanView): PlanVersionView | null {
@@ -96,6 +114,34 @@ function publishedOf(plan: PlanView): PlanVersionView | null {
     );
 }
 
+/**
+ * Hydrate the editor from the plan's draft when it has one, falling back to
+ * its newest PUBLISHED version.
+ *
+ * DATA-LOSS TRAP: seeded plans only ship a published v1. Hydrating from the
+ * draft alone (`draftOf(plan)`) opened a blank editor for every one of them;
+ * saving then created a draft with an empty features/quotas matrix that wiped
+ * the plan's real characteristics the moment it was published. Always
+ * hydrating `draftOf ?? publishedOf` keeps the current matrix intact.
+ */
+function hydrateEditor(plan: PlanView): void {
+    const version = draftOf(plan) ?? publishedOf(plan);
+
+    const features: Record<string, boolean> = {};
+    for (const feature of props.capabilities.features) {
+        features[feature.key] = Boolean(version?.features?.[feature.key]);
+    }
+
+    const quotas: Record<string, string> = {};
+    for (const quota of props.capabilities.quotas) {
+        const value = version?.quotas?.[quota.key];
+        quotas[quota.key] = value === null || value === undefined ? '' : String(value);
+    }
+
+    featureValues.value = features;
+    quotaValues.value = quotas;
+}
+
 function startEdit(plan: PlanView): void {
     if (editedPlanId.value === plan.id) {
         editedPlanId.value = null;
@@ -103,39 +149,31 @@ function startEdit(plan: PlanView): void {
         return;
     }
 
-    const draft = draftOf(plan);
+    hydrateEditor(plan);
     editedPlanId.value = plan.id;
-    featureRows.value = Object.entries(draft?.features ?? {}).map(([key, value]) => ({
-        key,
-        value: value ? 'true' : 'false',
-    }));
-    quotaRows.value = Object.entries(draft?.quotas ?? {}).map(([key, value]) => ({
-        key,
-        value: value === null ? '' : String(value),
-    }));
 }
 
-function addRow(rows: typeof featureRows): void {
-    rows.value.push({ key: '', value: rows === featureRows ? 'false' : '0' });
+function setFeature(key: string, value: boolean): void {
+    featureValues.value[key] = value;
 }
 
 function payloadFeatures(): Record<string, boolean> {
-    return Object.fromEntries(
-        featureRows.value
-            .filter((row) => row.key.trim() !== '')
-            .map((row) => [row.key.trim(), row.value === 'true']),
-    );
+    const payload: Record<string, boolean> = {};
+    for (const feature of props.capabilities.features) {
+        payload[feature.key] = Boolean(featureValues.value[feature.key]);
+    }
+
+    return payload;
 }
 
 function payloadQuotas(): Record<string, number | null> {
-    return Object.fromEntries(
-        quotaRows.value
-            .filter((row) => row.key.trim() !== '')
-            .map((row) => [
-                row.key.trim(),
-                row.value === '' ? null : Number.parseInt(row.value, 10),
-            ]),
-    );
+    const payload: Record<string, number | null> = {};
+    for (const quota of props.capabilities.quotas) {
+        const raw = quotaValues.value[quota.key] ?? '';
+        payload[quota.key] = raw === '' ? null : Number.parseInt(raw, 10);
+    }
+
+    return payload;
 }
 
 function saveDraft(plan: PlanView): void {
@@ -280,83 +318,69 @@ const hasDraft = computed(
 
                 <div class="grid gap-6 lg:grid-cols-2">
                     <div>
-                        <div class="mb-2 flex items-center justify-between">
-                            <Label>{{ t('saas.admin.plans.features') }}</Label>
-                            <Button
-                                type="button"
-                                size="sm"
-                                variant="ghost"
-                                @click="addRow(featureRows)"
+                        <Label class="mb-2 block">{{ t('saas.admin.plans.features') }}</Label>
+                        <div class="flex flex-col gap-2">
+                            <div
+                                v-for="feature in props.capabilities.features"
+                                :key="feature.key"
+                                class="flex items-center justify-between gap-3 rounded-md border p-3"
                             >
-                                + {{ t('saas.admin.plans.addRow') }}
-                            </Button>
-                        </div>
-                        <div
-                            v-for="(row, index) in featureRows"
-                            :key="index"
-                            class="mb-2 flex items-center gap-2"
-                        >
-                            <Input
-                                v-model="row.key"
-                                :placeholder="t('saas.admin.plans.featureKey')"
-                                class="font-mono text-xs"
-                            />
-                            <Select v-model="row.value">
-                                <SelectTrigger class="w-24">
-                                    <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="true">true</SelectItem>
-                                    <SelectItem value="false">false</SelectItem>
-                                </SelectContent>
-                            </Select>
-                            <Button
-                                type="button"
-                                size="sm"
-                                variant="ghost"
-                                @click="featureRows.splice(index, 1)"
-                            >
-                                ×
-                            </Button>
+                                <div class="flex flex-col gap-0.5">
+                                    <Label :for="`feature-${plan.id}-${feature.key}`" class="text-sm">
+                                        {{ feature.label }}
+                                    </Label>
+                                    <code class="text-xs text-muted-foreground">
+                                        {{ feature.key }}
+                                    </code>
+                                    <p
+                                        v-if="feature.module || feature.metric"
+                                        class="text-xs text-muted-foreground"
+                                    >
+                                        <span v-if="feature.module" class="font-mono">
+                                            {{ feature.module }}
+                                        </span>
+                                        <span v-if="feature.module && feature.metric"> · </span>
+                                        <span v-if="feature.metric" class="font-mono">
+                                            {{ feature.metric }}
+                                        </span>
+                                    </p>
+                                </div>
+                                <Switch
+                                    :id="`feature-${plan.id}-${feature.key}`"
+                                    :checked="Boolean(featureValues[feature.key])"
+                                    @update:checked="(value: boolean) => setFeature(feature.key, value)"
+                                />
+                            </div>
                         </div>
                     </div>
 
                     <div>
-                        <div class="mb-2 flex items-center justify-between">
-                            <Label>{{ t('saas.admin.plans.quotas') }}</Label>
-                            <Button
-                                type="button"
-                                size="sm"
-                                variant="ghost"
-                                @click="addRow(quotaRows)"
+                        <Label class="mb-2 block">{{ t('saas.admin.plans.quotas') }}</Label>
+                        <div class="flex flex-col gap-2">
+                            <div
+                                v-for="quota in props.capabilities.quotas"
+                                :key="quota.key"
+                                class="flex items-center justify-between gap-3 rounded-md border p-3"
                             >
-                                + {{ t('saas.admin.plans.addRow') }}
-                            </Button>
+                                <div class="flex flex-col gap-0.5">
+                                    <Label :for="`quota-${plan.id}-${quota.key}`" class="text-sm">
+                                        {{ quota.label }}
+                                    </Label>
+                                    <code class="text-xs text-muted-foreground">
+                                        {{ quota.key }}<span v-if="quota.unit"> · {{ quota.unit }}</span>
+                                    </code>
+                                </div>
+                                <Input
+                                    :id="`quota-${plan.id}-${quota.key}`"
+                                    v-model="quotaValues[quota.key]"
+                                    type="number"
+                                    min="0"
+                                    class="w-32"
+                                    :placeholder="t('saas.quotas.unlimited')"
+                                />
+                            </div>
                         </div>
-                        <div
-                            v-for="(row, index) in quotaRows"
-                            :key="index"
-                            class="mb-2 flex items-center gap-2"
-                        >
-                            <Input
-                                v-model="row.key"
-                                :placeholder="t('saas.admin.plans.quotaKey')"
-                                class="font-mono text-xs"
-                            />
-                            <Input
-                                v-model="row.value"
-                                :placeholder="t('saas.admin.plans.quotaValue')"
-                            />
-                            <Button
-                                type="button"
-                                size="sm"
-                                variant="ghost"
-                                @click="quotaRows.splice(index, 1)"
-                            >
-                                ×
-                            </Button>
-                        </div>
-                        <p class="text-xs text-muted-foreground">
+                        <p class="mt-2 text-xs text-muted-foreground">
                             {{ t('saas.admin.plans.quotaHint') }}
                         </p>
                     </div>
