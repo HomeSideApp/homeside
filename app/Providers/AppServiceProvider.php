@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Contracts\CryptoPriceFetcher;
 use App\Contracts\EntitlementGate;
+use App\Contracts\RegistrationBlockRepository;
 use App\Contracts\RegistrationGate;
 use App\Enums\AppLocale;
 use App\Http\Middleware\SecureHttpMiddleware;
@@ -16,15 +17,18 @@ use App\Models\Category;
 use App\Models\Product;
 use App\Models\Store;
 use App\Models\Tag;
+use App\Models\User;
 use App\Observers\CategoryObserver;
 use App\Observers\ProductObserver;
 use App\Observers\StoreObserver;
 use App\Policies\AiConversationPolicy;
 use App\Policies\AiProviderPolicy;
+use App\Policies\RegistrationApprovalPolicy;
 use App\Services\Auth\SelfHostedRegistrationGate;
 use App\Services\Economy\CoinGeckoPriceFetcher;
 use App\Support\NullEntitlementGate;
 use App\Support\OpenApi\DiscriminatedOneOfType;
+use App\Support\Registration\RegistrationBlockRepository as EloquentRegistrationBlockRepository;
 use Carbon\CarbonImmutable;
 use Dedoc\Scramble\Scramble;
 use Dedoc\Scramble\Support\Generator\OpenApi;
@@ -64,6 +68,7 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->configureEntitlements();
         $this->configureRegistration();
+        $this->configureRegistrationBlocks();
     }
 
     /**
@@ -79,6 +84,7 @@ class AppServiceProvider extends ServiceProvider
         $this->configureMorphMap();
         $this->configureOpenApi();
         $this->configureAiPolicies();
+        $this->configureRegistrationPolicies();
         $this->configureCryptoPrices();
         $this->configureJobMonitoring();
     }
@@ -136,6 +142,29 @@ class AppServiceProvider extends ServiceProvider
     protected function configureRegistration(): void
     {
         $this->app->bindIf(RegistrationGate::class, SelfHostedRegistrationGate::class);
+    }
+
+    /**
+     * Bind the persistent registration block repository behind its contract.
+     */
+    protected function configureRegistrationBlocks(): void
+    {
+        $this->app->bind(RegistrationBlockRepository::class, EloquentRegistrationBlockRepository::class);
+    }
+
+    /**
+     * Register the named abilities backed by RegistrationApprovalPolicy.
+     *
+     * The user model already owns UserPolicy, so the registration-approval
+     * abilities are exposed as named gates instead of a second model policy.
+     */
+    protected function configureRegistrationPolicies(): void
+    {
+        Gate::define('registrations.view', fn (User $actor, ?User $target = null): bool => app(RegistrationApprovalPolicy::class)->view($actor, $target));
+        Gate::define('registrations.approve', fn (User $actor, User $target): bool => app(RegistrationApprovalPolicy::class)->approve($actor, $target));
+        Gate::define('registrations.reject', fn (User $actor, User $target): bool => app(RegistrationApprovalPolicy::class)->reject($actor, $target));
+        Gate::define('registrations.release-rejection', fn (User $actor, User $target): bool => app(RegistrationApprovalPolicy::class)->releaseRejection($actor, $target));
+        Gate::define('registrations.manage-settings', fn (User $actor, ?User $target = null): bool => app(RegistrationApprovalPolicy::class)->manageSettings($actor, $target));
     }
 
     /**

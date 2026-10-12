@@ -94,7 +94,7 @@ final class HouseholdAccess
         $actual = preg_replace('/^api\\.v1\\./', '', (string) $request->route()?->getName()) ?? '';
 
         if (in_array($actual, ['households.create', 'households.store', 'households.configuration.show'], true)) {
-            return $user->households_enabled && $user->can_create_households;
+            return app(PlatformAccess::class)->canCreateHouseholds($user);
         }
 
         $household = $request->route('household');

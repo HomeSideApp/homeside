@@ -38,7 +38,14 @@ export function useAuthorization() {
             permission === 'households.create' ||
             permission === 'households.store'
         ) {
-            return !!page.props.auth?.user?.can_create_households;
+            // Tri-state on the server: null delegates to Policy + entitlement,
+            // false forbids. Never treat the absence of an override as consent.
+            const user = page.props.auth?.user;
+
+            return (
+                !!user?.households_enabled &&
+                user?.can_create_households_override !== false
+            );
         }
 
         if (permission.startsWith('lists.')) {

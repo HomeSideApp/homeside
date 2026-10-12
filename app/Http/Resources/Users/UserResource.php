@@ -27,7 +27,7 @@ final class UserResource extends JsonResource
             'google_connected' => $this->googleIdentity()->exists(),
             'active_household_id' => $this->active_household_id,
             'households_enabled' => $this->households_enabled,
-            'can_create_households' => $this->can_create_households,
+            'can_create_households_override' => $this->can_create_households_override,
             'operation_authorization' => [
                 'household_operations_require_capabilities' => true,
                 'households' => app(HouseholdAccess::class)->memberships($this->resource)->mapWithKeys(fn ($member): array => [$member->household_id => [

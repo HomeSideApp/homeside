@@ -103,7 +103,7 @@ final class HouseholdInviteLinkTest extends TestCase
         $this->assertSame('Rafael Ortega', $user->name);
         $this->assertNotNull($user->email_verified_at);
         $this->assertTrue($user->hasRole('user'));
-        $this->assertFalse($user->can_create_households);
+        $this->assertFalse($user->can_create_households_override);
 
         $member = HouseholdMember::where('household_id', $this->household->id)
             ->where('user_id', $user->id)

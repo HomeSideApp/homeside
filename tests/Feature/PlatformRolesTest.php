@@ -67,7 +67,7 @@ class PlatformRolesTest extends TestCase
         $this->patchJson(route('api.v1.admin.users.update', $target), ['name' => 'Blocked', 'roles' => ['admin']])->assertForbidden();
         $this->assertSame('Allowed', $target->refresh()->name);
         $this->assertFalse($target->hasRole('admin'));
-        $this->patchJson(route('api.v1.admin.users.update', $target), ['can_create_households' => false])->assertForbidden();
+        $this->patchJson(route('api.v1.admin.users.update', $target), ['can_create_households_override' => false])->assertForbidden();
     }
 
     public function test_multiple_additional_roles_preserve_the_user_base(): void

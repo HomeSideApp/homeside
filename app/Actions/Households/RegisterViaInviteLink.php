@@ -38,7 +38,7 @@ final class RegisterViaInviteLink
                 'name' => filled($data->name) ? $data->name : $data->email,
                 'email' => $data->email,
                 'password' => Hash::make($data->password),
-                'can_create_households' => false,
+                'can_create_households_override' => false,
             ]);
             // email_verified_at is not mass assignable, set it explicitly
             $user->forceFill(['email_verified_at' => now()])->save();

@@ -30,7 +30,7 @@ final class ApiOperationPermissions
 
                 $domainRouteName = Str::after((string) $route->getName(), 'api.v1.');
                 if (in_array($domainRouteName, ['households.create', 'households.store', 'households.configuration.show'], true)) {
-                    return $user->can_create_households && $user->households_enabled;
+                    return app(PlatformAccess::class)->canCreateHouseholds($user);
                 }
                 if (str_starts_with($domainRouteName, 'households.')) {
                     return true;

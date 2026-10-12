@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Enums\HouseholdModule;
+use App\Support\PlatformAccess;
 use Illuminate\Foundation\Http\FormRequest;
 
 class StoreHouseholdRequest extends FormRequest
@@ -11,7 +12,7 @@ class StoreHouseholdRequest extends FormRequest
     {
         $user = $this->user();
 
-        return $user !== null && $user->households_enabled && $user->can_create_households;
+        return $user !== null && app(PlatformAccess::class)->canCreateHouseholds($user);
     }
 
     /**

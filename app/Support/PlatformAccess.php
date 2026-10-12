@@ -2,6 +2,10 @@
 
 namespace App\Support;
 
+use App\Contracts\EntitlementGate;
+use App\Enums\AccountStatus;
+use App\Enums\ApprovalStatus;
+use App\Exceptions\EntitlementQuotaExceededException;
 use App\Models\Household;
 use App\Models\Role;
 use App\Models\User;
@@ -10,9 +14,72 @@ use Illuminate\Validation\ValidationException;
 
 final class PlatformAccess
 {
+    /**
+     * Determine whether the user may manage platform-level assignments.
+     *
+     * Managing requires BOTH independent axes to allow access: an approved
+     * account that is currently active, with the role-assignment permission.
+     */
     public function canManage(User $user): bool
     {
-        return $user->approval_status === 'approved' && $user->getPermissionRouteNames()->contains('admin.users.assign-roles');
+        return $this->isAdministrator($user);
+    }
+
+    /**
+     * Determine whether the user counts as a platform administrator.
+     *
+     * This is the definition the "last administrator" safeguard protects: an
+     * approved, active user who can assign roles. A suspended or blocked admin
+     * does not count, so they can never be the last one left.
+     */
+    public function isAdministrator(User $user): bool
+    {
+        return $user->approval_status === ApprovalStatus::Approved->value
+            && $user->account_status === AccountStatus::Active
+            && $user->getPermissionRouteNames()->contains('admin.users.assign-roles');
+    }
+
+    /**
+     * Determine whether another approved, active administrator exists besides this user.
+     *
+     * Used by the last-administrator safeguard so an administrator can never
+     * lock the platform out of its own management.
+     */
+    public function hasAnotherAdministrator(User $user): bool
+    {
+        return User::query()
+            ->whereKeyNot($user->id)
+            ->where('approval_status', ApprovalStatus::Approved->value)
+            ->where('account_status', AccountStatus::Active->value)
+            ->whereHas('roles.permissions', fn ($permissions) => $permissions->where('route_name', 'admin.users.assign-roles'))
+            ->exists();
+    }
+
+    /**
+     * Decide whether the user may create a new household.
+     *
+     * The decision is delegated, never defaulted. `null` on
+     * `can_create_households_override` means "ask the policy and the
+     * entitlement gate", `false` is an explicit prohibition, and the
+     * deliberately absent `true` state is not a grant. A null override is
+     * therefore NOT permission: the entitlement gate is consulted and a denied
+     * entitlement yields false.
+     */
+    public function canCreateHouseholds(User $user): bool
+    {
+        if (! $user->households_enabled
+            || $user->account_status !== AccountStatus::Active
+            || $user->can_create_households_override === false) {
+            return false;
+        }
+
+        try {
+            app(EntitlementGate::class)->assertHouseholdOwnershipCapacity($user);
+        } catch (EntitlementQuotaExceededException) {
+            return false;
+        }
+
+        return true;
     }
 
     /** @param list<string> $slugs */
@@ -51,8 +118,13 @@ final class PlatformAccess
         if ($management === null || in_array($management->id, $permissionIds, true)) {
             return;
         }
-        $affected = $role->users()->where('approval_status', 'approved')->exists();
-        $remaining = User::query()->where('approval_status', 'approved')
+        $affected = $role->users()
+            ->where('approval_status', ApprovalStatus::Approved->value)
+            ->where('account_status', AccountStatus::Active->value)
+            ->exists();
+        $remaining = User::query()
+            ->where('approval_status', ApprovalStatus::Approved->value)
+            ->where('account_status', AccountStatus::Active->value)
             ->whereHas('roles', fn ($roles) => $roles->where('roles.id', '!=', $role->id)
                 ->whereHas('permissions', fn ($permissions) => $permissions->where('route_name', 'admin.users.assign-roles')))->exists();
         if ($affected && ! $remaining) {
@@ -62,9 +134,7 @@ final class PlatformAccess
 
     private function ensureAnotherAdministrator(User $user): void
     {
-        $exists = User::query()->whereKeyNot($user->id)->where('approval_status', 'approved')
-            ->whereHas('roles.permissions', fn ($permissions) => $permissions->where('route_name', 'admin.users.assign-roles'))->exists();
-        if (! $exists) {
+        if (! $this->hasAnotherAdministrator($user)) {
             throw ValidationException::withMessages(['roles' => __('app.permissions.last_platform_admin')]);
         }
     }

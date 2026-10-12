@@ -66,7 +66,7 @@ class RequestAuthorizationTest extends TestCase
     }
 
     #[TestWith([['roles' => []]])]
-    #[TestWith([['can_create_households' => 'invalid']])]
+    #[TestWith([['can_create_households_override' => 'invalid']])]
     public function test_user_data_editor_cannot_submit_administrative_fields_even_when_invalid(array $fields): void
     {
         $this->seed(RolesAndPermissionsSeeder::class);

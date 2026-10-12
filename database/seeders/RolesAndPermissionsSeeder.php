@@ -268,6 +268,39 @@ class RolesAndPermissionsSeeder extends Seeder
             ]);
         }
 
+        // Admin: Registro y aprobación de cuentas.
+        //
+        // Approving registrations and assigning roles are DIFFERENT privileges:
+        // `admin.users.assign-roles` must never be the only way to approve, and
+        // `admin.registrations.*` must never grant role assignment. The `admin`
+        // system role holds the union because it is the platform superuser; any
+        // other role gets only what it is explicitly granted.
+        $registrationsGroup = PermissionGroup::firstOrCreate(['name' => 'Registrations'], ['description' => 'Permisos de registro y aprobación de cuentas']);
+        foreach ([
+            'admin.registrations.view' => 'view registrations',
+            'admin.registrations.approve' => 'approve registrations',
+            'admin.registrations.reject' => 'reject registrations',
+            'admin.registrations.release-rejection' => 'release registration rejections',
+            'admin.registrations.manage-settings' => 'manage registration settings',
+            'admin.registration-blocks.view' => 'view registration blocks',
+            'admin.registration-blocks.release' => 'release registration blocks',
+        ] as $registrationRoute => $registrationPermissionName) {
+            Permission::firstOrCreate(['route_name' => $registrationRoute], [
+                'name' => $registrationPermissionName,
+                'description' => 'Permiso de registro: '.$registrationRoute,
+                'permission_group_id' => $registrationsGroup->id,
+            ]);
+        }
+
+        // Admin: ciclo de vida de usuarios (suspender / bloquear / eliminar).
+        foreach (['admin.users.suspend', 'admin.users.block', 'admin.users.unblock', 'admin.users.delete', 'admin.users.delete-and-block'] as $lifecycleRoute) {
+            Permission::firstOrCreate(['route_name' => $lifecycleRoute], [
+                'name' => $lifecycleRoute,
+                'description' => 'Permiso de ciclo de vida de usuario: '.$lifecycleRoute,
+                'permission_group_id' => $adminGroup->id,
+            ]);
+        }
+
         $baseRoutes = [
             'contacts.create',
             'contacts.delete',
