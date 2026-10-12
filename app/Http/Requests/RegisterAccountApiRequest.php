@@ -9,6 +9,14 @@ use Illuminate\Validation\Rules\Password;
 
 class RegisterAccountApiRequest extends FormRequest
 {
+    /**
+     * The request only validates the payload.
+     *
+     * Channel policy is enforced by the controller through
+     * App\Contracts\RegistrationGate, never here, so this endpoint cannot be
+     * opened by a request-level toggle and the decision stays auditable in one
+     * place.
+     */
     public function authorize(): bool
     {
         return true;
