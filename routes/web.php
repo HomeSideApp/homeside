@@ -202,7 +202,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     });
 
     // === Cookbook personal (fuera de household context) ===
-    Route::prefix('recipes')->name('recipes.')->middleware('saas.feature:recipes')->group(function () {
+    Route::prefix('recipes')->name('recipes.')->middleware('entitlement:recipes')->group(function () {
         Route::get('/', [RecipeController::class, 'index'])->name('index');
         Route::get('create', [RecipeController::class, 'create'])->name('create');
         Route::post('/', [RecipeController::class, 'store'])->name('store');
@@ -360,7 +360,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
             });
 
             // Recetas compartidas (requiere módulo recipes activo)
-            Route::middleware(['module:recipes', 'saas.feature:recipes'])->group(function () {
+            Route::middleware(['module:recipes', 'entitlement:recipes'])->group(function () {
                 Route::get('recipes', [HouseholdRecipeController::class, 'index'])->middleware('permission:recipes.index')->name('recipes.index');
                 Route::post('recipes/{recipe}/share', [HouseholdRecipeController::class, 'share'])->middleware('permission:recipes.share')->name('recipes.share');
                 Route::delete('recipes/{recipe}/share', [HouseholdRecipeController::class, 'unshare'])->middleware('permission:recipes.unshare')->name('recipes.unshare');

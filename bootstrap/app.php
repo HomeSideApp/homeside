@@ -2,6 +2,7 @@
 
 use App\Http\Middleware\ApiPermissionsMiddleware;
 use App\Http\Middleware\EnsureApprovedUser;
+use App\Http\Middleware\EnsureEntitlement;
 use App\Http\Middleware\EnsureIdempotentRequest;
 use App\Http\Middleware\EnsureModuleEnabled;
 use App\Http\Middleware\EnsureUserHasHousehold;
@@ -53,6 +54,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'module' => EnsureModuleEnabled::class,
             'locale' => SetLocale::class,
             'idempotency' => EnsureIdempotentRequest::class,
+            'entitlement' => EnsureEntitlement::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
