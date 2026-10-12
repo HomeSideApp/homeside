@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Contracts\CryptoPriceFetcher;
 use App\Contracts\EntitlementGate;
+use App\Contracts\RegistrationGate;
 use App\Enums\AppLocale;
 use App\Http\Middleware\SecureHttpMiddleware;
 use App\Http\Requests\StoreRecipeApiRequest;
@@ -20,6 +21,7 @@ use App\Observers\ProductObserver;
 use App\Observers\StoreObserver;
 use App\Policies\AiConversationPolicy;
 use App\Policies\AiProviderPolicy;
+use App\Services\Auth\SelfHostedRegistrationGate;
 use App\Services\Economy\CoinGeckoPriceFetcher;
 use App\Support\NullEntitlementGate;
 use App\Support\OpenApi\DiscriminatedOneOfType;
@@ -61,6 +63,7 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->configureEntitlements();
+        $this->configureRegistration();
     }
 
     /**
@@ -119,6 +122,20 @@ class AppServiceProvider extends ServiceProvider
     protected function configureEntitlements(): void
     {
         $this->app->bindIf(EntitlementGate::class, NullEntitlementGate::class);
+    }
+
+    /**
+     * Bind the registration gate behind its app-owned port.
+     *
+     * Community owns the contract and its self-hosted implementation: the gate
+     * only reads the local per-channel policy. Using `bindIf` keeps the
+     * registration order-independent, so a commercial package can override the
+     * binding without Community referencing it. The SaaS package will supply its
+     * own gate in a later phase.
+     */
+    protected function configureRegistration(): void
+    {
+        $this->app->bindIf(RegistrationGate::class, SelfHostedRegistrationGate::class);
     }
 
     /**
