@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\RegistrationChannel;
 use App\Http\Controllers\Api\V1\AdminAiProviderController;
 use App\Http\Controllers\Api\V1\AdminAiUsageController;
 use App\Http\Controllers\Api\V1\AdminGoogleApprovalController;
@@ -17,6 +18,7 @@ use App\Http\Controllers\Api\V1\Auth\LoginController;
 use App\Http\Controllers\Api\V1\Auth\LogoutController;
 use App\Http\Controllers\Api\V1\Auth\PublicAccountController;
 use App\Http\Controllers\Api\V1\Auth\RefreshController;
+use App\Http\Controllers\Api\V1\Auth\RegistrationCapabilitiesController;
 use App\Http\Controllers\Api\V1\CatalogController as ApiCatalogController;
 use App\Http\Controllers\Api\V1\CategoryController;
 use App\Http\Controllers\Api\V1\ContactController;
@@ -56,13 +58,16 @@ use App\Http\Controllers\Api\V1\TwoFactorController;
 use App\Http\Controllers\Api\V1\UserAiProviderController;
 use App\Http\Controllers\HouseholdMemberPermissionController;
 use App\Http\Controllers\HouseholdOwnershipController;
+use App\Http\Middleware\EnsureRegistrationInvitationsEnabled;
 use Illuminate\Support\Facades\Route;
 
 // === Enlaces de invitación públicos (registro vía enlace) ===
-Route::prefix('v1/invite-links')->name('api.v1.invite-links.')->group(function () {
-    Route::get('{token}', [InviteLinkController::class, 'show'])->name('show');
-    Route::post('{token}/register', [InviteLinkController::class, 'store'])->middleware('throttle:10,1')->name('store');
-});
+Route::prefix('v1/invite-links')->name('api.v1.invite-links.')
+    ->middleware(EnsureRegistrationInvitationsEnabled::class.':'.RegistrationChannel::HouseholdInvitation->value)
+    ->group(function () {
+        Route::get('{token}', [InviteLinkController::class, 'show'])->name('show');
+        Route::post('{token}/register', [InviteLinkController::class, 'store'])->middleware('throttle:registration')->name('store');
+    });
 
 Route::prefix('v1/contact-sources')->name('api.v1.contact-sources.')->middleware(['auth:sanctum', 'locale'])->group(function () {
     Route::get('/', [ContactSourceController::class, 'index'])->middleware('api.permission:contacts.sources.view')->name('index');
@@ -95,7 +100,8 @@ Route::prefix('v1/auth')->as('api.v1.auth.')->group(function () {
     Route::post('google', [GoogleAuthController::class, 'login'])->middleware('throttle:login')->name('google.login');
     Route::post('google/otp/setup', [GoogleAuthController::class, 'setup'])->middleware(['auth:sanctum', 'throttle:otp'])->name('google.otp.setup');
     Route::post('google/otp/confirm', [GoogleAuthController::class, 'confirm'])->middleware(['auth:sanctum', 'throttle:otp'])->name('google.otp.confirm');
-    Route::post('register', [PublicAccountController::class, 'register'])->middleware('throttle:recovery')->name('register');
+    Route::post('register', [PublicAccountController::class, 'register'])->middleware('throttle:registration')->name('register');
+    Route::get('registration', [RegistrationCapabilitiesController::class, 'show'])->middleware('throttle:registration')->name('registration');
     Route::post('password/forgot', [PublicAccountController::class, 'forgotPassword'])->middleware('throttle:recovery')->name('password.forgot');
     Route::post('password/reset', [PublicAccountController::class, 'resetPassword'])->middleware('throttle:recovery')->name('password.reset');
     Route::post('otp/forgot', [PublicAccountController::class, 'forgotOtp'])->middleware('throttle:recovery')->name('otp.forgot');

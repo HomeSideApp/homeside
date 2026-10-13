@@ -35,4 +35,34 @@ return [
         'algorithm' => 'sha256',
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Registration rate limits
+    |--------------------------------------------------------------------------
+    |
+    | The public registration route is throttled on two independent axes, each
+    | with a one-minute window:
+    |
+    |  - `per_ip`: the maximum number of registration attempts from a single
+    |    source IP address. It stops one host from mass-creating accounts.
+    |  - `per_identifier`: the maximum number of attempts for one normalised
+    |    identifier (the lower-cased, transliterated email) from a single IP.
+    |    It stops one address from being hammered without punishing every other
+    |    visitor behind the same NAT.
+    |
+    | Both limits apply per-IP AND per-normalised-identifier: the identifier
+    | limit is additionally keyed by the request IP, so a distributed set of
+    | hosts can never make a single address account for the whole budget, and
+    | an anonymous host can never spend another host's identifier budget.
+    |
+    | Override per environment with the variables below. The defaults are
+    | deliberately conservative for a self-hosted install.
+    |
+    */
+
+    'rate_limits' => [
+        'per_ip' => (int) env('REGISTRATION_RATE_LIMIT_PER_IP', 10),
+        'per_identifier' => (int) env('REGISTRATION_RATE_LIMIT_PER_IDENTIFIER', 5),
+    ],
+
 ];

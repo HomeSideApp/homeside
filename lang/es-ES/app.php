@@ -18,6 +18,8 @@ return [
         'two_factor_code_invalid' => 'El código de autenticación de dos factores no es válido.',
         'two_factor_code_required' => 'Introduce un código de autenticación de dos factores.',
         'two_factor_recovery_code_invalid' => 'El código de recuperación no es válido.',
+        'registration_pending' => 'Tu cuenta se ha creado y está pendiente de aprobación por un administrador.',
+        'registration_verify_email' => 'Tu cuenta se ha creado. Revisa tu correo para verificar tu dirección.',
     ],
     'permissions' => [
         'owner_transfer_required' => 'Transfiere la titularidad o elimina los hogares afectados antes de continuar.',

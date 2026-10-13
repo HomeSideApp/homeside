@@ -123,8 +123,13 @@ export default {
             dashboard: 'Ir al panel principal',
         },
         register: {
-            title: 'Registro deshabilitado',
-            description: 'La creación de cuentas la gestiona un administrador',
+            title: 'Crear cuenta',
+            description: 'Registra una cuenta nueva',
+            name: 'Nombre',
+            submit: 'Crear cuenta',
+            approvalNotice:
+                'Las cuentas nuevas necesitan la aprobación de un administrador antes de poder iniciar sesión.',
+            google: 'Registrarse con Google',
             message:
                 'El registro de cuentas está deshabilitado. Contacta con un administrador para crear una cuenta.',
         },

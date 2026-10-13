@@ -43,7 +43,16 @@ final class InviteLinkController extends Controller
     {
         $link = HouseholdInviteLink::query()->where('token', $token)->firstOrFail();
 
-        $user = $action->execute(RegisterViaInviteLinkData::fromArray($request->validated()), $link);
+        $outcome = $action->execute(RegisterViaInviteLinkData::fromArray($request->validated()), $link, 'api');
+
+        if (! $outcome->registered() || $outcome->user === null) {
+            return new JsonResponse([
+                'code' => $outcome->reason ?? 'registration_denied',
+                'message' => 'Registration is not available for this identity.',
+            ], 403);
+        }
+
+        $user = $outcome->user;
 
         return new JsonResponse([
             'data' => [

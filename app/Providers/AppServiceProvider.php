@@ -242,6 +242,21 @@ class AppServiceProvider extends ServiceProvider
 
             return Limit::perMinute(5)->by(Str::transliterate($identity).'|'.$request->ip());
         });
+
+        // Registration is limited twice: once per source IP, so one host cannot
+        // mass-create accounts, and once per normalised identifier, so one
+        // address cannot be hammered. Both are configurable; the defaults are
+        // deliberately conservative.
+        RateLimiter::for('registration', function (Request $request) {
+            $identity = Str::lower(trim((string) $request->input('email')));
+            $perIp = (int) config('registration.rate_limits.per_ip', 10);
+            $perIdentifier = (int) config('registration.rate_limits.per_identifier', 5);
+
+            return [
+                Limit::perMinute($perIp)->by('registration-ip:'.$request->ip()),
+                Limit::perMinute($perIdentifier)->by('registration-identity:'.Str::transliterate($identity).'|'.$request->ip()),
+            ];
+        });
     }
 
     protected function configureObservers(): void

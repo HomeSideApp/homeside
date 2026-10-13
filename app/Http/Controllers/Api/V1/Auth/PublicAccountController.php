@@ -2,10 +2,9 @@
 
 namespace App\Http\Controllers\Api\V1\Auth;
 
-use App\Contracts\RegistrationGate;
-use App\Data\Registration\RegistrationDecisionData;
+use App\Actions\Auth\RegisterAccount;
+use App\Data\Auth\RegisterAccountData;
 use App\Enums\AppLocale;
-use App\Enums\ApprovalStatus;
 use App\Enums\RegistrationChannel;
 use App\Enums\RegistrationDecision;
 use App\Http\Controllers\Controller;
@@ -17,9 +16,7 @@ use App\Http\Requests\RegisterAccountApiRequest;
 use App\Http\Requests\ResetAccountPasswordRequest;
 use App\Http\Requests\SetupOtpResetRequest;
 use App\Http\Resources\Users\UserResource;
-use App\Models\Role;
 use App\Models\User;
-use App\Notifications\MobileVerifyEmailNotification;
 use App\Notifications\ResetPasswordNotification;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Http\JsonResponse;
@@ -31,66 +28,51 @@ use PragmaRX\Google2FA\Google2FA;
 final class PublicAccountController extends Controller
 {
     /**
-     * Register a new account after the registration gate approves the channel.
+     * Register a new account through the shared registration use case.
      *
      * Contract:
      * - `denied` (the secure API default): 403 `{code, message}` and nothing is
      *   created or mailed.
      * - `approval_required`: 201 with `state = approval_pending`, the user is
-     *   created as `pending`, role `user` is assigned, the verification
-     *   notification is sent, and NO authentication token is issued.
-     * - `allowed`: the historical behaviour, 201 with the user resource.
+     *   created as `pending`, and NO authentication token is issued.
+     * - `allowed`: 201 with the user resource.
      *
      * A token is never returned for an account that is not approved.
      */
-    public function register(RegisterAccountApiRequest $request, RegistrationGate $gate): JsonResponse
+    public function register(RegisterAccountApiRequest $request, RegisterAccount $accounts): JsonResponse
     {
         $validated = $request->validated();
-        $decision = $gate->evaluate(RegistrationChannel::Api, $validated['email']);
 
-        if (! in_array($decision->decision, [RegistrationDecision::Allowed, RegistrationDecision::ApprovalRequired], true)) {
-            return $this->registrationDenied($decision);
+        $outcome = $accounts->execute(new RegisterAccountData(
+            name: $validated['name'],
+            email: $validated['email'],
+            password: $validated['password'],
+            locale: $validated['locale'] ?? AppLocale::default()->value,
+            channel: RegistrationChannel::Api,
+            origin: 'api',
+        ));
+
+        if ($outcome->decision === RegistrationDecision::ExistingIdentity) {
+            return response()->json([
+                'code' => 'identity_exists',
+                'message' => 'An account already exists for this email. Authenticate to continue.',
+            ], 409);
         }
 
-        $requiresApproval = $decision->decision === RegistrationDecision::ApprovalRequired;
-
-        $attributes = [
-            ...$validated,
-            'locale' => $validated['locale'] ?? AppLocale::default()->value,
-        ];
-
-        if ($requiresApproval) {
-            $attributes['approval_status'] = ApprovalStatus::Pending->value;
+        if (! $outcome->registered() || $outcome->user === null) {
+            return response()->json([
+                'code' => $outcome->reason ?? 'registration_disabled',
+                'message' => 'Registration is not available on this channel.',
+            ], 403);
         }
 
-        $user = User::create($attributes);
-        $role = Role::query()->where('slug', 'user')->first();
-        if ($role !== null) {
-            $user->assignRole($role);
-        }
-        $user->notify(new MobileVerifyEmailNotification);
+        $resource = UserResource::make($outcome->user);
 
-        $resource = UserResource::make($user);
-
-        if ($requiresApproval) {
+        if ($outcome->decision === RegistrationDecision::ApprovalRequired) {
             $resource = $resource->additional(['state' => 'approval_pending']);
         }
 
         return $resource->response()->setStatusCode(201);
-    }
-
-    /**
-     * Translate a non-approving decision into a stable JSON rejection.
-     *
-     * @param  RegistrationDecisionData  $decision  The decision returned by the gate.
-     * @return JsonResponse The 403 response.
-     */
-    private function registrationDenied(RegistrationDecisionData $decision): JsonResponse
-    {
-        return response()->json([
-            'code' => $decision->reason ?? 'registration_disabled',
-            'message' => 'Registration is not available on this channel.',
-        ], 403);
     }
 
     public function forgotPassword(RecoveryEmailRequest $request): JsonResponse

@@ -119,8 +119,13 @@ export default {
             dashboard: 'Go to dashboard',
         },
         register: {
-            title: 'Registration disabled',
-            description: 'Account creation is handled by an administrator',
+            title: 'Create account',
+            description: 'Register a new account',
+            name: 'Name',
+            submit: 'Create account',
+            approvalNotice:
+                'New accounts need an administrator to approve them before you can sign in.',
+            google: 'Sign up with Google',
             message:
                 'Account registration is currently disabled. Contact an administrator to create an account.',
         },

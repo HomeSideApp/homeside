@@ -60,7 +60,9 @@ class RegistrationRegressionTest extends TestCase
         $this->assertStringContainsString('otp/setup', (string) $response->headers->get('Location'));
 
         $user = User::where('email', 'invited@example.com')->firstOrFail();
-        $this->assertNotNull($user->email_verified_at);
+        // A generic, reusable invite link never proves ownership of the typed
+        // address, so it must NOT auto-verify the email.
+        $this->assertNull($user->email_verified_at);
         $this->assertTrue($user->hasRole('user'));
         $this->assertDatabaseHas('household_members', [
             'household_id' => $this->household->id,

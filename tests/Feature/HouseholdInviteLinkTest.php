@@ -83,7 +83,7 @@ final class HouseholdInviteLinkTest extends TestCase
     }
 
     /**
-     * Confirm that registering through a link creates a verified member and consumes one use.
+     * Confirm that registering through a link creates an unverified member and consumes one use.
      *
      * @return void This test method does not return a value.
      */
@@ -101,7 +101,13 @@ final class HouseholdInviteLinkTest extends TestCase
 
         $user = User::where('email', 'rafael@example.com')->firstOrFail();
         $this->assertSame('Rafael Ortega', $user->name);
-        $this->assertNotNull($user->email_verified_at);
+        // A generic, reusable invite link never proves possession of the typed
+        // address, so the spec requires the registrant to START unverified and
+        // go through email verification ("Invitaciones genéricas: no marcar
+        // automáticamente el email como verificado"). Auto-verification was
+        // removed on purpose; asserting it here would silently re-open the
+        // hole this phase closed.
+        $this->assertNull($user->email_verified_at);
         $this->assertTrue($user->hasRole('user'));
         $this->assertFalse($user->can_create_households_override);
 

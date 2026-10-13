@@ -63,7 +63,7 @@ Route::get('/', function () {
 // === Enlaces de invitación públicos (registro vía enlace) ===
 Route::middleware(EnsureRegistrationInvitationsEnabled::class.':'.RegistrationChannel::HouseholdInvitation->value)->group(function (): void {
     Route::get('invite/{token}', [InviteLinkController::class, 'show'])->name('invite-links.show');
-    Route::post('invite/{token}', [InviteLinkController::class, 'store'])->middleware('throttle:10,1')->name('invite-links.store');
+    Route::post('invite/{token}', [InviteLinkController::class, 'store'])->middleware('throttle:registration')->name('invite-links.store');
 });
 
 Route::middleware(['auth', 'verified'])->group(function () {
@@ -449,7 +449,7 @@ require __DIR__.'/auth.php';
 // Invitación (sin auth, con URL firmada)
 Route::middleware([EnsureRegistrationInvitationsEnabled::class.':'.RegistrationChannel::AdminInvitation->value, 'signed'])->group(function (): void {
     Route::get('invitation/{user}', [InvitationController::class, 'show'])->name('invitation.show');
-    Route::post('invitation', [InvitationController::class, 'store'])->name('invitation.store');
+    Route::post('invitation', [InvitationController::class, 'store'])->middleware('throttle:registration')->name('invitation.store');
 });
 
 // OTP Setup (con URL firmada, sin auth - parte del flujo de onboarding)

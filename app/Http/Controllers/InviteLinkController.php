@@ -8,6 +8,7 @@ use App\Http\Requests\RegisterViaInviteLinkRequest;
 use App\Http\Requests\ViewInviteLinkRequest;
 use App\Models\HouseholdInviteLink;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -50,8 +51,16 @@ class InviteLinkController extends Controller
     {
         $link = HouseholdInviteLink::query()->where('token', $token)->firstOrFail();
 
-        $user = $action->execute(RegisterViaInviteLinkData::fromArray($request->validated()), $link);
+        $outcome = $action->execute(RegisterViaInviteLinkData::fromArray($request->validated()), $link, 'web');
 
-        return redirect()->temporarySignedRoute('otp.setup', now()->addMinutes(30), ['user' => $user->id]);
+        // An existing account is never taken over by an invitation: the owner
+        // must authenticate as it.
+        if (! $outcome->registered() || $outcome->user === null) {
+            throw ValidationException::withMessages([
+                'email' => __('app.errors.registration_identity_exists'),
+            ]);
+        }
+
+        return redirect()->temporarySignedRoute('otp.setup', now()->addMinutes(30), ['user' => $outcome->user->id]);
     }
 }

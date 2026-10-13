@@ -18,6 +18,8 @@ return [
         'two_factor_code_invalid' => 'The provided two-factor authentication code was invalid.',
         'two_factor_code_required' => 'Please enter a two-factor authentication code.',
         'two_factor_recovery_code_invalid' => 'The provided recovery code was invalid.',
+        'registration_pending' => 'Your account was created and is pending administrator approval.',
+        'registration_verify_email' => 'Your account was created. Check your email to verify your address.',
     ],
     'permissions' => [
         'owner_transfer_required' => 'Transfer ownership or delete the affected households before continuing.',
@@ -167,6 +169,9 @@ return [
         'invitation_invalid' => 'Invalid invitation or already used.',
         'invitation_no_permission_cancel' => 'You do not have permission to cancel this invitation.',
         'invite_link_unusable' => 'This invitation link is no longer valid.',
+        'registration_identity_exists' => 'An account already exists for this email. Sign in to continue.',
+        'registration_unavailable' => 'This registration cannot be completed right now.',
+        'registration_blocked' => 'This identity is not allowed to register.',
         'invitation_not_pending' => 'This invitation is no longer pending.',
         'cannot_remove_only_admin' => 'You cannot remove the only administrator of the household.',
         'otp_not_configured_short' => 'OTP authentication is not configured.',

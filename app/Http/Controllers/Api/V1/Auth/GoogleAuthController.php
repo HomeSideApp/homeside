@@ -2,11 +2,13 @@
 
 namespace App\Http\Controllers\Api\V1\Auth;
 
+use App\Actions\Auth\ResolveGoogleIdentity;
+use App\Data\Auth\RegistrationOutcomeData;
+use App\Enums\RegistrationDecision;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\ConfirmGoogleOtpApiRequest;
 use App\Http\Requests\GoogleIdTokenRequest;
 use App\Http\Requests\GoogleOtpSetupRequest;
-use App\Services\Auth\GoogleIdentityService;
 use App\Services\Auth\GoogleIdTokenVerifier;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Cache;
@@ -15,24 +17,25 @@ use PragmaRX\Google2FA\Google2FA;
 
 class GoogleAuthController extends Controller
 {
-    public function login(GoogleIdTokenRequest $request, GoogleIdTokenVerifier $verifier, GoogleIdentityService $identities): JsonResponse
+    public function login(GoogleIdTokenRequest $request, GoogleIdTokenVerifier $verifier, ResolveGoogleIdentity $identities): JsonResponse
     {
         $input = $request->validated();
         $google = $verifier->verify($input['id_token']);
-        $result = $identities->resolve($google['sub'], $google['email'], $google['name'], $google['email_verified']);
+        $outcome = $identities->resolve($google['sub'], $google['email'], $google['name'], $google['email_verified']);
 
-        if ($result['status'] === 'link_required') {
+        if ($outcome->decision === RegistrationDecision::LinkRequired) {
             return response()->json(['code' => 'link_required', 'message' => 'Entra con tu método actual y vincula Google.'], 409);
         }
-        if ($result['status'] === 'pending') {
+        if ($outcome->decision === RegistrationDecision::Denied) {
+            return $outcome->reason === 'approval_rejected'
+                ? response()->json(['code' => 'approval_rejected', 'message' => 'Tu solicitud fue rechazada.'], 403)
+                : response()->json(['code' => 'registration_denied', 'message' => 'Tu cuenta no puede acceder.'], 403);
+        }
+        if ($outcome->nextStep === RegistrationOutcomeData::NEXT_AWAIT_APPROVAL) {
             return response()->json(['code' => 'approval_pending', 'message' => 'Tu solicitud está pendiente de aprobación.'], 202);
         }
-        if ($result['status'] === 'rejected') {
-            return response()->json(['code' => 'approval_rejected', 'message' => 'Tu solicitud fue rechazada.'], 403);
-        }
 
-        $user = $result['user'];
-        $user = $request->authorizeAccount($user);
+        $user = $request->authorizeAccount($outcome->user);
         $user->tokens()->whereIn('name', ['temp-otp', 'google-otp-setup'])->delete();
         $name = $user->hasEnabledTwoFactorAuthentication() ? 'temp-otp' : 'google-otp-setup';
         $ability = $name === 'temp-otp' ? 'otp-verify' : 'otp-setup';
