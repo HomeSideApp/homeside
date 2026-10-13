@@ -20,4 +20,21 @@ export class SetPasswordPage {
         await this.page.getByLabel('Confirm password').fill(password);
         await this.page.getByRole('button', { name: 'Set password' }).click();
     }
+
+    /**
+     * Complete the form reached from a reusable household invitation link,
+     * where the email is an editable field the registrant must fill in.
+     */
+    async completeLink(
+        name: string,
+        email: string,
+        password: string,
+    ): Promise<void> {
+        await this.expectLoaded();
+        await this.page.getByLabel('Email address').fill(email);
+        await this.page.getByLabel('Your name').fill(name);
+        await this.page.getByLabel('Password', { exact: true }).fill(password);
+        await this.page.getByLabel('Confirm password').fill(password);
+        await this.page.getByRole('button', { name: 'Set password' }).click();
+    }
 }

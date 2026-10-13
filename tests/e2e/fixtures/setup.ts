@@ -35,8 +35,14 @@ export function setRegistrationPolicy(
     runArtisan(['e2e:policy', channel, policy]);
 }
 
+export interface HouseholdAccessState {
+    profile: string | null;
+    module_access: Record<string, string>;
+}
+
 export interface RegistrationState {
     email: string;
+    id?: string;
     exists: boolean;
     name?: string;
     approval_status: string;
@@ -47,6 +53,10 @@ export interface RegistrationState {
     active_identity_block: boolean;
     approved_by: string | null;
     approved_at: string | null;
+    rejection_released_by: string | null;
+    rejection_released_at: string | null;
+    active_household: string | null;
+    household_access: Record<string, HouseholdAccessState>;
 }
 
 /**
@@ -57,4 +67,68 @@ export interface RegistrationState {
  */
 export function registrationState(email: string): RegistrationState {
     return JSON.parse(runArtisan(['e2e:user-state', email])) as RegistrationState;
+}
+
+export interface BootstrapGrant {
+    token: string;
+    purpose: string;
+    url: string;
+    path: string;
+    expires_at: string;
+}
+
+/**
+ * Issue a real single-use authentication bootstrap through the production
+ * action and return the plaintext token once. State PREPARATION helper: the
+ * scenario still drives the redemption through the browser.
+ */
+export function issueBootstrap(
+    email: string,
+    purpose: 'two_factor' | 'account_recovery' = 'two_factor',
+    minutes?: number,
+): BootstrapGrant {
+    const args = ['e2e:bootstrap', 'issue', email, `--purpose=${purpose}`];
+
+    if (minutes !== undefined) {
+        args.push(`--minutes=${minutes}`);
+    }
+
+    return JSON.parse(runArtisan(args)) as BootstrapGrant;
+}
+
+/** Mark every outstanding grant of a purpose as already expired. */
+export function expireBootstraps(email: string, purpose: 'two_factor' | 'account_recovery' = 'two_factor'): number {
+    const result = JSON.parse(
+        runArtisan(['e2e:bootstrap', 'expire', email, `--purpose=${purpose}`]),
+    ) as { expired: number };
+
+    return result.expired;
+}
+
+/** Mark every outstanding grant of a purpose as already consumed. */
+export function consumeBootstraps(email: string, purpose: 'two_factor' | 'account_recovery' = 'two_factor'): number {
+    const result = JSON.parse(
+        runArtisan(['e2e:bootstrap', 'consume', email, `--purpose=${purpose}`]),
+    ) as { consumed: number };
+
+    return result.consumed;
+}
+
+/** Delete a fixture account through the production action (state preparation). */
+export function deleteUser(email: string): void {
+    runArtisan(['e2e:delete-user', email]);
+}
+
+export interface InviteLinkState {
+    exists: boolean;
+    household?: string;
+    usable: boolean;
+    uses_count: number;
+    max_uses: number | null;
+    revoked: boolean;
+}
+
+/** Read the persisted state of a household invitation link (assertion helper). */
+export function inviteLinkState(token: string): InviteLinkState {
+    return JSON.parse(runArtisan(['e2e:invite-link-state', token])) as InviteLinkState;
 }

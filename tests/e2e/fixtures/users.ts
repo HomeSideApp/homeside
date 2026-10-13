@@ -11,7 +11,9 @@ export const FIXTURE = {
     member: 'member@homeside.test',
     pending: 'pending@homeside.test',
     rejected: 'rejected@homeside.test',
+    rejectedNoFactor: 'rejected.no-factor@homeside.test',
     invited: 'invited@homeside.test',
+    enrolReady: 'enrol.ready@homeside.test',
     blocked: 'blocked@homeside.test',
     restricted: 'restricted@homeside.test',
     creator: 'creator@homeside.test',
@@ -30,6 +32,10 @@ export function inviteLink(state: 'valid' | 'expired' | 'exhausted' | 'revoked')
 
 export function householdName(key: 'alpha' | 'beta'): string {
     return readSecrets().households[key];
+}
+
+export function householdId(key: 'alpha' | 'beta'): string {
+    return readSecrets().household_ids[key];
 }
 
 /**

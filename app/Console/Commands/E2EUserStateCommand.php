@@ -5,6 +5,8 @@ namespace App\Console\Commands;
 use App\Console\Commands\Concerns\GuardsE2EDatabase;
 use App\Contracts\RegistrationBlockRepository;
 use App\Enums\AccountStatus;
+use App\Models\Household;
+use App\Models\HouseholdMember;
 use App\Models\RegistrationAudit;
 use App\Models\User;
 use App\Support\Registration\RegistrationIdentifier;
@@ -40,7 +42,12 @@ class E2EUserStateCommand extends Command
         $user = User::query()->where('email', $email)->first();
 
         if ($user === null) {
-            $this->line(json_encode(['email' => $email, 'exists' => false]));
+            $this->line(json_encode([
+                'email' => $email,
+                'exists' => false,
+                'active_identity_block' => app(RegistrationBlockRepository::class)
+                    ->isBlocked(RegistrationIdentifier::EMAIL, $email),
+            ], JSON_THROW_ON_ERROR));
 
             return SymfonyCommand::SUCCESS;
         }
@@ -51,8 +58,15 @@ class E2EUserStateCommand extends Command
             ->latest('created_at')
             ->first();
 
+        $released = RegistrationAudit::query()
+            ->where('user_id', $user->id)
+            ->where('action', 'rejection_released')
+            ->latest('created_at')
+            ->first();
+
         $state = [
             'email' => $user->email,
+            'id' => $user->id,
             'exists' => true,
             'name' => $user->name,
             'approval_status' => $user->approval_status,
@@ -68,6 +82,24 @@ class E2EUserStateCommand extends Command
                 ? User::query()->whereKey($approved->actor_id)->value('email')
                 : null,
             'approved_at' => $approved?->created_at?->toIso8601String(),
+            'rejection_released_by' => $released?->actor_id !== null
+                ? User::query()->whereKey($released->actor_id)->value('email')
+                : null,
+            'rejection_released_at' => $released?->created_at?->toIso8601String(),
+            'active_household' => $user->active_household_id !== null
+                ? Household::query()->whereKey($user->active_household_id)->value('name')
+                : null,
+            'household_access' => HouseholdMember::query()
+                ->where('user_id', $user->id)
+                ->with('household')
+                ->get()
+                ->mapWithKeys(fn (HouseholdMember $member): array => [
+                    (string) $member->household?->name => [
+                        'profile' => $member->access_profile?->value,
+                        'module_access' => $member->permissions(),
+                    ],
+                ])
+                ->all(),
         ];
 
         $this->line(json_encode($state, JSON_THROW_ON_ERROR));

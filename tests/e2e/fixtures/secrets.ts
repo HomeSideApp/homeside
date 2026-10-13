@@ -27,6 +27,7 @@ export interface E2ESecrets {
     generated_at: string;
     users: Record<string, E2EUserSecret>;
     households: { alpha: string; beta: string };
+    household_ids: { alpha: string; beta: string };
     invite_links: Record<'valid' | 'expired' | 'exhausted' | 'revoked', E2EInviteLinkSecret>;
 }
 

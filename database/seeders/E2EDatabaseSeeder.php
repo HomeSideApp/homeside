@@ -48,7 +48,25 @@ class E2EDatabaseSeeder extends Seeder
 
     public const REJECTED = 'rejected@homeside.test';
 
+    /**
+     * A rejected account with NO second factor yet.
+     *
+     * The TOTP matrix needs a rejected identity that can still be shown an
+     * enrolment page (a `rejected` fixture that already owns a second factor
+     * would be redirected before the page loads), to prove enrolment completes
+     * without ever becoming a session.
+     */
+    public const REJECTED_NO_FACTOR = 'rejected.no-factor@homeside.test';
+
     public const INVITED = 'invited@homeside.test';
+
+    /**
+     * An approved, active, address-verified account with NO second factor.
+     *
+     * The TOTP matrix needs an account that can actually finish enrolment and
+     * be signed in, so this fixture is the one the valid-bootstrap cases use.
+     */
+    public const ENROL_READY = 'enrol.ready@homeside.test';
 
     public const BLOCKED = 'blocked@homeside.test';
 
@@ -102,6 +120,10 @@ class E2EDatabaseSeeder extends Seeder
             'households' => [
                 'alpha' => self::HOUSEHOLD_ALPHA,
                 'beta' => self::HOUSEHOLD_BETA,
+            ],
+            'household_ids' => [
+                'alpha' => $households['alpha']->getKey(),
+                'beta' => $households['beta']->getKey(),
             ],
             'invite_links' => $links,
         ]);
@@ -162,6 +184,15 @@ class E2EDatabaseSeeder extends Seeder
                 'account_status' => AccountStatus::Active->value,
                 'verified' => true,
             ],
+            'rejected_no_factor' => [
+                'email' => self::REJECTED_NO_FACTOR,
+                'name' => 'E2E Rejected No Factor',
+                'roles' => ['user'],
+                'two_factor' => false,
+                'approval_status' => ApprovalStatus::Rejected->value,
+                'account_status' => AccountStatus::Active->value,
+                'verified' => true,
+            ],
             'invited' => [
                 'email' => self::INVITED,
                 'name' => 'E2E Invited',
@@ -170,6 +201,15 @@ class E2EDatabaseSeeder extends Seeder
                 'approval_status' => ApprovalStatus::Approved->value,
                 'account_status' => AccountStatus::Active->value,
                 'verified' => false,
+            ],
+            'enrol_ready' => [
+                'email' => self::ENROL_READY,
+                'name' => 'E2E Enrolment Ready',
+                'roles' => ['user'],
+                'two_factor' => false,
+                'approval_status' => ApprovalStatus::Approved->value,
+                'account_status' => AccountStatus::Active->value,
+                'verified' => true,
             ],
             'blocked' => [
                 'email' => self::BLOCKED,
@@ -399,6 +439,15 @@ class E2EDatabaseSeeder extends Seeder
 
         $blocks->block(
             'email',
+            self::REJECTED_NO_FACTOR,
+            RegistrationBlockReason::RejectedRegistration,
+            RegistrationBlockSource::Admin,
+            $admin,
+            'Rejected during E2E seeding',
+        );
+
+        $blocks->block(
+            'email',
             self::BLOCKED_IDENTITY,
             RegistrationBlockReason::RejectedRegistration,
             RegistrationBlockSource::Admin,
@@ -416,6 +465,7 @@ class E2EDatabaseSeeder extends Seeder
     {
         return [
             app(RegistrationIdentifier::class)->hash('email', self::REJECTED),
+            app(RegistrationIdentifier::class)->hash('email', self::REJECTED_NO_FACTOR),
         ];
     }
 
