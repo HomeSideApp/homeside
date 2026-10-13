@@ -2,7 +2,10 @@
 
 namespace Tests\Feature;
 
+use App\Actions\Auth\CreateAuthenticationBootstrap;
+use App\Enums\AuthenticationBootstrapPurpose;
 use App\Enums\HouseholdRole;
+use App\Models\AuthenticationBootstrap;
 use App\Models\Contact;
 use App\Models\Household;
 use App\Models\HouseholdMember;
@@ -12,7 +15,6 @@ use App\Models\User;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use HomeSide\AiAgents\Models\AiProvider;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\URL;
 use PHPUnit\Framework\Attributes\TestWith;
 use Tests\TestCase;
 
@@ -82,7 +84,7 @@ class RequestAuthorizationTest extends TestCase
         $this->assertFalse($target->hasRole('admin'));
     }
 
-    public function test_signed_otp_reset_validates_code_before_replacing_existing_secrets(): void
+    public function test_single_use_recovery_bootstrap_validates_code_before_replacing_existing_secret(): void
     {
         $this->seed(RolesAndPermissionsSeeder::class);
         $user = User::factory()->create([
@@ -90,10 +92,13 @@ class RequestAuthorizationTest extends TestCase
             'two_factor_confirmed_at' => now(),
         ]);
         $user->assignRole('user');
-        $url = URL::temporarySignedRoute('otp.reset.confirm', now()->addMinutes(30), ['user' => $user->id]);
+        // Recovery moved off signed URLs onto purpose-bound single-use bootstraps.
+        $token = app(CreateAuthenticationBootstrap::class)
+            ->execute($user, AuthenticationBootstrapPurpose::AccountRecovery);
+        $bootstrap = AuthenticationBootstrap::query()->where('purpose', 'account_recovery')->firstOrFail();
 
-        $this->withSession(['otp_reset_secret_'.$user->id => 'pending-secret'])
-            ->postJson($url, ['code' => []])
+        $this->withSession(['otp_reset_secret_'.$bootstrap->id => 'pending-secret'])
+            ->postJson(route('otp.reset.confirm', ['token' => $token]), ['code' => []])
             ->assertUnprocessable()->assertJsonValidationErrors('code');
 
         $this->assertSame('existing-secret', decrypt($user->refresh()->two_factor_secret));

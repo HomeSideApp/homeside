@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Auth;
 
+use App\Actions\Auth\CreateAuthenticationBootstrap;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
@@ -87,7 +88,7 @@ class AuthTest extends TestCase
         $response->assertOk();
     }
 
-    public function test_invitation_store_redirects_to_otp_setup(): void
+    public function test_invitation_store_redirects_to_single_use_enrolment(): void
     {
         $user = User::create([
             'name' => 'Test User',
@@ -103,7 +104,7 @@ class AuthTest extends TestCase
         ]);
 
         $response->assertRedirect();
-        $this->assertStringContainsString('otp/setup', $response->headers->get('Location'));
+        $this->assertStringContainsString('auth/bootstrap', $response->headers->get('Location'));
         $this->assertTrue($user->fresh()->email_verified_at !== null);
     }
 
@@ -161,7 +162,7 @@ class AuthTest extends TestCase
         $response->assertStatus(403);
     }
 
-    public function test_otp_setup_renders_with_signed_url(): void
+    public function test_enrolment_link_renders_for_a_valid_single_use_token(): void
     {
         $user = User::create([
             'name' => 'Test User',
@@ -170,24 +171,20 @@ class AuthTest extends TestCase
             'email_verified_at' => now(),
         ]);
 
-        $url = URL::temporarySignedRoute('otp.setup', now()->addMinutes(30), ['user' => $user->id]);
-        $response = $this->get($url);
+        $token = app(CreateAuthenticationBootstrap::class)->execute($user);
+
+        $response = $this->get(route('auth.bootstrap.two-factor.show', ['token' => $token]));
 
         $response->assertOk();
+        $this->assertGuest();
     }
 
-    public function test_otp_setup_rejects_unsigned_request(): void
+    public function test_enrolment_link_rejects_an_unknown_token(): void
     {
-        $user = User::create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
-            'password' => 'password',
-            'email_verified_at' => now(),
-        ]);
+        $response = $this->get(route('auth.bootstrap.two-factor.show', ['token' => 'unknown-token']));
 
-        $response = $this->get(route('otp.setup', $user->id));
-
-        $response->assertStatus(403);
+        $response->assertRedirect(route('login'));
+        $this->assertGuest();
     }
 
     public function test_reset_password_link_can_be_requested(): void

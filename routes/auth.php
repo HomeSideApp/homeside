@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Auth\AuthenticationBootstrapController;
 use App\Http\Controllers\Auth\ConfirmPasswordController;
 use App\Http\Controllers\Auth\EmailVerificationController;
 use App\Http\Controllers\Auth\ForgotOtpController;
@@ -26,8 +27,20 @@ Route::middleware('guest')->group(function () {
     Route::post('reset-password/{user}', [ResetPasswordController::class, 'store'])->middleware(['signed'])->name('password.update');
     Route::get('forgot-otp', [ForgotOtpController::class, 'show'])->name('otp.forgot');
     Route::post('forgot-otp', [ForgotOtpController::class, 'store'])->name('otp.forgot.store');
-    Route::get('reset-otp/{user}', [ResetOtpController::class, 'show'])->middleware(['signed'])->name('otp.reset');
-    Route::post('reset-otp/{user}', [ResetOtpController::class, 'confirm'])->middleware(['signed', 'throttle:otp'])->name('otp.reset.confirm');
+
+    // Single-use AccountRecovery bootstrap (replaces the retired signed
+    // otp.reset pair). The token is the credential; recovery never creates a
+    // session and cannot be redeemed as an enrolment grant (or vice versa).
+    // The confirm step keeps the pre-existing `otp` throttle.
+    Route::get('reset-otp/{token}', [ResetOtpController::class, 'show'])->name('otp.reset');
+    Route::post('reset-otp/{token}', [ResetOtpController::class, 'confirm'])->middleware('throttle:otp')->name('otp.reset.confirm');
+
+    // Single-use two-factor bootstrap (replaces the retired signed otp.setup
+    // pair). The token is the credential; the page never creates a session.
+    Route::get('auth/bootstrap/{token}/2fa', [AuthenticationBootstrapController::class, 'show'])
+        ->middleware('throttle:otp')->name('auth.bootstrap.two-factor.show');
+    Route::post('auth/bootstrap/{token}/2fa', [AuthenticationBootstrapController::class, 'confirm'])
+        ->middleware('throttle:otp')->name('auth.bootstrap.two-factor.confirm');
 });
 
 Route::get('google/otp/setup', [GoogleAuthController::class, 'showOtpSetup'])->name('google.otp.setup');

@@ -2,6 +2,7 @@
 
 namespace App\Actions\Users;
 
+use App\Contracts\AuthenticationBootstrapRepository;
 use App\Models\User;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -22,14 +23,18 @@ use Illuminate\Support\Facades\Schema;
  *    session loses authorization on its next request even before the
  *    EnsureAccountIsActive middleware runs;
  *  - the outstanding cache-backed authentication challenges indexed by user
- *    (OTP reset, two-factor enrolment) and the challenge payload they point to.
+ *    (OTP reset, two-factor enrolment) and the challenge payload they point to;
+ *  - every outstanding single-use authentication bootstrap, whatever its
+ *    purpose, so a suspension, rejection or block kills any onboarding or
+ *    recovery link already issued.
  *
- * Extension point: phase 7 introduces the single-use `authentication_bootstraps`
- * table. Its revocation belongs in `revokeAuthenticationChallenges()`, next to
- * the cache-backed challenges, so nothing else has to change.
+ * Extension point: any future credential that grants access on its own belongs
+ * next to `revokeAuthenticationChallenges()`, so nothing else has to change.
  */
 final class RevokeUserAccess
 {
+    public function __construct(private AuthenticationBootstrapRepository $bootstraps) {}
+
     /**
      * Revoke every outstanding credential and challenge for the user.
      *
@@ -44,6 +49,7 @@ final class RevokeUserAccess
         $this->revokeRememberToken($user);
         $this->invalidateSessions($user);
         $this->revokeAuthenticationChallenges($user);
+        $this->revokeAuthenticationBootstraps($user);
     }
 
     /**
@@ -106,7 +112,8 @@ final class RevokeUserAccess
      * The API OTP-reset and two-factor enrolment flows store a challenge id in
      * the cache and index it by user id. Both the index entry and the challenge
      * payload are removed, so a previously issued challenge cannot be redeemed
-     * after a block or a rejection. Phase 7's bootstraps are revoked here too.
+     * after a block or a rejection. Outstanding single-use authentication
+     * bootstraps are deleted in the same pass.
      *
      * @param  User  $user  The user whose challenges are revoked.
      */
@@ -114,6 +121,21 @@ final class RevokeUserAccess
     {
         $this->forgetIndexedChallenge('public-otp-reset-user:'.$user->id, 'public-otp-reset:');
         $this->forgetIndexedChallenge('two-factor-challenge-user:'.$user->id, 'two-factor-challenge:');
+    }
+
+    /**
+     * Delete every outstanding single-use authentication bootstrap for the user.
+     *
+     * A bootstrap is a bearer credential that grants enrolment (or recovery)
+     * without a session. Revocation must therefore delete the rows rather than
+     * rotate a secret: a link mailed before a block must stop working the
+     * instant the block lands, whatever its purpose.
+     *
+     * @param  User  $user  The user whose bootstraps are revoked.
+     */
+    private function revokeAuthenticationBootstraps(User $user): void
+    {
+        $this->bootstraps->invalidateAllFor($user);
     }
 
     /**

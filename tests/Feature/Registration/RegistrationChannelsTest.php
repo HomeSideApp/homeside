@@ -14,6 +14,7 @@ use App\Enums\RegistrationBlockSource;
 use App\Enums\RegistrationChannel;
 use App\Enums\RegistrationDecision;
 use App\Enums\RegistrationPolicy;
+use App\Models\AuthenticationBootstrap;
 use App\Models\HouseholdInviteLink;
 use App\Models\RegistrationAudit;
 use App\Models\Role;
@@ -110,9 +111,12 @@ class RegistrationChannelsTest extends TestCase
         Notification::fake();
         $settings = app(RegistrationSettings::class);
 
-        // Open: creates an approved account and records the audit entry.
+        // Open: creates an approved account, records the audit entry and hands
+        // out a single-use enrolment bootstrap instead of a dead-end /login.
         $settings->setPolicy(RegistrationChannel::Web, RegistrationPolicy::Open);
-        $this->post(route('register.store'), $this->webPayload('web-open@example.com'))->assertRedirect(route('login'));
+        $openResponse = $this->post(route('register.store'), $this->webPayload('web-open@example.com'));
+        $openResponse->assertRedirect();
+        $this->assertStringContainsString('auth/bootstrap', (string) $openResponse->headers->get('Location'));
 
         $open = User::where('email', 'web-open@example.com')->firstOrFail();
         $this->assertSame(ApprovalStatus::Approved->value, $open->approval_status);
@@ -123,11 +127,18 @@ class RegistrationChannelsTest extends TestCase
             'action' => 'registration_created',
             'channel' => RegistrationChannel::Web->value,
         ]);
+        $this->assertSame(1, AuthenticationBootstrap::query()
+            ->where('user_id', $open->id)
+            ->where('purpose', 'two_factor_enrolment')
+            ->count());
 
-        // Approval required: creates a pending account.
+        // Approval required: creates a pending account and must NOT hand out a
+        // usable enrolment path into a session.
         $settings->setPolicy(RegistrationChannel::Web, RegistrationPolicy::ApprovalRequired);
         $this->post(route('register.store'), $this->webPayload('web-pending@example.com'))->assertRedirect(route('login'));
-        $this->assertSame(ApprovalStatus::Pending->value, User::where('email', 'web-pending@example.com')->firstOrFail()->approval_status);
+        $pending = User::where('email', 'web-pending@example.com')->firstOrFail();
+        $this->assertSame(ApprovalStatus::Pending->value, $pending->approval_status);
+        $this->assertSame(0, AuthenticationBootstrap::query()->where('user_id', $pending->id)->count());
 
         // Disabled: nothing is created.
         $settings->setPolicy(RegistrationChannel::Web, RegistrationPolicy::Disabled);

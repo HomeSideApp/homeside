@@ -211,6 +211,8 @@ return [
         'two_factor_not_enabled' => 'La autenticación de dos factores no está activada.',
         'two_factor_already_enabled' => 'La autenticación de dos factores ya está activada.',
         'account_not_ready' => 'Tu cuenta todavía no está lista. Inicia sesión para continuar.',
+        'bootstrap_invalid' => 'Este enlace de inscripción no es válido, ha caducado o ya se ha usado. Inicia sesión para continuar.',
+        'recovery_bootstrap_invalid' => 'Este enlace de recuperación no es válido, ha caducado o ya se ha usado. Inicia sesión para continuar.',
         'verification_token_invalid' => 'El token de verificación no es válido.',
         'route_permission_not_configured' => 'Esta ruta no tiene un permiso configurado.',
         'permission_denied' => 'No tienes permiso para realizar esta acción.',

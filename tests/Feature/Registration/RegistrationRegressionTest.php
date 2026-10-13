@@ -57,7 +57,7 @@ class RegistrationRegressionTest extends TestCase
         ]);
 
         $response->assertRedirect();
-        $this->assertStringContainsString('otp/setup', (string) $response->headers->get('Location'));
+        $this->assertStringContainsString('auth/bootstrap', (string) $response->headers->get('Location'));
 
         $user = User::where('email', 'invited@example.com')->firstOrFail();
         // A generic, reusable invite link never proves ownership of the typed

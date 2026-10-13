@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\Auth\CreateAuthenticationBootstrap;
 use App\Actions\Auth\RegisterAccount;
 use App\Data\Auth\InvitationContextData;
 use App\Data\Auth\RegisterAccountData;
@@ -47,9 +48,11 @@ class InvitationController
      * leaves the roles the administrator chose explicitly untouched.
      *
      * @param  AcceptInvitationRequest  $request  The incoming HTTP request.
+     * @param  RegisterAccount  $accounts  The shared registration use case.
+     * @param  CreateAuthenticationBootstrap  $bootstraps  The single-use bootstrap issuer.
      * @return RedirectResponse The HTTP response.
      */
-    public function store(AcceptInvitationRequest $request, RegisterAccount $accounts): RedirectResponse
+    public function store(AcceptInvitationRequest $request, RegisterAccount $accounts, CreateAuthenticationBootstrap $bootstraps): RedirectResponse
     {
         $validated = $request->validated();
         $user = $request->invitedUser();
@@ -75,6 +78,29 @@ class InvitationController
             ]);
         }
 
-        return redirect()->temporarySignedRoute('otp.setup', now()->addMinutes(30), ['user' => $outcome->user->id]);
+        return redirect()->to($this->enrolmentUrl($outcome->user, $bootstraps));
+    }
+
+    /**
+     * Build the single-use enrolment URL for a freshly completed account.
+     *
+     * A signed `otp.setup` URL is deliberately NOT used: the token is bound to
+     * the user AND the purpose, expires in 30 minutes and is consumed once.
+     * When the account already has a second factor there is nothing to enrol,
+     * so the user goes to login instead.
+     *
+     * @param  User  $user  The account that just completed registration.
+     * @param  CreateAuthenticationBootstrap  $bootstraps  The bootstrap issuer.
+     * @return string The redirect target.
+     */
+    private function enrolmentUrl(User $user, CreateAuthenticationBootstrap $bootstraps): string
+    {
+        if ($user->hasEnabledTwoFactorAuthentication()) {
+            return route('login');
+        }
+
+        $token = $bootstraps->execute($user);
+
+        return route('auth.bootstrap.two-factor.show', ['token' => $token]);
     }
 }

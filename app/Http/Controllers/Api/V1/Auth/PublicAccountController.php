@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers\Api\V1\Auth;
 
+use App\Actions\Auth\CreateAuthenticationBootstrap;
 use App\Actions\Auth\RegisterAccount;
 use App\Data\Auth\RegisterAccountData;
 use App\Enums\AppLocale;
+use App\Enums\AuthenticationBootstrapPurpose;
 use App\Enums\RegistrationChannel;
 use App\Enums\RegistrationDecision;
 use App\Http\Controllers\Controller;
@@ -37,10 +39,18 @@ final class PublicAccountController extends Controller
      *   created as `pending`, and NO authentication token is issued.
      * - `allowed`: 201 with the user resource.
      *
-     * A token is never returned for an account that is not approved.
+     * Both creating decisions also return a single-use `enrolment` bootstrap
+     * (`token` + `expires_at`) so the client can complete the two-factor step
+     * without a session. The token is the only credential handed out here; the
+     * enrolment SECRET is never delivered by this endpoint, only by the
+     * bootstrap-authenticated setup exchange. A token is never returned for an
+     * account that is not approved.
      */
-    public function register(RegisterAccountApiRequest $request, RegisterAccount $accounts): JsonResponse
-    {
+    public function register(
+        RegisterAccountApiRequest $request,
+        RegisterAccount $accounts,
+        CreateAuthenticationBootstrap $bootstraps,
+    ): JsonResponse {
         $validated = $request->validated();
 
         $outcome = $accounts->execute(new RegisterAccountData(
@@ -68,11 +78,21 @@ final class PublicAccountController extends Controller
 
         $resource = UserResource::make($outcome->user);
 
-        if ($outcome->decision === RegistrationDecision::ApprovalRequired) {
-            $resource = $resource->additional(['state' => 'approval_pending']);
+        $additional = [
+            'state' => $outcome->decision === RegistrationDecision::ApprovalRequired
+                ? 'approval_pending'
+                : $outcome->nextStep,
+        ];
+
+        if (! $outcome->user->hasEnabledTwoFactorAuthentication()) {
+            $token = $bootstraps->execute($outcome->user, AuthenticationBootstrapPurpose::TwoFactorEnrolment);
+            $additional['enrolment'] = [
+                'token' => $token,
+                'expires_at' => now()->addMinutes(CreateAuthenticationBootstrap::TTL_MINUTES)->toISOString(),
+            ];
         }
 
-        return $resource->response()->setStatusCode(201);
+        return $resource->additional($additional)->response()->setStatusCode(201);
     }
 
     public function forgotPassword(RecoveryEmailRequest $request): JsonResponse

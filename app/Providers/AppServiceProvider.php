@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Contracts\AuthenticationBootstrapRepository;
 use App\Contracts\CryptoPriceFetcher;
 use App\Contracts\EntitlementGate;
 use App\Contracts\RegistrationBlockRepository;
@@ -31,6 +32,7 @@ use App\Policies\RegistrationApprovalPolicy;
 use App\Policies\RegistrationSettingsPolicy;
 use App\Services\Auth\SelfHostedRegistrationGate;
 use App\Services\Economy\CoinGeckoPriceFetcher;
+use App\Support\Auth\AuthenticationBootstrapRepository as EloquentAuthenticationBootstrapRepository;
 use App\Support\NullEntitlementGate;
 use App\Support\OpenApi\DiscriminatedOneOfType;
 use App\Support\Registration\RegistrationBlockRepository as EloquentRegistrationBlockRepository;
@@ -74,6 +76,7 @@ class AppServiceProvider extends ServiceProvider
         $this->configureEntitlements();
         $this->configureRegistration();
         $this->configureRegistrationBlocks();
+        $this->configureAuthenticationBootstraps();
     }
 
     /**
@@ -156,6 +159,18 @@ class AppServiceProvider extends ServiceProvider
     protected function configureRegistrationBlocks(): void
     {
         $this->app->bind(RegistrationBlockRepository::class, EloquentRegistrationBlockRepository::class);
+    }
+
+    /**
+     * Bind the single-use authentication bootstrap repository behind its contract.
+     *
+     * The token is stored only as a keyed digest and consumed with a conditional
+     * update, so the transport depends on the contract while the database is
+     * the arbiter of single use.
+     */
+    protected function configureAuthenticationBootstraps(): void
+    {
+        $this->app->bind(AuthenticationBootstrapRepository::class, EloquentAuthenticationBootstrapRepository::class);
     }
 
     /**

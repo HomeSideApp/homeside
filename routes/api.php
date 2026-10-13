@@ -102,6 +102,11 @@ Route::prefix('v1/auth')->as('api.v1.auth.')->group(function () {
     Route::post('google/otp/confirm', [GoogleAuthController::class, 'confirm'])->middleware(['auth:sanctum', 'throttle:otp'])->name('google.otp.confirm');
     Route::post('register', [PublicAccountController::class, 'register'])->middleware('throttle:registration')->name('register');
     Route::get('registration', [RegistrationCapabilitiesController::class, 'show'])->middleware('throttle:registration')->name('registration');
+    // Single-use bootstrap enrolment: the token is sent in the body, the secret
+    // only comes back from the setup exchange, and the auth token only after a
+    // verified code on an account allowed to hold a session.
+    Route::post('two-factor/setup', [TwoFactorController::class, 'setupFromBootstrap'])->middleware('throttle:otp')->name('two-factor.setup');
+    Route::post('two-factor/setup/confirm', [TwoFactorController::class, 'confirmFromBootstrap'])->middleware('throttle:otp')->name('two-factor.setup.confirm');
     Route::post('password/forgot', [PublicAccountController::class, 'forgotPassword'])->middleware('throttle:recovery')->name('password.forgot');
     Route::post('password/reset', [PublicAccountController::class, 'resetPassword'])->middleware('throttle:recovery')->name('password.reset');
     Route::post('otp/forgot', [PublicAccountController::class, 'forgotOtp'])->middleware('throttle:recovery')->name('otp.forgot');

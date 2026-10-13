@@ -211,6 +211,8 @@ return [
         'two_factor_not_enabled' => 'Two-factor authentication is not enabled.',
         'two_factor_already_enabled' => 'Two-factor authentication is already enabled.',
         'account_not_ready' => 'Your account is not ready yet. Sign in to continue.',
+        'bootstrap_invalid' => 'This enrolment link is invalid, expired or already used. Sign in to continue.',
+        'recovery_bootstrap_invalid' => 'This recovery link is invalid, expired or already used. Sign in to continue.',
         'verification_token_invalid' => 'The verification token is invalid.',
         'route_permission_not_configured' => 'This route does not have a configured permission.',
         'permission_denied' => 'You do not have permission to perform this action.',

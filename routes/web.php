@@ -15,7 +15,6 @@ use App\Http\Controllers\HouseholdMemberPermissionController;
 use App\Http\Controllers\HouseholdOwnershipController;
 use App\Http\Controllers\InvitationController;
 use App\Http\Controllers\InviteLinkController;
-use App\Http\Controllers\OtpSetupController;
 use App\Http\Controllers\ProductSearchController;
 use App\Http\Controllers\Web\AiProviderController;
 use App\Http\Controllers\Web\AiUsageController;
@@ -496,7 +495,3 @@ Route::middleware([EnsureRegistrationInvitationsEnabled::class.':'.RegistrationC
     Route::get('invitation/{user}', [InvitationController::class, 'show'])->name('invitation.show');
     Route::post('invitation', [InvitationController::class, 'store'])->middleware('throttle:registration')->name('invitation.store');
 });
-
-// OTP Setup (con URL firmada, sin auth - parte del flujo de onboarding)
-Route::get('otp/setup/{user}', [OtpSetupController::class, 'show'])->middleware(['signed'])->name('otp.setup');
-Route::post('otp/confirm/{user}', [OtpSetupController::class, 'confirm'])->middleware(['signed', 'throttle:otp'])->name('otp.confirm');
