@@ -3,16 +3,20 @@
 namespace App\Http\Requests;
 
 use App\Enums\HouseholdModule;
-use App\Support\PlatformAccess;
+use App\Models\Household;
 use Illuminate\Foundation\Http\FormRequest;
 
 class StoreHouseholdRequest extends FormRequest
 {
+    /**
+     * Authorize through the HouseholdPolicy `create` ability, the same
+     * structural gate the action enforces for non-HTTP callers.
+     */
     public function authorize(): bool
     {
         $user = $this->user();
 
-        return $user !== null && app(PlatformAccess::class)->canCreateHouseholds($user);
+        return $user !== null && $user->can('create', Household::class);
     }
 
     /**

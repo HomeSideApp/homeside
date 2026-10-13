@@ -5,6 +5,7 @@ namespace App\Policies;
 use App\Models\Household;
 use App\Models\HouseholdMember;
 use App\Models\User;
+use App\Support\PlatformAccess;
 
 /**
  * Class HouseholdPolicy
@@ -14,6 +15,24 @@ use App\Models\User;
  */
 final class HouseholdPolicy
 {
+    /**
+     * Determine whether the user can create a household.
+     *
+     * This is the STRUCTURAL gate: it answers whether the installation policy
+     * and the user's own restrictions allow a new household at all. Commercial
+     * capacity is a different question and belongs to the entitlement gate,
+     * which the creation action asserts inside its transaction. The policy must
+     * never try to count or cap households itself; it only delegates the read
+     * through PlatformAccess, the single funnel every surface uses.
+     *
+     * @param  User  $user  The authenticated user.
+     * @return bool True on success, false otherwise.
+     */
+    public function create(User $user): bool
+    {
+        return app(PlatformAccess::class)->canCreateHouseholds($user);
+    }
+
     /**
      * Determine whether the user can view the given household.
      *

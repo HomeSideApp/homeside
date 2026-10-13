@@ -80,13 +80,59 @@ final class PlatformAccess
             return false;
         }
 
+        return $this->hasHouseholdOwnershipCapacity($user);
+    }
+
+    /**
+     * Ask the entitlement gate whether the user can own one more household.
+     *
+     * This entitlement read now runs on every `canCreateHouseholds()` call, and
+     * that read happens several times per serialized user (UserResource via
+     * ApiOperationPermissions, request authorization, route decisions). The
+     * answer is therefore memoized on the request attributes, the same
+     * convention HasPermissionsTrait and CapabilityRegistry use, with a plain
+     * read in CLI runs that have no request to memoize on. It is deliberately
+     * per request, never static state.
+     *
+     * Only the entitlement answer is memoized. The installation policy and the
+     * per-user tri-state are re-read on every call, so an administrative change
+     * inside the same request is never masked.
+     *
+     * The authoritative capacity decision for an actual creation is NOT this
+     * read: CreateHousehold asserts the same gate inside its transaction, where
+     * the package's billing-account row lock serializes concurrent attempts.
+     */
+    private function hasHouseholdOwnershipCapacity(User $user): bool
+    {
+        if (app()->runningInConsole() && ! app()->runningUnitTests()) {
+            return $this->assertsHouseholdOwnershipCapacity($user);
+        }
+
+        $request = request();
+        $key = 'platform_access.household_ownership_capacity.'.$user->id;
+
+        if ($request->attributes->has($key)) {
+            return (bool) $request->attributes->get($key);
+        }
+
+        $allowed = $this->assertsHouseholdOwnershipCapacity($user);
+        $request->attributes->set($key, $allowed);
+
+        return $allowed;
+    }
+
+    /**
+     * Translate the entitlement gate's quota outcome into a boolean.
+     */
+    private function assertsHouseholdOwnershipCapacity(User $user): bool
+    {
         try {
             app(EntitlementGate::class)->assertHouseholdOwnershipCapacity($user);
+
+            return true;
         } catch (EntitlementQuotaExceededException) {
             return false;
         }
-
-        return true;
     }
 
     /** @param list<string> $slugs */
