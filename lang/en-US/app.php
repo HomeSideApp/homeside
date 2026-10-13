@@ -57,6 +57,7 @@ return [
         'errors' => [
             'rejection_must_be_released' => 'This registration was rejected. Release the rejection before approving it.',
             'approved_cannot_be_rejected' => 'This account is already approved. Suspend or delete it instead of rejecting it.',
+            'default_role_missing' => 'The baseline "user" role does not exist, so this account cannot be approved into a usable state. Restore the role and try again.',
         ],
         'notifications' => [
             'requested' => [

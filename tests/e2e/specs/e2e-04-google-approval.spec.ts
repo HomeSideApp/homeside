@@ -6,7 +6,7 @@ import {
 } from '../fixtures/google';
 import { registrationState, seedE2EState, setRegistrationPolicy } from '../fixtures/setup';
 import { FIXTURE, user } from '../fixtures/users';
-import { AdminUsersPage } from '../pages/AdminUsersPage';
+import { ApprovalPanelPage } from '../pages/ApprovalPanelPage';
 import { DashboardPage } from '../pages/DashboardPage';
 import { GoogleConsentPage } from '../pages/GoogleConsentPage';
 import { LoginPage } from '../pages/LoginPage';
@@ -22,6 +22,14 @@ import { TwoFactorPage } from '../pages/TwoFactorPage';
  * own listener. Nothing inserts a `google_identities` row directly.
  *
  * Two independent browser contexts: the applicant and the administrator.
+ *
+ * The approval runs through the REGISTRATION & ACCESS panel — the flow the spec
+ * describes — and not through the Users panel's review dialog. That matters: a
+ * Google account is created pending and WITHOUT a role, and the Users panel can
+ * assign one, which used to hide the fact that approving from the registrations
+ * panel left the account unusable. The scenario therefore approves with the
+ * plain panel button and then proves the approved identity can sign in with
+ * Google and TOTP, which is the assertion that catches the defect.
  */
 test.describe('E2E-04 Google approval lifecycle across two real browser contexts', () => {
     test.beforeEach(async () => {
@@ -30,7 +38,7 @@ test.describe('E2E-04 Google approval lifecycle across two real browser contexts
         await resetGoogleSimulator();
     });
 
-    test('a Google account waits for approval, is approved from the panel, then enrols TOTP and signs in @critical', async ({
+    test('a Google account waits for approval, is approved from the registration panel, then enrols TOTP and signs in @critical', async ({
         browser,
     }, testInfo) => {
         const applicantEmail = `e2e-google-${Date.now()}@homeside.test`;
@@ -68,10 +76,13 @@ test.describe('E2E-04 Google approval lifecycle across two real browser contexts
                 ).toBeVisible();
             });
 
-            await test.step('the account is pending, linked and has NO full session', async () => {
+            await test.step('the account is pending, linked, role-less and has NO full session', async () => {
                 const state = registrationState(applicantEmail);
                 expect(state.approval_status).toBe('pending');
                 expect(state.google_linked).toBe(true);
+                // The state the approval must repair: a pending Google account
+                // holds no role at all, so `canAccessApplication()` refuses it.
+                expect(state.roles).not.toContain('user');
                 applicantId = state.id ?? '';
                 expect(applicantId).not.toBe('');
 
@@ -90,15 +101,20 @@ test.describe('E2E-04 Google approval lifecycle across two real browser contexts
                 expect(calls.calls.last_auth?.redirect_uri ?? '').toMatch(/\/auth\/google\/callback$/);
             });
 
-            await test.step('an administrator approves the request from the panel and assigns the role', async () => {
+            await test.step('an administrator approves the request from the REGISTRATION & ACCESS pending tab', async () => {
                 const admin = new LoginPage(pageB);
                 await admin.goto();
                 await admin.login(FIXTURE.admin, user(FIXTURE.admin).password);
 
-                await new AdminUsersPage(pageB).approveGoogle(applicantEmail, applicantName);
+                const panel = new ApprovalPanelPage(pageB);
+                await panel.goto();
+                await panel.expectPending(applicantEmail);
+                await panel.approve(applicantEmail);
 
                 const approved = registrationState(applicantEmail);
                 expect(approved.approval_status).toBe('approved');
+                // Approving from the registrations panel confers the baseline
+                // `user` role, so the account is actually usable afterwards.
                 expect(approved.roles).toContain('user');
             });
 

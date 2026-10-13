@@ -57,6 +57,7 @@ return [
         'errors' => [
             'rejection_must_be_released' => 'Este registro fue rechazado. Libera el rechazo antes de aprobarlo.',
             'approved_cannot_be_rejected' => 'Esta cuenta ya está aprobada. Suspéndela o elimínala en lugar de rechazarla.',
+            'default_role_missing' => 'El rol base "user" no existe, por lo que esta cuenta no puede quedar aprobada en un estado utilizable. Restaura el rol e inténtalo de nuevo.',
         ],
         'notifications' => [
             'requested' => [
