@@ -19,6 +19,7 @@ export const FIXTURE = {
     creator: 'creator@homeside.test',
     googlePending: 'google.pending@homeside.test',
     googleLinked: 'google.linked@homeside.test',
+    googleUnlinked: 'google.unlinked@homeside.test',
     blockedIdentity: 'blocked.identity@homeside.test',
 } as const;
 

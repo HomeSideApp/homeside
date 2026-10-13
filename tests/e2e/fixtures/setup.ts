@@ -49,6 +49,7 @@ export interface RegistrationState {
     account_status: string;
     email_verified: boolean;
     two_factor_enabled: boolean;
+    google_linked: boolean;
     roles: string[];
     active_identity_block: boolean;
     active_identity_block_id: string | null;

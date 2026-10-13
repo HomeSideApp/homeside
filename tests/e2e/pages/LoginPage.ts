@@ -43,6 +43,18 @@ export class LoginPage {
         await expect(this.page.getByText(message)).toBeVisible();
     }
 
+    /**
+     * Follow the Google button through to the simulator consent screen.
+     *
+     * The click navigates to the REAL `/auth/google` route, which writes the
+     * state into the session and redirects to the provider.
+     */
+    async startGoogleLogin(): Promise<void> {
+        await expect(this.page.getByRole('link', { name: 'Continue with Google' })).toBeVisible();
+        await this.page.getByRole('link', { name: 'Continue with Google' }).click();
+        await this.page.waitForURL(/\/oauth2\/auth/);
+    }
+
     async expectStatus(message: string | RegExp): Promise<void> {
         await expect(this.page.getByText(message)).toBeVisible();
     }

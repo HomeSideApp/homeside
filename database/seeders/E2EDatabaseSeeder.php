@@ -79,6 +79,14 @@ class E2EDatabaseSeeder extends Seeder
     public const GOOGLE_LINKED = 'google.linked@homeside.test';
 
     /**
+     * An approved account with NO linked Google identity.
+     *
+     * It is the "email already exists, but the identity is not linked" case:
+     * Google must answer `link_required` and never link or create anything.
+     */
+    public const GOOGLE_UNLINKED = 'google.unlinked@homeside.test';
+
+    /**
      * An identity that is blocked but has NO account row: it proves the
      * persistent identity block refuses a fresh registration on its own,
      * independently of the "this email already exists" rule.
@@ -258,6 +266,15 @@ class E2EDatabaseSeeder extends Seeder
                 'account_status' => AccountStatus::Active->value,
                 'verified' => true,
             ],
+            'google_unlinked' => [
+                'email' => self::GOOGLE_UNLINKED,
+                'name' => 'E2E Google Unlinked',
+                'roles' => ['user'],
+                'two_factor' => true,
+                'approval_status' => ApprovalStatus::Approved->value,
+                'account_status' => AccountStatus::Active->value,
+                'verified' => true,
+            ],
         ];
 
         $this->ensureApproverRole();
@@ -429,6 +446,14 @@ class E2EDatabaseSeeder extends Seeder
     {
         // Restore the accountless blocked identity.
         User::query()->where('email', self::BLOCKED_IDENTITY)->delete();
+
+        // Remove every Google identity a previous scenario LINKED dynamically
+        // (for example through the profile flow), so a leftover link cannot make
+        // the "existing email, not linked" case pass by accident. The two seeded
+        // identities are kept.
+        GoogleIdentity::query()
+            ->whereNotIn('google_sub', ['e2e-google-pending-sub', 'e2e-google-linked-sub'])
+            ->delete();
 
         // Remove EVERY block (active and released) for the identities a
         // scenario manages, so a previous run's released history cannot be

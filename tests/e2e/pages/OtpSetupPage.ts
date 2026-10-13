@@ -1,11 +1,20 @@
-import { expect, type Page } from '@playwright/test';
+import { expect, type Page, type Response } from '@playwright/test';
 import { generateTotp } from '../fixtures/totp';
 
 /**
- * The two-factor enrolment page reached from a single-use bootstrap link.
+ * The two-factor enrolment page reached from a single-use bootstrap link, or
+ * from the simulated Google callback (`/google/otp/setup`). Both confirm with a
+ * POST to their own endpoint and both render the recovery codes on success.
  */
 export class OtpSetupPage {
     constructor(private readonly page: Page) {}
+
+    private static isConfirmRequest(response: Response): boolean {
+        const request = response.request();
+
+        return request.method() === 'POST'
+            && (request.url().includes('/auth/bootstrap/') || request.url().includes('/google/otp/setup'));
+    }
 
     async expectLoaded(): Promise<void> {
         await expect(this.page.getByRole('button', { name: 'Verify and activate' })).toBeVisible();
@@ -21,10 +30,7 @@ export class OtpSetupPage {
         await this.page.getByLabel('Verification code').fill(code);
 
         const [response] = await Promise.all([
-            this.page.waitForResponse(
-                (candidate) =>
-                    candidate.request().method() === 'POST' && candidate.url().includes('/auth/bootstrap/'),
-            ),
+            this.page.waitForResponse((candidate) => OtpSetupPage.isConfirmRequest(candidate)),
             this.page.getByRole('button', { name: 'Verify and activate' }).click(),
         ]);
 
@@ -54,10 +60,7 @@ export class OtpSetupPage {
         await this.page.getByLabel('Verification code').fill(code);
 
         const [response] = await Promise.all([
-            this.page.waitForResponse(
-                (candidate) =>
-                    candidate.request().method() === 'POST' && candidate.url().includes('/auth/bootstrap/'),
-            ),
+            this.page.waitForResponse((candidate) => OtpSetupPage.isConfirmRequest(candidate)),
             this.page.getByRole('button', { name: 'Verify and activate' }).click(),
         ]);
 

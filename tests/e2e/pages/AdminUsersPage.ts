@@ -145,4 +145,38 @@ export class AdminUsersPage {
     async expectNoControl(email: string, label: string): Promise<void> {
         await expect(this.row(email).getByRole('button', { name: label })).toHaveCount(0);
     }
+
+    /**
+     * Approve a pending GOOGLE request through the review dialog, assigning the
+     * role the approval requires.
+     *
+     * A Google account is created without roles (an administrator chooses them),
+     * and `canAccessApplication()` refuses a Google-linked account that has none,
+     * so the approval and the role assignment are one control in the panel.
+     */
+    async approveGoogle(email: string, name: string, roleLabel = 'Usuario'): Promise<void> {
+        await this.goto(email);
+        await expect(this.row(email)).toBeVisible();
+
+        await this.row(email).getByRole('button', { name: `Revisar solicitud: ${name}` }).click();
+
+        const dialog = this.page.getByRole('dialog');
+        await expect(dialog).toBeVisible();
+
+        await dialog.getByRole('combobox').click();
+        await this.page.getByRole('option', { name: roleLabel }).click();
+
+        const [response] = await Promise.all([
+            this.page.waitForResponse(
+                (candidate) =>
+                    candidate.request().method() === 'POST'
+                    && candidate.url().includes('/admin/users/')
+                    && candidate.url().includes('/approve'),
+            ),
+            dialog.getByRole('button', { name: 'Aprobar acceso' }).click(),
+        ]);
+
+        expect(response.status()).toBeLessThan(400);
+        await expect(dialog).toHaveCount(0);
+    }
 }

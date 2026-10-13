@@ -33,6 +33,7 @@ use App\Policies\RegistrationSettingsPolicy;
 use App\Services\Auth\SelfHostedRegistrationGate;
 use App\Services\Economy\CoinGeckoPriceFetcher;
 use App\Support\Auth\AuthenticationBootstrapRepository as EloquentAuthenticationBootstrapRepository;
+use App\Support\Auth\GoogleDriverRegistrar;
 use App\Support\NullEntitlementGate;
 use App\Support\OpenApi\DiscriminatedOneOfType;
 use App\Support\Registration\RegistrationBlockRepository as EloquentRegistrationBlockRepository;
@@ -96,6 +97,21 @@ class AppServiceProvider extends ServiceProvider
         $this->configureRegistrationNotifications();
         $this->configureCryptoPrices();
         $this->configureJobMonitoring();
+        $this->configureGoogleProvider();
+    }
+
+    /**
+     * Point Socialite's Google driver at the E2E simulator, inside E2E only.
+     *
+     * The registrar is fail-closed: outside the E2E environment it registers
+     * nothing, so a production install keeps the framework's real Google
+     * driver even if the simulator flag is set. Only the three provider
+     * endpoints move; state validation, the redirect-URI check and the code
+     * exchange stay in Socialite's real code paths.
+     */
+    protected function configureGoogleProvider(): void
+    {
+        app(GoogleDriverRegistrar::class)->register();
     }
 
     /**

@@ -48,6 +48,7 @@ class E2EUserStateCommand extends Command
                 'exists' => false,
                 'active_identity_block' => app(RegistrationBlockRepository::class)
                     ->isBlocked(RegistrationIdentifier::EMAIL, $email),
+                'google_linked' => false,
                 ...$this->blockState($email),
             ], JSON_THROW_ON_ERROR));
 
@@ -77,6 +78,7 @@ class E2EUserStateCommand extends Command
                 : (string) $user->account_status,
             'email_verified' => $user->email_verified_at !== null,
             'two_factor_enabled' => $user->hasEnabledTwoFactorAuthentication(),
+            'google_linked' => $user->googleIdentity()->exists(),
             'roles' => $user->roles()->pluck('slug')->sort()->values()->all(),
             'active_identity_block' => app(RegistrationBlockRepository::class)
                 ->isBlocked(RegistrationIdentifier::EMAIL, $user->email),

@@ -34,4 +34,9 @@ export class RegisterPage {
         await this.page.getByRole('link', { name: 'Back to login' }).click();
         await expect(this.page).toHaveURL(/\/login/);
     }
+
+    /** The Google sign-up affordance is offered only when the channel is available. */
+    async expectGoogleSignupHidden(): Promise<void> {
+        await expect(this.page.getByRole('link', { name: 'Sign up with Google' })).toHaveCount(0);
+    }
 }

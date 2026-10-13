@@ -75,10 +75,11 @@ trigger a wipe. The guard is covered by
 
 Fixtures: `admin@homeside.test`, `approver@homeside.test`,
 `member@homeside.test`, `pending@homeside.test`, `rejected@homeside.test`,
-`invited@homeside.test`, `blocked@homeside.test`, plus the Google, capacity and
-identity-block fixtures the scenarios need. `database/seeders/E2EDatabaseSeeder.php`
-is the source of truth. It reuses `RolesAndPermissionsSeeder` and the existing
-factories.
+`invited@homeside.test`, `blocked@homeside.test`, `google.pending@homeside.test`,
+`google.linked@homeside.test`, `google.unlinked@homeside.test`, plus the Google,
+capacity and identity-block fixtures the scenarios need.
+`database/seeders/E2EDatabaseSeeder.php` is the source of truth. It reuses
+`RolesAndPermissionsSeeder` and the existing factories.
 
 ## Sensitivity
 
@@ -95,7 +96,43 @@ are never printed, committed or embedded in a spec.
 | E2E-01 self-hosted refuses public registration | green |
 | E2E-02 approval lifecycle across two browser contexts | green |
 | E2E-03 administrative rejection | green |
-| E2E-04..E2E-29 (remaining spec scenarios) | pending |
+| E2E-04 Google approval lifecycle | green |
+| E2E-05 Google edge cases | green |
+| E2E-06 household invitation | green |
+| E2E-07 administrative invitation | green |
+| E2E-09 TOTP bootstrap security | green |
+| E2E-15/16/18 rejection persistence | green |
+| E2E-17 rejected identity tries Google | green |
+| E2E-19 release rejection | green |
+| E2E-20 delete without block | green |
+| E2E-21 delete and block | green |
+| E2E-22 release block | green |
+| E2E-23 suspend lifecycle | green |
+| E2E-24 release permissions | green |
+| E2E-25 blocked open session | green |
+| E2E-26 bootstrap before rejection | green |
+| E2E-28 blocked identity returned by Google | green |
+| E2E-29 targeted invitation blocked | green |
+| remaining spec scenarios | pending |
+
+## Simulated Google provider
+
+The Google scenarios (E2E-04, 05, 17, 28) must run through the REAL callback
+route and the REAL OAuth exchange. Only the three provider endpoints move to a
+local simulator; `state` validation, the redirect-URI check, the code exchange
+and the identity mapping all stay in Socialite's real code paths.
+
+| Piece | Value | Why |
+| --- | --- | --- |
+| Driver selection | `E2EGoogleSimulator` + `GoogleDriverRegistrar` | Fail-closed: registered only when `APP_ENV=e2e`, the URL is loopback and the credentials are set. A production install that exports the flag keeps talking to Google. |
+| Simulator listener | `php -S 127.0.0.1:8011`, started by `e2e:serve` | It must be a SEPARATE process: the app calls the token/userinfo endpoints server-to-server while handling the callback, and its own `php artisan serve` is single-threaded. |
+| Endpoints | `/oauth2/auth`, `/oauth2/consent`, `/oauth2/token`, `/oauth2/userinfo` | A real browser consent plus the real server-to-server exchange. |
+| Control | `/__reset`, `/__scenario`, `/__calls`, `/__health` | Test-only: set the identity per run and read the call counters/state. |
+
+The fixture `tests/e2e/fixtures/google.ts` drives the control endpoints. The
+scenarios assert `calls.token`/`calls.userinfo`, so a test that bypassed the
+exchange would fail.
+
 
 ## Layout
 
