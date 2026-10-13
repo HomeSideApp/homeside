@@ -1,6 +1,7 @@
 import { request } from '@playwright/test';
 import { expect, test } from '../fixtures/test';
 import { E2E_BASE_URL } from '../fixtures/env';
+import { postWeb } from '../fixtures/http';
 import { clearMailbox } from '../fixtures/mail';
 import { registrationState, seedE2EState, setRegistrationPolicy } from '../fixtures/setup';
 import { FIXTURE, user } from '../fixtures/users';
@@ -132,7 +133,18 @@ test.describe('E2E-03 administrative rejection', () => {
 
                 const panel = new ApprovalPanelPage(approverPage);
                 await panel.goto();
-                const response = await panel.releaseRejection(FIXTURE.pending);
+                await panel.openTab('Rejected');
+
+                // The control is not rendered to an operator who cannot use
+                // it, so the refusal is proven with a forced direct request.
+                await panel.expectNoReleaseControl();
+
+                const target = registrationState(FIXTURE.pending);
+                const response = await postWeb(
+                    approverPage,
+                    `/admin/registrations/${target.id}/release-rejection`,
+                    {},
+                );
 
                 expect(response.status()).toBe(403);
                 expect(registrationState(FIXTURE.pending).approval_status).toBe('rejected');

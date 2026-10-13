@@ -38,6 +38,13 @@ export function e2eEnv(): NodeJS.ProcessEnv {
         MAIL_HOST: process.env.MAIL_HOST ?? 'mailpit',
         MAIL_PORT: process.env.MAIL_PORT ?? '1025',
         APP_URL: E2E_BASE_URL,
+        // The E2E server must use the FILE session driver. A blocked or
+        // suspended user's already-open session has to survive the revocation
+        // and lose access at the account-status middleware (403); with the
+        // database driver the session row is deleted and the navigation turns
+        // into a login redirect, which asserts the wrong thing. Forced, not
+        // overridable: the stack's own SESSION_DRIVER is irrelevant here.
+        SESSION_DRIVER: 'file',
         E2E_SECRETS_FILE,
         E2E_MAILPIT_URL,
     };

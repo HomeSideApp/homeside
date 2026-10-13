@@ -1,4 +1,5 @@
 import { expect, test } from '../fixtures/test';
+import { postWeb } from '../fixtures/http';
 import { clearMailbox } from '../fixtures/mail';
 import {
     deleteUser,
@@ -70,7 +71,18 @@ test.describe('E2E-19 releasing a rejection from the panel', () => {
 
                     const panel = new ApprovalPanelPage(approverPage);
                     await panel.goto();
-                    const response = await panel.releaseRejection(FIXTURE.rejectedNoFactor);
+                    await panel.openTab('Rejected');
+
+                    // The affordance is hidden from an operator who cannot use
+                    // it; the 403 must still hold for a forced direct request.
+                    await panel.expectNoReleaseControl();
+
+                    const target = registrationState(FIXTURE.rejectedNoFactor);
+                    const response = await postWeb(
+                        approverPage,
+                        `/admin/registrations/${target.id}/release-rejection`,
+                        {},
+                    );
 
                     expect(response.status()).toBe(403);
                     expect(registrationState(FIXTURE.rejectedNoFactor).approval_status).toBe('rejected');

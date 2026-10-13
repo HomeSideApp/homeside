@@ -56,6 +56,12 @@ export class ApprovalPanelPage {
         await expect(row).toContainText(reason);
     }
 
+    /** The blocked tab shows the reason note of the block the scenario created. */
+    async expectBlock(reason: string): Promise<void> {
+        await this.openTab('Blocked');
+        await expect(this.blockRow(reason)).toBeVisible();
+    }
+
     /**
      * Attempt to release a rejection, returning the raw response so a scenario
      * can assert that a user without the permission is refused.
@@ -70,5 +76,38 @@ export class ApprovalPanelPage {
         ]);
 
         return response;
+    }
+
+    /**
+     * The active identity-block queue row that carries a human reason.
+     *
+     * Blocks store only a keyed hash of the identity, so the reason note the
+     * administrator typed is the stable, human-readable handle the panel shows.
+     */
+    blockRow(reason: string) {
+        return this.page.locator('tr').filter({ hasText: reason });
+    }
+
+    /**
+     * Release an active identity block through the real panel control.
+     */
+    async releaseBlock(reason: string): Promise<Response> {
+        await this.openTab('Blocked');
+        const row = this.blockRow(reason);
+        await expect(row).toBeVisible();
+
+        const [response] = await Promise.all([
+            this.page.waitForResponse((candidate) => candidate.url().includes('/registration-blocks/') && candidate.url().includes('/release')),
+            row.getByRole('button', { name: 'Release' }).click(),
+        ]);
+
+        return response;
+    }
+
+    /**
+     * Assert the release affordance is absent from the currently open tab.
+     */
+    async expectNoReleaseControl(): Promise<void> {
+        await expect(this.page.getByRole('button', { name: 'Release' })).toHaveCount(0);
     }
 }

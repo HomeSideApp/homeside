@@ -51,6 +51,9 @@ export interface RegistrationState {
     two_factor_enabled: boolean;
     roles: string[];
     active_identity_block: boolean;
+    active_identity_block_id: string | null;
+    block_released_by: string | null;
+    block_released_at: string | null;
     approved_by: string | null;
     approved_at: string | null;
     rejection_released_by: string | null;

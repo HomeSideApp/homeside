@@ -112,6 +112,7 @@ class E2EDatabaseSeeder extends Seeder
         $this->seedMemberships($users, $households);
         $this->seedGoogleIdentities($users);
         $links = $this->seedInviteLinks($households['alpha'], $users['member']);
+        $this->clearScenarioState();
         $this->seedRejectedBlock($users['admin']);
 
         $this->writeSecrets([
@@ -412,6 +413,44 @@ class E2EDatabaseSeeder extends Seeder
         }
 
         return $links;
+    }
+
+    /**
+     * Reset the identities the lifecycle scenarios mutate between runs.
+     *
+     * The lifecycle scenarios delete, block and reject fixtures, and their
+     * changes must not leak into the next scenario. `blocked.identity` in
+     * particular MUST have no account row: E2E-03/15/18 rely on the persistent
+     * block refusing it on its own, and E2E-29 tells an administrator to create
+     * a targeted invitation for it, which leaves a row behind. Re-running the
+     * seeder restores the contract instead of accumulating drift.
+     */
+    private function clearScenarioState(): void
+    {
+        // Restore the accountless blocked identity.
+        User::query()->where('email', self::BLOCKED_IDENTITY)->delete();
+
+        // Remove EVERY block (active and released) for the identities a
+        // scenario manages, so a previous run's released history cannot be
+        // mistaken for the block under test. The seeded blocks for the rejected
+        // fixtures are re-created immediately afterwards.
+        $hashes = array_map(
+            fn (string $email): string => app(RegistrationIdentifier::class)->hash(RegistrationIdentifier::EMAIL, $email),
+            [
+                self::REJECTED,
+                self::REJECTED_NO_FACTOR,
+                self::BLOCKED_IDENTITY,
+                self::RESTRICTED,
+                self::MEMBER,
+                self::CREATOR,
+                self::PENDING,
+                self::GOOGLE_PENDING,
+            ],
+        );
+
+        RegistrationBlock::query()
+            ->whereIn('identifier_hash', $hashes)
+            ->delete();
     }
 
     /**
