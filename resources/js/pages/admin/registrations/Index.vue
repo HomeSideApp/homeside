@@ -40,6 +40,7 @@ import {
 } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
+import { useAuthorization } from '@/composables/useAuthorization';
 import { release as releaseRegistrationBlock } from '@/routes/admin/registration-blocks';
 import {
     approve as approveRegistration,
@@ -91,6 +92,7 @@ const props = defineProps<{
 }>();
 
 const { t } = useI18n();
+const { can } = useAuthorization();
 
 defineOptions({
     layout: {
@@ -433,6 +435,7 @@ function releaseBlock(block: RegistrationBlockRow): void {
                                     }}</TableCell>
                                     <TableCell class="text-right">
                                         <Button
+                                            v-if="can('admin.registrations.release-rejection')"
                                             size="sm"
                                             variant="outline"
                                             @click="releaseRejection(row)"
@@ -511,6 +514,7 @@ function releaseBlock(block: RegistrationBlockRow): void {
                                     }}</TableCell>
                                     <TableCell class="text-right">
                                         <Button
+                                            v-if="can('admin.registration-blocks.release')"
                                             size="sm"
                                             variant="outline"
                                             @click="releaseBlock(row)"

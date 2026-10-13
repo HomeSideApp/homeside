@@ -1432,6 +1432,20 @@ export default {
         users: {
             indexTitle: 'User Management',
             create: 'New user',
+            suspend: 'Suspend',
+            unsuspend: 'Unsuspend',
+            block: 'Block',
+            unblock: 'Unblock',
+            blockTitle: 'Block user?',
+            blockDescription:
+                'Block {name}? The account loses access and the email cannot register again until the block is released.',
+            blockReason: 'Reason',
+            deleteAlsoBlock: 'Also block this email from registering again',
+            status: {
+                active: 'Active',
+                suspended: 'Suspended',
+                blocked: 'Blocked',
+            },
             deleteTitle: 'Delete user?',
             deleteDescription:
                 'Are you sure you want to delete {name}? This action cannot be undone.',

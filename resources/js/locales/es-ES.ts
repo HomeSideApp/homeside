@@ -1450,6 +1450,21 @@ export default {
         users: {
             indexTitle: 'Gestión de Usuarios',
             create: 'Nuevo usuario',
+            suspend: 'Suspender',
+            unsuspend: 'Reactivar',
+            block: 'Bloquear',
+            unblock: 'Desbloquear',
+            blockTitle: '¿Bloquear usuario?',
+            blockDescription:
+                '¿Bloquear a {name}? La cuenta pierde el acceso y el email no podrá registrarse de nuevo hasta que se libere el bloqueo.',
+            blockReason: 'Motivo',
+            deleteAlsoBlock:
+                'Bloquear también este email para que no pueda registrarse de nuevo',
+            status: {
+                active: 'Activa',
+                suspended: 'Suspendida',
+                blocked: 'Bloqueada',
+            },
             deleteTitle: '¿Eliminar usuario?',
             deleteDescription:
                 '¿Estás seguro de que quieres eliminar a {name}? Esta acción no se puede deshacer.',

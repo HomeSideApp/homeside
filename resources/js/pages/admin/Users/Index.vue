@@ -1,6 +1,16 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
-import { ArrowUpDown, Pencil, Plus, Trash2, UserCheck } from '@lucide/vue';
+import {
+    ArrowUpDown,
+    Ban,
+    Pause,
+    Pencil,
+    Play,
+    Plus,
+    ShieldCheck,
+    Trash2,
+    UserCheck,
+} from '@lucide/vue';
 import { createColumnHelper } from '@tanstack/vue-table';
 import type { ColumnDef } from '@tanstack/vue-table';
 import { h, ref } from 'vue';
@@ -19,6 +29,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
     Dialog,
     DialogContent,
@@ -27,6 +38,8 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
     Select,
     SelectContent,
@@ -35,12 +48,19 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
+import { useAuthorization } from '@/composables/useAuthorization';
 import { users as usersIndex } from '@/routes/admin';
 import {
     create as createUser,
     edit as editUser,
     approve as approveUser,
     reject as rejectUser,
+    suspend as suspendUser,
+    unsuspend as unsuspendUser,
+    block as blockUser,
+    unblock as unblockUser,
+    deleteMethod as deleteUser,
+    deleteAndBlock as deleteAndBlockUser,
 } from '@/routes/admin/users';
 import type { Paginated } from '@/types';
 
@@ -51,11 +71,13 @@ interface User {
     roles: Array<{ name: string }>;
     created_at: string;
     approval_status: string;
+    account_status: string;
     external_providers: string[];
     google_connected: boolean;
 }
 
 const { t } = useI18n();
+const { can } = useAuthorization();
 
 defineProps<{
     roles: Array<{ name: string; slug: string }>;
@@ -155,21 +177,35 @@ const columns: ColumnDef<any, User, any>[] = [
     columnHelper.accessor('approval_status', {
         header: 'Estado',
         cell: ({ row }) =>
-            h(
-                Badge,
-                {
-                    variant:
-                        row.original.approval_status === 'approved'
-                            ? 'secondary'
-                            : 'outline',
-                },
-                () =>
-                    row.original.approval_status === 'pending'
-                        ? 'Pendiente'
-                        : row.original.approval_status === 'rejected'
-                          ? 'Rechazado'
-                          : 'Aprobado',
-            ),
+            h('div', { class: 'flex flex-wrap items-center gap-1' }, [
+                h(
+                    Badge,
+                    {
+                        variant:
+                            row.original.approval_status === 'approved'
+                                ? 'secondary'
+                                : 'outline',
+                    },
+                    () =>
+                        row.original.approval_status === 'pending'
+                            ? 'Pendiente'
+                            : row.original.approval_status === 'rejected'
+                              ? 'Rechazado'
+                              : 'Aprobado',
+                ),
+                ...(row.original.account_status !== 'active'
+                    ? [
+                          h(
+                              Badge,
+                              { variant: 'destructive' },
+                              () =>
+                                  row.original.account_status === 'suspended'
+                                      ? t('admin.users.status.suspended')
+                                      : t('admin.users.status.blocked'),
+                          ),
+                      ]
+                    : []),
+            ]),
     }),
     columnHelper.accessor('created_at', {
         header: ({ column }) =>
@@ -197,6 +233,63 @@ const columns: ColumnDef<any, User, any>[] = [
         header: () => h('div', { class: 'text-right' }, 'Acciones'),
         cell: ({ row }) => {
             const user = row.original;
+            const lifecycle = [];
+
+            // Only the transition the row's own state allows is offered: an
+            // active account can be suspended or blocked, a suspended one can
+            // be restored or blocked, and a blocked one can only be unblocked.
+            if (user.account_status === 'active' && can('admin.users.suspend')) {
+                lifecycle.push(
+                    h(
+                        IconAction,
+                        {
+                            label: `${t('admin.users.suspend')}: ${user.name}`,
+                            onClick: () => confirmLifecycle(suspendUser, user),
+                        },
+                        { default: () => h(Pause, { 'aria-hidden': 'true' }) },
+                    ),
+                );
+            }
+
+            if (user.account_status === 'suspended' && can('admin.users.suspend')) {
+                lifecycle.push(
+                    h(
+                        IconAction,
+                        {
+                            label: `${t('admin.users.unsuspend')}: ${user.name}`,
+                            onClick: () => confirmLifecycle(unsuspendUser, user),
+                        },
+                        { default: () => h(Play, { 'aria-hidden': 'true' }) },
+                    ),
+                );
+            }
+
+            if (user.account_status !== 'blocked' && can('admin.users.block')) {
+                lifecycle.push(
+                    h(
+                        IconAction,
+                        {
+                            label: `${t('admin.users.block')}: ${user.name}`,
+                            variant: 'destructive',
+                            onClick: () => openBlockDialog(user),
+                        },
+                        { default: () => h(Ban, { 'aria-hidden': 'true' }) },
+                    ),
+                );
+            }
+
+            if (user.account_status === 'blocked' && can('admin.users.unblock')) {
+                lifecycle.push(
+                    h(
+                        IconAction,
+                        {
+                            label: `${t('admin.users.unblock')}: ${user.name}`,
+                            onClick: () => confirmLifecycle(unblockUser, user),
+                        },
+                        { default: () => h(ShieldCheck, { 'aria-hidden': 'true' }) },
+                    ),
+                );
+            }
 
             return h('div', { class: 'flex items-center justify-end gap-1' }, [
                 ...(user.google_connected && user.approval_status !== 'approved'
@@ -217,6 +310,7 @@ const columns: ColumnDef<any, User, any>[] = [
                           ),
                       ]
                     : []),
+                ...lifecycle,
                 h(
                     IconAction,
                     {
@@ -225,15 +319,22 @@ const columns: ColumnDef<any, User, any>[] = [
                     },
                     { default: () => h(Pencil, { 'aria-hidden': 'true' }) },
                 ),
-                h(
-                    IconAction,
-                    {
-                        label: `${t('common.actions.delete')}: ${user.name}`,
-                        variant: 'destructive',
-                        onClick: () => openDeleteDialog(user),
-                    },
-                    { default: () => h(Trash2, { 'aria-hidden': 'true' }) },
-                ),
+                ...(can('admin.users.delete') || can('admin.users.delete-and-block')
+                    ? [
+                          h(
+                              IconAction,
+                              {
+                                  label: `${t('common.actions.delete')}: ${user.name}`,
+                                  variant: 'destructive',
+                                  onClick: () => openDeleteDialog(user),
+                              },
+                              {
+                                  default: () =>
+                                      h(Trash2, { 'aria-hidden': 'true' }),
+                              },
+                          ),
+                      ]
+                    : []),
             ]);
         },
     }),
@@ -311,21 +412,80 @@ function userRowClass(user: User): string {
         : '';
 }
 
+function confirmLifecycle(
+    route: (user: { id: string }) => { url: string },
+    user: User,
+): void {
+    router.post(route({ id: String(user.id) }).url, {}, { preserveScroll: true });
+}
+
+const showBlockDialog = ref(false);
+const userToBlock = ref<User | null>(null);
+const blockReason = ref('');
+
+function openBlockDialog(user: User) {
+    userToBlock.value = user;
+    blockReason.value = '';
+    showBlockDialog.value = true;
+}
+
+function confirmBlock() {
+    if (!userToBlock.value) {
+        return;
+    }
+
+    router.post(
+        blockUser({ id: String(userToBlock.value.id) }).url,
+        { reason: blockReason.value || undefined },
+        {
+            preserveScroll: true,
+            onFinish: () => {
+                showBlockDialog.value = false;
+                userToBlock.value = null;
+                blockReason.value = '';
+            },
+        },
+    );
+}
+
 const showDeleteDialog = ref(false);
 const userToDelete = ref<User | null>(null);
+const deleteAlsoBlock = ref(false);
+const deleteReason = ref('');
 
 function openDeleteDialog(user: User) {
     userToDelete.value = user;
+    deleteAlsoBlock.value = false;
+    deleteReason.value = '';
     showDeleteDialog.value = true;
 }
 
 function confirmDelete() {
-    if (userToDelete.value) {
-        router.delete(`/admin/users/${userToDelete.value.id}`);
+    if (!userToDelete.value) {
+        return;
     }
+
+    const user = userToDelete.value;
+    const alsoBlock = deleteAlsoBlock.value && can('admin.users.delete-and-block');
+
+    const request = alsoBlock
+        ? router.delete(
+              deleteAndBlockUser({ id: String(user.id) }).url,
+              {
+                  data: { reason: deleteReason.value || undefined },
+                  preserveScroll: true,
+              },
+          )
+        : router.delete(deleteUser({ id: String(user.id) }).url, {
+              preserveScroll: true,
+          });
+
+    void request;
 
     showDeleteDialog.value = false;
     userToDelete.value = null;
+    deleteAlsoBlock.value = false;
+    deleteReason.value = '';
 }
 </script>
 
@@ -483,6 +643,51 @@ function confirmDelete() {
         </DialogContent>
     </Dialog>
 
+    <Dialog
+        :open="showBlockDialog"
+        @update:open="
+            (open) => {
+                if (!open) {
+                    showBlockDialog = false;
+                    userToBlock = null;
+                }
+            }
+        "
+    >
+        <DialogContent class="sm:max-w-lg">
+            <DialogHeader>
+                <DialogTitle>{{ t('admin.users.blockTitle') }}</DialogTitle>
+                <DialogDescription>
+                    {{
+                        t('admin.users.blockDescription', {
+                            name: userToBlock?.name,
+                        })
+                    }}
+                </DialogDescription>
+            </DialogHeader>
+
+            <div class="grid gap-2">
+                <Label for="block-reason">
+                    {{ t('admin.users.blockReason') }}
+                </Label>
+                <Input
+                    id="block-reason"
+                    v-model="blockReason"
+                    maxlength="500"
+                />
+            </div>
+
+            <DialogFooter>
+                <Button variant="outline" @click="showBlockDialog = false">
+                    {{ t('common.actions.cancel') }}
+                </Button>
+                <Button variant="destructive" @click="confirmBlock">
+                    {{ t('admin.users.block') }}
+                </Button>
+            </DialogFooter>
+        </DialogContent>
+    </Dialog>
+
     <AlertDialog v-model:open="showDeleteDialog">
         <AlertDialogContent>
             <AlertDialogHeader>
@@ -497,6 +702,27 @@ function confirmDelete() {
                     }}
                 </AlertDialogDescription>
             </AlertDialogHeader>
+
+            <div
+                v-if="can('admin.users.delete-and-block')"
+                class="grid gap-3 rounded-lg border bg-muted/30 p-4"
+            >
+                <Label class="flex items-center gap-2 text-sm">
+                    <Checkbox v-model="deleteAlsoBlock" />
+                    {{ t('admin.users.deleteAlsoBlock') }}
+                </Label>
+                <div v-if="deleteAlsoBlock" class="grid gap-2">
+                    <Label for="delete-reason">
+                        {{ t('admin.users.blockReason') }}
+                    </Label>
+                    <Input
+                        id="delete-reason"
+                        v-model="deleteReason"
+                        maxlength="500"
+                    />
+                </div>
+            </div>
+
             <AlertDialogFooter>
                 <AlertDialogCancel>{{
                     t('common.actions.cancel')
