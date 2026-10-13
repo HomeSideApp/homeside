@@ -9,6 +9,7 @@ use App\Http\Controllers\Admin\AdminRoleController;
 use App\Http\Controllers\Admin\AdminTranslationController;
 use App\Http\Controllers\Admin\AdminUserController;
 use App\Http\Controllers\Admin\GoogleApprovalController;
+use App\Http\Controllers\Admin\RegistrationController;
 use App\Http\Controllers\Admin\RegistrationSettingsController;
 use App\Http\Controllers\HouseholdMemberPermissionController;
 use App\Http\Controllers\HouseholdOwnershipController;
@@ -66,7 +67,7 @@ Route::middleware(EnsureRegistrationInvitationsEnabled::class.':'.RegistrationCh
     Route::post('invite/{token}', [InviteLinkController::class, 'store'])->middleware('throttle:registration')->name('invite-links.store');
 });
 
-Route::middleware(['auth', 'verified'])->group(function () {
+Route::middleware(['auth', 'verified', 'account.active'])->group(function () {
 
     Route::prefix('contacts')->name('contacts.')->group(function () {
         Route::get('/', [ContactController::class, 'index'])->middleware('permission:contacts.view')->name('index');
@@ -148,6 +149,50 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::put('registrations/settings', [RegistrationSettingsController::class, 'update'])
             ->middleware(['permission:admin.registrations.manage-settings', 'can:registration-settings.update'])
             ->name('registrations.settings.update');
+    });
+
+    // Admin: Registro y acceso (aprobación, rechazo y ciclo de vida de cuentas).
+    // Every mutation is protected by BOTH the permission middleware and the
+    // policy: the middleware stops a caller missing the permission, the policy
+    // adds the domain rules (last-administrator safeguard, effective access).
+    Route::prefix('admin')->name('admin.')->group(function (): void {
+        Route::get('registrations', [RegistrationController::class, 'index'])
+            ->middleware(['permission:admin.registrations.view', 'can:registrations.view'])
+            ->name('registrations.index');
+        Route::post('registrations/{user}/approve', [RegistrationController::class, 'approve'])
+            ->middleware(['permission:admin.registrations.approve', 'can:registrations.approve,user'])
+            ->name('registrations.approve');
+        Route::post('registrations/{user}/reject', [RegistrationController::class, 'reject'])
+            ->middleware(['permission:admin.registrations.reject', 'can:registrations.reject,user'])
+            ->name('registrations.reject');
+        Route::post('registrations/{user}/release-rejection', [RegistrationController::class, 'releaseRejection'])
+            ->middleware(['permission:admin.registrations.release-rejection', 'can:registrations.release-rejection,user'])
+            ->name('registrations.release-rejection');
+        Route::post('registration-blocks/{block}/release', [RegistrationController::class, 'releaseBlock'])
+            ->middleware(['permission:admin.registration-blocks.release', 'can:registration-blocks.release,block'])
+            ->name('registration-blocks.release');
+
+        Route::post('users/{user}/suspend', [RegistrationController::class, 'suspend'])
+            ->middleware(['permission:admin.users.suspend', 'can:suspend,user'])
+            ->name('users.suspend');
+        Route::post('users/{user}/unsuspend', [RegistrationController::class, 'unsuspend'])
+            ->middleware(['permission:admin.users.suspend', 'can:unsuspend,user'])
+            ->name('users.unsuspend');
+        Route::post('users/{user}/block', [RegistrationController::class, 'block'])
+            ->middleware(['permission:admin.users.block', 'can:block,user'])
+            ->name('users.block');
+        Route::post('users/{user}/unblock', [RegistrationController::class, 'unblock'])
+            ->middleware(['permission:admin.users.unblock', 'can:unblock,user'])
+            ->name('users.unblock');
+
+        // Deleting alone and deleting with a block are different authorities;
+        // the flag cannot be used to bypass the stronger one.
+        Route::delete('users/{user}/delete', [RegistrationController::class, 'destroy'])
+            ->middleware(['permission:admin.users.delete', 'can:delete,user'])
+            ->name('users.delete');
+        Route::delete('users/{user}/delete-and-block', [RegistrationController::class, 'destroy'])
+            ->middleware(['permission:admin.users.delete-and-block', 'can:delete-and-block,user'])
+            ->name('users.delete-and-block');
     });
 
     // Admin: Roles (no necesitan household)

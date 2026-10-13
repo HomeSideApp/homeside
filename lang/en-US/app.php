@@ -33,6 +33,60 @@ return [
             'description' => 'Open the private economic document import form.',
         ],
     ],
+    'registrations' => [
+        'toasts' => [
+            'approved' => 'Registration approved.',
+            'already_approved' => 'This registration was already approved.',
+            'rejected' => 'Registration rejected and its identity blocked.',
+            'already_rejected' => 'This registration was already rejected.',
+            'rejection_released' => 'Rejection released. The account is pending again.',
+            'nothing_to_release' => 'There is no rejection to release.',
+            'block_released' => 'Identity block released.',
+            'block_already_released' => 'This block was already released.',
+            'suspended' => 'Account suspended.',
+            'already_suspended' => 'This account was already suspended.',
+            'unsuspended' => 'Suspension lifted.',
+            'not_suspended' => 'This account is not suspended.',
+            'blocked' => 'Account and identity blocked.',
+            'already_blocked' => 'This account was already blocked.',
+            'unblocked' => 'Block lifted.',
+            'not_blocked' => 'This account is not blocked.',
+            'deleted' => 'Account deleted.',
+            'deleted_and_blocked' => 'Account deleted and its identity blocked.',
+        ],
+        'errors' => [
+            'rejection_must_be_released' => 'This registration was rejected. Release the rejection before approving it.',
+            'approved_cannot_be_rejected' => 'This account is already approved. Suspend or delete it instead of rejecting it.',
+        ],
+        'notifications' => [
+            'requested' => [
+                'subject' => 'New registration awaiting approval on :app',
+                'line' => ':name (:email) has registered and is waiting for approval.',
+                'action' => 'Review registrations',
+                'ignore' => 'You receive this email because you can approve registrations on :app.',
+            ],
+            'approved' => [
+                'subject' => 'Your account on :app was approved',
+                'line' => 'Your registration was approved. You can now sign in and finish setting up your account.',
+                'action' => 'Sign in',
+            ],
+            'rejected' => [
+                'subject' => 'Your registration on :app was not approved',
+                'line' => 'Your registration was reviewed and was not approved.',
+                'contact' => 'If you believe this is a mistake, contact an administrator.',
+            ],
+            'account_suspended' => [
+                'subject' => 'Your account on :app was suspended',
+                'line' => 'Your account has been suspended and cannot be used right now.',
+                'contact' => 'If you believe this is a mistake, contact an administrator.',
+            ],
+            'account_blocked' => [
+                'subject' => 'Your account on :app was blocked',
+                'line' => 'Your account has been blocked and cannot be used right now.',
+                'contact' => 'If you believe this is a mistake, contact an administrator.',
+            ],
+        ],
+    ],
     'toast' => [
         'transaction_created' => 'Transaction created successfully.',
         'transaction_updated' => 'Transaction updated successfully.',
@@ -136,6 +190,7 @@ return [
         'published' => 'Published',
     ],
     'errors' => [
+        'account_not_active' => 'Your account is not allowed to access the application.',
         'account_inactive' => 'Your account is not approved or has no assigned role.',
         'system_role_cannot_update' => 'System roles cannot be modified.',
         'system_role_cannot_delete' => 'System roles cannot be deleted.',

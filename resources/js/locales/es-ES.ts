@@ -1002,6 +1002,7 @@ export default {
         saas: 'Planes y facturación',
         saasAdmin: 'Admin SaaS',
         registrationSettings: 'Registro',
+        registrations: 'Registro y acceso',
     },
     saas: {
         plans: {
@@ -1372,6 +1373,70 @@ export default {
                         'Estos canales están abiertos: {channels}. Cualquiera que llegue a ellos puede registrarse sin aprobación de un administrador.',
                     channel:
                         'Abierto: cualquiera que llegue a este canal se registra sin aprobación.',
+                },
+            },
+            panel: {
+                title: 'Registro y acceso',
+                description:
+                    'Aprueba o rechaza registros, revisa rechazos y libera bloqueos de identidad.',
+                yes: 'Verificado',
+                no: 'Sin verificar',
+                unknown: 'Desconocido',
+                conflict: {
+                    title: 'No se pudo aplicar la acción',
+                },
+                filters: {
+                    status: 'Estado',
+                    channel: 'Canal',
+                    allChannels: 'Todos los canales',
+                },
+                tabs: {
+                    pending: 'Pendientes',
+                    rejected: 'Rechazados',
+                    blocked: 'Bloqueados',
+                },
+                columns: {
+                    name: 'Nombre',
+                    email: 'Email',
+                    channel: 'Canal',
+                    registered: 'Registro',
+                    emailVerified: 'Email',
+                    rejectedBy: 'Rechazado por',
+                    rejectedAt: 'Rechazado el',
+                    reason: 'Motivo',
+                    source: 'Origen',
+                    createdBy: 'Creado por',
+                    createdAt: 'Creado el',
+                    actions: 'Acciones',
+                },
+                pending: {
+                    title: 'Registros pendientes de aprobación',
+                    description:
+                        'Aprueba para conceder acceso, o rechaza para denegarlo y bloquear la identidad.',
+                    approve: 'Aprobar',
+                    reject: 'Rechazar',
+                    empty: 'No hay registros esperando aprobación.',
+                },
+                rejected: {
+                    title: 'Registros rechazados',
+                    description:
+                        'Liberar un rechazo levanta el bloqueo y deja la cuenta pendiente; no la aprueba.',
+                    release: 'Liberar',
+                    empty: 'No hay registros rechazados.',
+                },
+                blocked: {
+                    title: 'Identidades bloqueadas',
+                    description:
+                        'Bloqueos de identidad activos. Liberar uno permite un nuevo registro según la política vigente.',
+                    release: 'Liberar',
+                    empty: 'No hay bloqueos de identidad activos.',
+                },
+                rejectDialog: {
+                    title: 'Rechazar registro',
+                    description:
+                        '¿Rechazar a {name}? La cuenta quedará rechazada y el email no podrá volver a registrarse.',
+                    reason: 'Motivo',
+                    confirm: 'Rechazar y bloquear',
                 },
             },
         },

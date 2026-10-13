@@ -7,6 +7,8 @@ use App\Contracts\EntitlementGate;
 use App\Contracts\RegistrationBlockRepository;
 use App\Contracts\RegistrationGate;
 use App\Enums\AppLocale;
+use App\Enums\ApprovalStatus;
+use App\Enums\RegistrationAuditAction;
 use App\Http\Middleware\SecureHttpMiddleware;
 use App\Http\Requests\StoreRecipeApiRequest;
 use App\Http\Resources\Assistant\AiProposalResource;
@@ -15,9 +17,11 @@ use App\Listeners\JobProcessedListener;
 use App\Listeners\JobProcessingListener;
 use App\Models\Category;
 use App\Models\Product;
+use App\Models\RegistrationAudit;
 use App\Models\Store;
 use App\Models\Tag;
 use App\Models\User;
+use App\Notifications\RegistrationRequested;
 use App\Observers\CategoryObserver;
 use App\Observers\ProductObserver;
 use App\Observers\StoreObserver;
@@ -86,6 +90,7 @@ class AppServiceProvider extends ServiceProvider
         $this->configureOpenApi();
         $this->configureAiPolicies();
         $this->configureRegistrationPolicies();
+        $this->configureRegistrationNotifications();
         $this->configureCryptoPrices();
         $this->configureJobMonitoring();
     }
@@ -168,6 +173,50 @@ class AppServiceProvider extends ServiceProvider
         Gate::define('registrations.manage-settings', fn (User $actor, ?User $target = null): bool => app(RegistrationApprovalPolicy::class)->manageSettings($actor, $target));
         Gate::define('registration-settings.view', fn (User $actor): bool => app(RegistrationSettingsPolicy::class)->view($actor));
         Gate::define('registration-settings.update', fn (User $actor): bool => app(RegistrationSettingsPolicy::class)->update($actor));
+        Gate::define('registration-blocks.release', fn (User $actor): bool => $actor->canAccessApplication()
+            && $actor->getPermissionRouteNames()->contains('admin.registration-blocks.release'));
+    }
+
+    /**
+     * Notify the administrators who can approve when a registration waits.
+     *
+     * The registration use case is deliberately unaware of notifications, so
+     * the trigger is the audit entry it already writes. Dispatching after commit
+     * means a mail failure can never roll the registration back, and the
+     * notification can be retried without repeating the decision. No new audit
+     * entry and no HTTP call is involved.
+     */
+    protected function configureRegistrationNotifications(): void
+    {
+        RegistrationAudit::created(function (RegistrationAudit $audit): void {
+            if ($audit->action !== RegistrationAuditAction::RegistrationCreated) {
+                return;
+            }
+
+            if ($audit->new_status !== ApprovalStatus::Pending->value) {
+                return;
+            }
+
+            $applicantId = $audit->user_id;
+
+            if ($applicantId === null) {
+                return;
+            }
+
+            DB::afterCommit(function () use ($applicantId): void {
+                $applicant = User::query()->find($applicantId);
+
+                if ($applicant === null) {
+                    return;
+                }
+
+                try {
+                    RegistrationRequested::sendToAdministrators($applicant);
+                } catch (\Throwable $exception) {
+                    report($exception);
+                }
+            });
+        });
     }
 
     /**

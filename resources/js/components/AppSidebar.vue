@@ -49,7 +49,7 @@ import {
     roles as adminRolesIndex,
 } from '@/routes/admin';
 import { translations as adminTranslationsIndex } from '@/routes/admin';
-import { settings as adminRegistrationSettingsIndex } from '@/routes/admin/registrations';
+import { settings as adminRegistrationSettingsIndex, index as adminRegistrationsIndex } from '@/routes/admin/registrations';
 import { index as contactsIndex } from '@/routes/contacts';
 import { index as contactSourcesIndex } from '@/routes/contacts/sources';
 import { index as personalEconomyIndex } from '@/routes/economy/me';
@@ -254,6 +254,7 @@ const mainNavItems = computed<NavItem[]>(() => [
             'admin.ai-providers',
             'admin.translations',
             'admin.registrations.manage-settings',
+            'admin.registrations.view',
             'admin.saas.billing.view',
             'admin.saas.plans.manage',
             'admin.saas.grants.manage',
@@ -266,6 +267,12 @@ const mainNavItems = computed<NavItem[]>(() => [
                 href: adminTranslationsIndex(),
                 icon: Languages,
                 permission: 'admin.translations',
+            },
+            {
+                title: t('sidebar.registrations'),
+                href: adminRegistrationsIndex(),
+                icon: ClipboardList,
+                permission: 'admin.registrations.view',
             },
             {
                 title: t('sidebar.registrationSettings'),

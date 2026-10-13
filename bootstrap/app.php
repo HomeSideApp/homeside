@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Middleware\ApiPermissionsMiddleware;
+use App\Http\Middleware\EnsureAccountIsActive;
 use App\Http\Middleware\EnsureApprovedUser;
 use App\Http\Middleware\EnsureEntitlement;
 use App\Http\Middleware\EnsureIdempotentRequest;
@@ -55,6 +56,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'locale' => SetLocale::class,
             'idempotency' => EnsureIdempotentRequest::class,
             'entitlement' => EnsureEntitlement::class,
+            'account.active' => EnsureAccountIsActive::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

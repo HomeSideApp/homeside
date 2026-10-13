@@ -33,6 +33,60 @@ return [
             'description' => 'Abre el formulario para importar un documento económico privado.',
         ],
     ],
+    'registrations' => [
+        'toasts' => [
+            'approved' => 'Registro aprobado.',
+            'already_approved' => 'Este registro ya estaba aprobado.',
+            'rejected' => 'Registro rechazado y su identidad bloqueada.',
+            'already_rejected' => 'Este registro ya estaba rechazado.',
+            'rejection_released' => 'Rechazo liberado. La cuenta vuelve a estar pendiente.',
+            'nothing_to_release' => 'No hay ningún rechazo que liberar.',
+            'block_released' => 'Bloqueo de identidad liberado.',
+            'block_already_released' => 'Este bloqueo ya estaba liberado.',
+            'suspended' => 'Cuenta suspendida.',
+            'already_suspended' => 'Esta cuenta ya estaba suspendida.',
+            'unsuspended' => 'Suspensión levantada.',
+            'not_suspended' => 'Esta cuenta no está suspendida.',
+            'blocked' => 'Cuenta e identidad bloqueadas.',
+            'already_blocked' => 'Esta cuenta ya estaba bloqueada.',
+            'unblocked' => 'Bloqueo levantado.',
+            'not_blocked' => 'Esta cuenta no está bloqueada.',
+            'deleted' => 'Cuenta eliminada.',
+            'deleted_and_blocked' => 'Cuenta eliminada y su identidad bloqueada.',
+        ],
+        'errors' => [
+            'rejection_must_be_released' => 'Este registro fue rechazado. Libera el rechazo antes de aprobarlo.',
+            'approved_cannot_be_rejected' => 'Esta cuenta ya está aprobada. Suspéndela o elimínala en lugar de rechazarla.',
+        ],
+        'notifications' => [
+            'requested' => [
+                'subject' => 'Nuevo registro pendiente de aprobación en :app',
+                'line' => ':name (:email) se ha registrado y espera aprobación.',
+                'action' => 'Revisar registros',
+                'ignore' => 'Recibes este correo porque puedes aprobar registros en :app.',
+            ],
+            'approved' => [
+                'subject' => 'Tu cuenta en :app fue aprobada',
+                'line' => 'Tu registro fue aprobado. Ya puedes iniciar sesión y terminar de configurar tu cuenta.',
+                'action' => 'Iniciar sesión',
+            ],
+            'rejected' => [
+                'subject' => 'Tu registro en :app no fue aprobado',
+                'line' => 'Tu registro fue revisado y no fue aprobado.',
+                'contact' => 'Si crees que es un error, contacta con un administrador.',
+            ],
+            'account_suspended' => [
+                'subject' => 'Tu cuenta en :app fue suspendida',
+                'line' => 'Tu cuenta ha sido suspendida y no puede usarse ahora mismo.',
+                'contact' => 'Si crees que es un error, contacta con un administrador.',
+            ],
+            'account_blocked' => [
+                'subject' => 'Tu cuenta en :app fue bloqueada',
+                'line' => 'Tu cuenta ha sido bloqueada y no puede usarse ahora mismo.',
+                'contact' => 'Si crees que es un error, contacta con un administrador.',
+            ],
+        ],
+    ],
     'toast' => [
         'transaction_created' => 'Transacción creada correctamente.',
         'transaction_updated' => 'Transacción actualizada correctamente.',
@@ -136,6 +190,7 @@ return [
         'published' => 'Publicada',
     ],
     'errors' => [
+        'account_not_active' => 'Tu cuenta no puede acceder a la aplicación.',
         'account_inactive' => 'Tu cuenta no está aprobada o no tiene un rol asignado.',
         'system_role_cannot_update' => 'No se puede modificar un rol del sistema.',
         'system_role_cannot_delete' => 'No se puede eliminar un rol del sistema.',

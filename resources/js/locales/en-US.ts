@@ -983,6 +983,7 @@ export default {
         saas: 'Plans & Billing',
         saasAdmin: 'SaaS Admin',
         registrationSettings: 'Registration',
+        registrations: 'Registration & Access',
     },
     saas: {
         plans: {
@@ -1354,6 +1355,70 @@ export default {
                         'These channels are currently open: {channels}. Anyone reaching them can register without an administrator approving.',
                     channel:
                         'Open: anyone reaching this channel registers without approval.',
+                },
+            },
+            panel: {
+                title: 'Registration & Access',
+                description:
+                    'Approve or reject registrations, review rejections and release identity blocks.',
+                yes: 'Verified',
+                no: 'Unverified',
+                unknown: 'Unknown',
+                conflict: {
+                    title: 'The action could not be applied',
+                },
+                filters: {
+                    status: 'Status',
+                    channel: 'Channel',
+                    allChannels: 'All channels',
+                },
+                tabs: {
+                    pending: 'Pending',
+                    rejected: 'Rejected',
+                    blocked: 'Blocked',
+                },
+                columns: {
+                    name: 'Name',
+                    email: 'Email',
+                    channel: 'Channel',
+                    registered: 'Registered',
+                    emailVerified: 'Email',
+                    rejectedBy: 'Rejected by',
+                    rejectedAt: 'Rejected at',
+                    reason: 'Reason',
+                    source: 'Source',
+                    createdBy: 'Created by',
+                    createdAt: 'Created at',
+                    actions: 'Actions',
+                },
+                pending: {
+                    title: 'Registrations awaiting approval',
+                    description:
+                        'Approve to grant access, or reject to deny it and block the identity.',
+                    approve: 'Approve',
+                    reject: 'Reject',
+                    empty: 'No registrations are waiting for approval.',
+                },
+                rejected: {
+                    title: 'Rejected registrations',
+                    description:
+                        'Releasing a rejection lifts the block and leaves the account pending; it does not approve it.',
+                    release: 'Release',
+                    empty: 'No rejected registrations.',
+                },
+                blocked: {
+                    title: 'Blocked identities',
+                    description:
+                        'Active identity blocks. Releasing one allows a fresh registration subject to the current policy.',
+                    release: 'Release',
+                    empty: 'No active identity blocks.',
+                },
+                rejectDialog: {
+                    title: 'Reject registration',
+                    description:
+                        'Reject {name}? This sets the account as rejected and blocks the email from registering again.',
+                    reason: 'Reason',
+                    confirm: 'Reject and block',
                 },
             },
         },
