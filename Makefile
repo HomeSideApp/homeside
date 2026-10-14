@@ -38,7 +38,7 @@ E2E_ARTIFACTS := tests/e2e/.artifacts
 PROFILE_SELFHOSTED := -e HOMESIDE_TEST_PROFILE=selfhosted
 PROFILE_SAAS := -e HOMESIDE_TEST_PROFILE=saas
 
-.PHONY: e2e-up e2e-seed e2e-reset e2e-test e2e-test-critical e2e-report e2e-down test-selfhosted test-saas
+.PHONY: e2e-up e2e-seed e2e-reset e2e-test e2e-test-chromium e2e-test-firefox e2e-test-all e2e-test-critical e2e-report e2e-down test-selfhosted test-saas
 
 # Bring up the shared stack (MySQL, Redis, Mailpit) and the application.
 e2e-up:
@@ -52,10 +52,23 @@ e2e-seed:
 e2e-reset:
 	$(COMPOSE) exec -T -u sail $(E2E_ENV) laravel.test php artisan e2e:reset
 
-# Run the whole browser suite in Chromium (and Firefox when its browser is
-# installed: `$(SAIL) npx playwright install firefox`).
+# Run the whole browser suite in Chromium.
 e2e-test:
 	$(SAIL) npx playwright test --project=chromium
+
+# Run the whole browser suite in Chromium (alias of `e2e-test`).
+e2e-test-chromium:
+	$(SAIL) npx playwright test --project=chromium
+
+# Run the whole browser suite in Firefox. Both browsers are exercised now, not
+# just configured: install Firefox once with
+# `$(SAIL) npx playwright install firefox`.
+e2e-test-firefox:
+	$(SAIL) npx playwright test --project=firefox
+
+# Run the whole browser suite on every configured project (Chromium + Firefox).
+e2e-test-all:
+	$(SAIL) npx playwright test
 
 # Run only the tagged critical scenarios.
 e2e-test-critical:
