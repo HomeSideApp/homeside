@@ -24,7 +24,6 @@ use HomeSide\Saas\Models\PlanVersion;
 use HomeSide\Saas\SaasServiceProvider;
 use HomeSide\Saas\Services\SaasEntitlementGate;
 use HomeSide\Saas\Support\FeatureGate;
-use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
 use Tests\TestCase;
@@ -68,13 +67,13 @@ class HouseholdOwnershipCapacityTest extends TestCase
 
         $this->nextRequest($user);
         $this->assertTrue(
-            app(PlatformAccess::class)->canCreateHouseholds($user),
+            app(PlatformAccess::class)->mayCreateHouseholdNow($user),
             'Being a member of other people\'s households must never consume ownership capacity.',
         );
 
         for ($i = 0; $i < $cap; $i++) {
             $this->nextRequest($user);
-            $this->assertTrue(app(PlatformAccess::class)->canCreateHouseholds($user));
+            $this->assertTrue(app(PlatformAccess::class)->mayCreateHouseholdNow($user));
             app(CreateHousehold::class)->execute($this->householdData('Owned '.$i), $user);
         }
 
@@ -83,7 +82,7 @@ class HouseholdOwnershipCapacityTest extends TestCase
 
         $this->nextRequest($user);
         $this->assertFalse(
-            app(PlatformAccess::class)->canCreateHouseholds($user),
+            app(PlatformAccess::class)->mayCreateHouseholdNow($user),
             'The user is now at their own ownership cap, not at someone else\'s.',
         );
     }
@@ -125,18 +124,18 @@ class HouseholdOwnershipCapacityTest extends TestCase
         $this->assertDatabaseCount('saas_billing_accounts', 0);
 
         $this->nextRequest($joiner);
-        $this->assertTrue(app(PlatformAccess::class)->canCreateHouseholds($joiner));
+        $this->assertTrue(app(PlatformAccess::class)->mayCreateHouseholdNow($joiner));
 
         $cap = $this->householdCap($joiner);
 
         for ($i = 0; $i < $cap; $i++) {
             $this->nextRequest($joiner);
-            $this->assertTrue(app(PlatformAccess::class)->canCreateHouseholds($joiner));
+            $this->assertTrue(app(PlatformAccess::class)->mayCreateHouseholdNow($joiner));
             app(CreateHousehold::class)->execute($this->householdData('Joiner owned '.$i), $joiner);
         }
 
         $this->nextRequest($joiner);
-        $this->assertFalse(app(PlatformAccess::class)->canCreateHouseholds($joiner));
+        $this->assertFalse(app(PlatformAccess::class)->mayCreateHouseholdNow($joiner));
     }
 
     public function test_an_upgrade_immediately_allows_a_creation_that_was_previously_refused(): void
@@ -148,13 +147,13 @@ class HouseholdOwnershipCapacityTest extends TestCase
         $this->own($user, $freeCap);
 
         $this->nextRequest($user);
-        $this->assertFalse(app(PlatformAccess::class)->canCreateHouseholds($user));
+        $this->assertFalse(app(PlatformAccess::class)->mayCreateHouseholdNow($user));
 
         app(AssignGrant::class)->execute($user, $this->planVersion('plus'), null, 'phase 8 upgrade test');
 
         $this->nextRequest($user);
         $this->assertTrue(
-            app(PlatformAccess::class)->canCreateHouseholds($user),
+            app(PlatformAccess::class)->mayCreateHouseholdNow($user),
             'A larger plan must allow the creation the smaller plan refused, with no registration or role change.',
         );
 
@@ -184,7 +183,7 @@ class HouseholdOwnershipCapacityTest extends TestCase
         );
 
         $this->nextRequest($user);
-        $this->assertFalse(app(PlatformAccess::class)->canCreateHouseholds($user));
+        $this->assertFalse(app(PlatformAccess::class)->mayCreateHouseholdNow($user));
     }
 
     public function test_after_a_downgrade_below_the_owned_count_further_creations_are_refused(): void
@@ -200,13 +199,16 @@ class HouseholdOwnershipCapacityTest extends TestCase
         app(RevokeActiveGrants::class)->execute($user, 'phase8-downgrade');
 
         $this->nextRequest($user);
-        $this->assertFalse(app(PlatformAccess::class)->canCreateHouseholds($user));
+        $this->assertFalse(app(PlatformAccess::class)->mayCreateHouseholdNow($user));
 
         try {
             app(CreateHousehold::class)->execute($this->householdData('Refused after downgrade'), $user);
             $this->fail('A downgraded plan below the owned count must refuse further creations.');
-        } catch (AuthorizationException) {
-            // Expected: the structural gate delegates to the denied entitlement read.
+        } catch (EntitlementQuotaExceededException $exception) {
+            // Expected: the structural gate allows the user, and the authoritative
+            // capacity assertion inside the creation transaction raises the 402
+            // outcome. A downgrade is a quota problem, not a structural refusal.
+            $this->assertSame('households_own', $exception->metric);
         }
 
         $this->assertSame($plusCap, Household::query()->where('owner_id', $user->id)->count());

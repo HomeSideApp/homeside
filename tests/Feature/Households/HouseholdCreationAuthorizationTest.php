@@ -100,11 +100,11 @@ class HouseholdCreationAuthorizationTest extends TestCase
         app(CreateHousehold::class)->execute($this->householdData('Two layers'), $user);
 
         $this->assertSame(
-            [$base, $base + 1],
+            [$base + 1],
             $gate->capacityLevels,
-            'The policy read runs before the transaction and the authoritative capacity check inside it.',
+            'The structural policy must not read capacity at all; the only capacity read is the authoritative one inside the transaction.',
         );
-        $this->assertSame([1, 1], $gate->incomingAmounts, 'Both layers ask for one incoming household.');
+        $this->assertSame([1], $gate->incomingAmounts, 'The capacity assertion asks for one incoming household.');
         $this->assertDatabaseHas('households', ['name' => 'Two layers', 'owner_id' => $user->id]);
     }
 
@@ -112,7 +112,7 @@ class HouseholdCreationAuthorizationTest extends TestCase
     {
         $user = User::factory()->create();
         $gate = new RecordingEntitlementGate;
-        $gate->denyAfterCapacityCalls = 1; // The pre-check passes; the authoritative check refuses.
+        $gate->denyAfterCapacityCalls = 0; // The structural policy passes; the authoritative check refuses.
         $this->app->instance(EntitlementGate::class, $gate);
 
         try {
@@ -123,11 +123,42 @@ class HouseholdCreationAuthorizationTest extends TestCase
             $this->assertSame(1, $exception->requested);
         }
 
-        $this->assertSame(2, $gate->capacityCallCount());
+        $this->assertSame(1, $gate->capacityCallCount());
         $this->assertDatabaseMissing('households', ['name' => 'Rolled back']);
         $this->assertSame(0, Household::query()->where('owner_id', $user->id)->count());
         $this->assertSame(0, $user->householdMemberships()->count());
         $this->assertNull($user->refresh()->active_household_id);
+    }
+
+    public function test_a_quota_denial_is_not_a_structural_denial(): void
+    {
+        $user = User::factory()->create();
+        $gate = new RecordingEntitlementGate;
+        $gate->denyAfterCapacityCalls = 0; // Every capacity assertion is refused.
+        $this->app->instance(EntitlementGate::class, $gate);
+
+        // Structurally the user may create a household, so the policy and the
+        // request authorization must let the attempt through rather than 403 it.
+        $this->assertTrue(Gate::forUser($user)->allows('create', Household::class));
+        $this->assertTrue(app(PlatformAccess::class)->canCreateHouseholds($user));
+        $request = StoreHouseholdRequest::create('/households', 'POST');
+        $request->setUserResolver(fn () => $user);
+        $this->assertTrue($request->authorize());
+
+        // Only the combined presentation read reflects the exhausted quota.
+        $this->assertFalse(app(PlatformAccess::class)->mayCreateHouseholdNow($user));
+        $this->assertFalse(app(PlatformAccess::class)->hasHouseholdOwnershipCapacity($user));
+
+        // The authoritative refusal is the capacity assertion inside the
+        // transaction, which is what renders as 402, never 403.
+        try {
+            app(CreateHousehold::class)->execute($this->householdData('Quota only'), $user);
+            $this->fail('An exhausted quota must refuse the creation with the quota outcome.');
+        } catch (EntitlementQuotaExceededException $exception) {
+            $this->assertSame('households_own', $exception->metric);
+        }
+
+        $this->assertDatabaseMissing('households', ['name' => 'Quota only']);
     }
 
     public function test_the_creation_entitlement_read_is_memoized_per_request_but_structure_is_re_read(): void
@@ -136,10 +167,15 @@ class HouseholdCreationAuthorizationTest extends TestCase
         $gate = new RecordingEntitlementGate;
         $this->app->instance(EntitlementGate::class, $gate);
 
+        // The structural predicate must never consult the entitlement gate.
         $this->assertTrue(app(PlatformAccess::class)->canCreateHouseholds($user));
         $this->assertTrue(app(PlatformAccess::class)->canCreateHouseholds($user));
-        $this->assertTrue(app(PlatformAccess::class)->canCreateHouseholds($user));
+        $this->assertSame(0, $gate->capacityCallCount(), 'The structural gate must not read capacity.');
 
+        // The capacity read is memoized per request.
+        $this->assertTrue(app(PlatformAccess::class)->hasHouseholdOwnershipCapacity($user));
+        $this->assertTrue(app(PlatformAccess::class)->hasHouseholdOwnershipCapacity($user));
+        $this->assertTrue(app(PlatformAccess::class)->mayCreateHouseholdNow($user));
         $this->assertSame(1, $gate->capacityCallCount(), 'The entitlement read is memoized per request.');
 
         // The structural layers are deliberately NOT memoized: an administrative
@@ -148,6 +184,7 @@ class HouseholdCreationAuthorizationTest extends TestCase
         $user->update(['can_create_households_override' => false]);
 
         $this->assertFalse(app(PlatformAccess::class)->canCreateHouseholds($user));
+        $this->assertFalse(app(PlatformAccess::class)->mayCreateHouseholdNow($user));
         $this->assertSame(1, $gate->capacityCallCount());
     }
 

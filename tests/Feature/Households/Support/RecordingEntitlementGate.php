@@ -11,15 +11,14 @@ use Illuminate\Support\Facades\DB;
  * Recording double for the app-owned EntitlementGate port.
  *
  * It records every ownership-capacity assertion together with the database
- * transaction level it observed, so a test can prove BOTH layers of the
- * creation contract:
- *  - the policy's structural read runs before the creation transaction has
- *    opened (level `base`); and
- *  - the authoritative capacity assertion runs INSIDE it (level `base + 1`).
+ * transaction level it observed, so a test can prove the contract:
+ *  - the structural policy never reads capacity, so the only capacity assertion
+ *    is the authoritative one INSIDE the creation transaction (level
+ *    `base + 1`).
  *
- * `denyAfterCapacityCalls` lets a test model a denial that only appears on the
- * in-transaction check (the pre-check passed, the authoritative check refused),
- * which is exactly the race window the row lock closes.
+ * `denyAfterCapacityCalls` lets a test model a quota refusal that is not a
+ * structural denial (0 = refuse the single in-transaction assertion), which is
+ * exactly what must render as 402 rather than 403.
  */
 final class RecordingEntitlementGate implements EntitlementGate
 {

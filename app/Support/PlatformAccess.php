@@ -57,16 +57,25 @@ final class PlatformAccess
     }
 
     /**
-     * Decide whether the user may create a new household.
+     * Decide whether the user is STRUCTURALLY allowed to create a household.
      *
-     * The decision is delegated, never defaulted. The installation policy can
-     * only refuse: `denied` returns false regardless of anything else, while
-     * `allowed` leaves the rest of the decision untouched. `null` on
-     * `can_create_households_override` means "ask the policy and the
-     * entitlement gate", `false` is an explicit prohibition, and the
-     * deliberately absent `true` state is not a grant. A null override is
-     * therefore NOT permission: the entitlement gate is consulted and a denied
-     * entitlement yields false.
+     * This answers "may this user ever create a household?" and deliberately
+     * does NOT answer "do they have capacity for one more right now?". A
+     * structural denial means the user may never create a household and must
+     * stay a 403; capacity is a different question, owned by
+     * `hasHouseholdOwnershipCapacity()`, and its authoritative refusal must
+     * stay the 402 raised inside the creation transaction.
+     *
+     * Only structure is read here: the installation's household-creation
+     * policy, `households_enabled`, an active account status, and the tri-state
+     * override (`false` forbids outright, `null` delegates, and the deliberately
+     * absent `true` state is not a grant). `null` is therefore NOT permission
+     * on its own; it only means "not structurally forbidden", and the capacity
+     * read still decides whether a creation may proceed.
+     *
+     * This is the predicate the HouseholdPolicy and the request authorization
+     * use, so keeping the entitlement out of it is what preserves the 403/402
+     * split for the API, the web form and `CreateHousehold`.
      */
     public function canCreateHouseholds(User $user): bool
     {
@@ -74,35 +83,49 @@ final class PlatformAccess
             return false;
         }
 
-        if (! $user->households_enabled
-            || $user->account_status !== AccountStatus::Active
-            || $user->can_create_households_override === false) {
-            return false;
-        }
+        return $user->households_enabled
+            && $user->account_status === AccountStatus::Active
+            && $user->can_create_households_override !== false;
+    }
 
-        return $this->hasHouseholdOwnershipCapacity($user);
+    /**
+     * Answer the COMBINED question: structure AND current ownership capacity.
+     *
+     * Use this only for presentation and pre-flight decisions, such as the
+     * `can_create_households` serialized prop and the advertised API operation
+     * list, so a control is hidden for a user who is at their cap. NEVER use it
+     * as the authoritative refusal: a false here must not be turned into a 403,
+     * because the real quota refusal has to be the 402 that
+     * `assertHouseholdOwnershipCapacity()` throws inside the creation
+     * transaction.
+     */
+    public function mayCreateHouseholdNow(User $user): bool
+    {
+        return $this->canCreateHouseholds($user) && $this->hasHouseholdOwnershipCapacity($user);
     }
 
     /**
      * Ask the entitlement gate whether the user can own one more household.
      *
-     * This entitlement read now runs on every `canCreateHouseholds()` call, and
-     * that read happens several times per serialized user (UserResource via
-     * ApiOperationPermissions, request authorization, route decisions). The
-     * answer is therefore memoized on the request attributes, the same
-     * convention HasPermissionsTrait and CapabilityRegistry use, with a plain
-     * read in CLI runs that have no request to memoize on. It is deliberately
-     * per request, never static state.
+     * This is the CAPACITY question on its own: the user may not create
+     * ANOTHER household right now, even though they are structurally allowed to
+     * create one in principle. It is public because presentation call sites
+     * need to distinguish the two answers, while the authoritative refusal for
+     * an actual creation stays the entitlement assertion inside
+     * `CreateHousehold`'s transaction, which produces the 402 outcome.
+     *
+     * The read happens several times per serialized user (UserResource via
+     * ApiOperationPermissions, route decisions), so the answer is memoized on
+     * the request attributes, the same convention HasPermissionsTrait and
+     * CapabilityRegistry use, with a plain read in CLI runs that have no
+     * request to memoize on. It is deliberately per request, never static
+     * state.
      *
      * Only the entitlement answer is memoized. The installation policy and the
-     * per-user tri-state are re-read on every call, so an administrative change
-     * inside the same request is never masked.
-     *
-     * The authoritative capacity decision for an actual creation is NOT this
-     * read: CreateHousehold asserts the same gate inside its transaction, where
-     * the package's billing-account row lock serializes concurrent attempts.
+     * per-user tri-state are re-read on every `canCreateHouseholds()` call, so
+     * an administrative change inside the same request is never masked.
      */
-    private function hasHouseholdOwnershipCapacity(User $user): bool
+    public function hasHouseholdOwnershipCapacity(User $user): bool
     {
         if (app()->runningInConsole() && ! app()->runningUnitTests()) {
             return $this->assertsHouseholdOwnershipCapacity($user);

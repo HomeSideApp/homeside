@@ -74,13 +74,14 @@ class HouseholdCreationConcurrencyTest extends TestCase
 
         $this->assertSame($cap - 1, Household::query()->where('owner_id', $user->id)->count());
 
-        // Model the race window truthfully: the request has already read the
-        // combined decision (a page render or permissions serialization did
-        // it), so the policy pre-check is satisfied from the per-request memo.
-        // The only remaining decision is the authoritative assertion inside the
-        // creation transaction, which is what must serialize. This read also
-        // creates the billing-account row both racers will contend for.
-        $this->assertTrue(app(PlatformAccess::class)->canCreateHouseholds($user));
+        // Model the race window truthfully: the request has already rendered the
+        // combined presentation decision (a page render or permissions
+        // serialization did it), so from the UI's point of view the create
+        // control is visible. The only remaining decision is the authoritative
+        // assertion inside the creation transaction, which is what must
+        // serialize. This read also creates the billing-account row both racers
+        // will contend for.
+        $this->assertTrue(app(PlatformAccess::class)->mayCreateHouseholdNow($user));
 
         // Drop the live connection before forking: parent and child each open
         // their own database session, so only the row lock serializes them.

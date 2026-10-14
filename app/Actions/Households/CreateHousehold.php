@@ -17,10 +17,14 @@ use Illuminate\Support\Str;
  *
  * Creation passes through two independent gates, in this order:
  *  1. the HouseholdPolicy `create` ability - structural authorization and the
- *     installation's local restrictions; and
+ *     installation's local restrictions, OUTSIDE the transaction: a denial is a
+ *     403 and creates nothing; and
  *  2. the entitlement gate's ownership capacity - the commercial "can this
- *     billing account own one more household?" question.
- * They answer different questions and must not be folded into each other.
+ *     billing account own one more household?" question, INSIDE the
+ *     transaction: a denial is the documented 402 (EntitlementQuotaExceededException).
+ * They answer different questions and must not be folded into each other; in
+ * particular, the structural policy must never read capacity, or a quota
+ * refusal would surface as a 403 before this action ever runs.
  */
 final class CreateHousehold
 {
@@ -36,11 +40,13 @@ final class CreateHousehold
     public function execute(CreateHouseholdData $data, User $user): Household
     {
         // Layer 1, before the transaction: structural authorization. A denial
-        // here creates nothing and never opens a transaction.
+        // here creates nothing, never opens a transaction and renders as a 403.
         Gate::forUser($user)->authorize('create', Household::class);
 
         return DB::transaction(function () use ($data, $user) {
-            // Layer 2, INSIDE the transaction: commercial capacity. The bound
+            // Layer 2, INSIDE the transaction: commercial capacity. This is the
+            // authoritative quota refusal, and it renders as the documented 402
+            // (EntitlementQuotaExceededException), not a 403. The bound
             // entitlement gate locks the user's billing-account row as its
             // serialization anchor and counts owned households under that lock,
             // so two simultaneous attempts at the last available slot collapse

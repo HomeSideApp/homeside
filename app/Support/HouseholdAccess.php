@@ -94,6 +94,11 @@ final class HouseholdAccess
         $actual = preg_replace('/^api\\.v1\\./', '', (string) $request->route()?->getName()) ?? '';
 
         if (in_array($actual, ['households.create', 'households.store', 'households.configuration.show'], true)) {
+            // Structural only. `routeDecision` feeds `abort_unless($decision, 403)`
+            // in the permission middleware, so a combined read here would turn a
+            // quota denial into a 403 and preempt the authoritative 402 that the
+            // creation transaction raises. Capacity is presentation-only
+            // (UserResource / advertised operations), never this gate.
             return app(PlatformAccess::class)->canCreateHouseholds($user);
         }
 

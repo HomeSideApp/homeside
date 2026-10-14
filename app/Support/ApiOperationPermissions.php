@@ -30,7 +30,11 @@ final class ApiOperationPermissions
 
                 $domainRouteName = Str::after((string) $route->getName(), 'api.v1.');
                 if (in_array($domainRouteName, ['households.create', 'households.store', 'households.configuration.show'], true)) {
-                    return app(PlatformAccess::class)->canCreateHouseholds($user);
+                    // Presentation only: hide the create operations from a user
+                    // who is at their ownership cap. This list never produces a
+                    // 403; the authoritative quota refusal is the 402 thrown
+                    // inside the creation transaction.
+                    return app(PlatformAccess::class)->mayCreateHouseholdNow($user);
                 }
                 if (str_starts_with($domainRouteName, 'households.')) {
                     return true;
