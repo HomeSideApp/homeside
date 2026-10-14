@@ -3,6 +3,8 @@ import { postWeb } from '../fixtures/http';
 import {
     grantControlledPlan,
     registrationState,
+    SAAS_REQUIRED_REASON,
+    saasPackageInstalled,
     seedControlledPlans,
     seedE2EState,
 } from '../fixtures/setup';
@@ -25,6 +27,9 @@ import { LoginPage } from '../pages/LoginPage';
  * browser: it belongs to `tests/Feature/Households/HouseholdCreationConcurrencyTest.php`,
  * which already races two real processes against this same package gate.
  */
+
+// The controlled commercial plans do not exist without the optional module.
+test.skip(!saasPackageInstalled(), SAAS_REQUIRED_REASON);
 
 const CONTROLLED_PLANS = [
     { fixture: 'planSmall', plan: 'e2e-small', cap: 1 },

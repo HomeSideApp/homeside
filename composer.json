@@ -27,7 +27,6 @@
         "dedoc/scramble": "^0.13.42",
         "google/auth": "^1.55",
         "homeside/laravel-ai-agents": "dev-develop",
-        "homeside/saas": "*",
         "inertiajs/inertia-laravel": "^3.0",
         "intervention/image": "^4.2",
         "laravel/ai": "^1.0.0",
@@ -53,6 +52,9 @@
         "mrpunyapal/laravel-auditor": "^0.1.2",
         "nunomaduro/collision": "^8.9.3",
         "phpunit/phpunit": "^12.5.23"
+    },
+    "suggest": {
+        "homeside/saas": "Optional first-party commercial module (plans, entitlements, the SaaS registration gate). Only this installation can decide to add it; run `make install-saas` to install it from the sibling ../saas checkout. HomeSide runs fully without it."
     },
     "autoload": {
         "psr-4": {

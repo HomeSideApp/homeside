@@ -42,6 +42,15 @@ class E2EPlanCommand extends Command
             return self::FAILURE;
         }
 
+        // The controlled plans belong to the optional commercial module. On an
+        // OSS checkout there is nothing to seed, so report that and succeed
+        // instead of erroring; the commercial browser scenarios skip themselves.
+        if (! E2EDatabaseSeeder::saasPackageInstalled()) {
+            $this->info('The optional homeside/saas module is not installed; the controlled E2E plans are unavailable and nothing was seeded.');
+
+            return self::SUCCESS;
+        }
+
         return $this->runGuarded(function () use ($fixtures): void {
             match ((string) $this->argument('action')) {
                 'seed' => $this->seed($fixtures),

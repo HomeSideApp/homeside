@@ -1,6 +1,6 @@
 import { expect, test } from '../fixtures/test';
 import { clearMailbox, messageCountTo } from '../fixtures/mail';
-import { registrationState, seedE2EState, setRegistrationPolicy } from '../fixtures/setup';
+import { registrationState, SAAS_REQUIRED_REASON, saasPackageInstalled, seedE2EState, setRegistrationPolicy } from '../fixtures/setup';
 import { FIXTURE, user } from '../fixtures/users';
 import { AdminRegistrationSettingsPage } from '../pages/AdminRegistrationSettingsPage';
 import { DashboardPage } from '../pages/DashboardPage';
@@ -16,6 +16,7 @@ import { RegisterPage } from '../pages/RegisterPage';
  * change happens through the real settings controls, and existing accounts keep
  * working.
  */
+test.skip(!saasPackageInstalled(), SAAS_REQUIRED_REASON);
 test.describe('E2E-13 SaaS moving to closed', () => {
     test.beforeEach(async () => {
         seedE2EState();

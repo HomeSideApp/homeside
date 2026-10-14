@@ -3,6 +3,8 @@ import { clearMailbox, waitForEmailConfirmationLink } from '../fixtures/mail';
 import {
     registrationProfile,
     registrationState,
+    SAAS_REQUIRED_REASON,
+    saasPackageInstalled,
     seedE2EState,
     setRegistrationPolicy,
 } from '../fixtures/setup';
@@ -22,6 +24,7 @@ import { SetPasswordPage } from '../pages/SetPasswordPage';
  * bootstrap, reaches the dashboard with NO administrator involved, then signs
  * out and back in with password + TOTP.
  */
+test.skip(!saasPackageInstalled(), SAAS_REQUIRED_REASON);
 test.describe('E2E-10 SaaS with open registration', () => {
     test.beforeEach(async () => {
         seedE2EState();

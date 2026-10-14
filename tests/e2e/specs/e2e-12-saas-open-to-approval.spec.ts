@@ -3,6 +3,8 @@ import { clearMailbox, waitForEmailConfirmationLink } from '../fixtures/mail';
 import {
     registrationProfile,
     registrationState,
+    SAAS_REQUIRED_REASON,
+    saasPackageInstalled,
     seedE2EState,
     setRegistrationPolicy,
 } from '../fixtures/setup';
@@ -23,6 +25,7 @@ import { SetPasswordPage } from '../pages/SetPasswordPage';
  * the channel was open, is proven unaffected: it can sign out and back in after
  * the switch. The second account, created after, is left pending.
  */
+test.skip(!saasPackageInstalled(), SAAS_REQUIRED_REASON);
 test.describe('E2E-12 SaaS moving from open to approval', () => {
     test.beforeEach(async () => {
         seedE2EState();

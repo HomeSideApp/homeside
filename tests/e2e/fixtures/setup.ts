@@ -1,4 +1,6 @@
 import { execFileSync } from 'node:child_process';
+import { existsSync } from 'node:fs';
+import path from 'node:path';
 import { e2eEnv } from './env';
 
 /**
@@ -8,6 +10,26 @@ import { e2eEnv } from './env';
  * the marked database), so the application's own guard is what decides whether
  * the state may be touched. Nothing here writes to the database directly.
  */
+
+/**
+ * Whether the optional commercial `homeside/saas` module is installed here.
+ *
+ * The module is a Composer suggestion (see composer.json): an OSS checkout has
+ * no `vendor/homeside/saas` and the container resolves the Community
+ * registration gate. The commercial scenarios read this BEFORE they run and
+ * skip with a stated reason instead of failing, so the browser suite stays
+ * green on a package-less checkout. Bring the module back with `make
+ * install-saas`.
+ */
+export function saasPackageInstalled(): boolean {
+    return existsSync(path.join(process.cwd(), 'vendor', 'homeside', 'saas'));
+}
+
+/**
+ * The skip reason the commercial scenarios share when the module is absent.
+ */
+export const SAAS_REQUIRED_REASON =
+    'The optional homeside/saas module is not installed; run `make install-saas` to run the commercial scenarios.';
 
 export function runArtisan(args: string[]): string {
     const php = process.env.E2E_PHP_BIN ?? 'php';

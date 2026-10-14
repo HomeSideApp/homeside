@@ -1,6 +1,6 @@
 import { expect, monitorPage, test } from '../fixtures/test';
 import { clearMailbox, waitForEmailConfirmationLink } from '../fixtures/mail';
-import { registrationState, seedE2EState, setRegistrationPolicy } from '../fixtures/setup';
+import { registrationState, SAAS_REQUIRED_REASON, saasPackageInstalled, seedE2EState, setRegistrationPolicy } from '../fixtures/setup';
 import { FIXTURE, user } from '../fixtures/users';
 import { ApprovalPanelPage } from '../pages/ApprovalPanelPage';
 import { DashboardPage } from '../pages/DashboardPage';
@@ -20,6 +20,7 @@ import { SetPasswordPage } from '../pages/SetPasswordPage';
  * approves through the real panel, and only then does enrolment reach the
  * dashboard.
  */
+test.skip(!saasPackageInstalled(), SAAS_REQUIRED_REASON);
 test.describe('E2E-11 SaaS in beta with approval required', () => {
     test.beforeEach(async () => {
         seedE2EState();

@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "61b3574363b782fb44aeb1e7435c2216",
+    "content-hash": "ca92cb71a66324ff6f1543ed01d8f3ec",
     "packages": [
         {
             "name": "amphp/amp",
@@ -2431,47 +2431,6 @@
                 "providers"
             ],
             "time": "2026-09-30T13:12:21+00:00"
-        },
-        {
-            "name": "homeside/saas",
-            "version": "0.1.0",
-            "dist": {
-                "type": "path",
-                "url": "../saas",
-                "reference": "0b00f05d6890c1a30199c84edb57a89546d769e4"
-            },
-            "require": {
-                "illuminate/support": "^13.0",
-                "php": "^8.5"
-            },
-            "type": "library",
-            "extra": {
-                "laravel": {
-                    "providers": [
-                        "HomeSide\\Saas\\SaasServiceProvider"
-                    ]
-                }
-            },
-            "autoload": {
-                "psr-4": {
-                    "HomeSide\\Saas\\": "src/",
-                    "HomeSide\\Saas\\Database\\Seeders\\": "database/seeders/",
-                    "HomeSide\\Saas\\Database\\Factories\\": "database/factories/"
-                }
-            },
-            "autoload-dev": {
-                "psr-4": {
-                    "HomeSide\\Saas\\Tests\\": "tests/"
-                }
-            },
-            "license": [
-                "MIT"
-            ],
-            "description": "SaaS packaging layer for HomeSide: plans, billing accounts, entitlements, grants, promotions, and usage counters.",
-            "transport-options": {
-                "symlink": true,
-                "relative": true
-            }
         },
         {
             "name": "inertiajs/inertia-laravel",

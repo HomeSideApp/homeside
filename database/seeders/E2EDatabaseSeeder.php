@@ -156,6 +156,19 @@ class E2EDatabaseSeeder extends Seeder
     private array $secrets = [];
 
     /**
+     * Whether the optional commercial `homeside/saas` module is installed.
+     *
+     * The module is a Composer suggestion (see composer.json), so an OSS
+     * checkout has no package classes at all. `class_exists` on the imported
+     * `Plan` alias returns false without error, which is how the E2E commands
+     * and the controlled-plan helpers degrade cleanly instead of failing.
+     */
+    public static function saasPackageInstalled(): bool
+    {
+        return class_exists(Plan::class);
+    }
+
+    /**
      * Seed the E2E fixtures and persist the generated credentials.
      */
     public function run(): void
@@ -711,12 +724,13 @@ class E2EDatabaseSeeder extends Seeder
      * its published version: the quota is the assertion target, so a stale
      * value from an earlier run must never survive.
      *
-     * @throws RuntimeException When the commercial package is not installed.
+     * When the optional module is absent this is a no-op: there are no
+     * commercial plans to seed, and the commercial scenarios skip themselves.
      */
     public function seedControlledPlans(): void
     {
-        if (! class_exists(Plan::class)) {
-            throw new RuntimeException('The homeside/saas package is not installed; the controlled plans cannot be seeded.');
+        if (! static::saasPackageInstalled()) {
+            return;
         }
 
         $sortOrder = 10;
@@ -763,12 +777,12 @@ class E2EDatabaseSeeder extends Seeder
      * @param  int  $own  The number of households the account already owns.
      * @param  bool  $reset  Delete the account's owned households and active grants first.
      *
-     * @throws RuntimeException When the package is absent or the fixture/plan is unknown.
+     * @throws RuntimeException When the fixture or plan is unknown.
      */
     public function grantControlledPlan(string $email, string $planKey, int $own = 0, bool $reset = false): void
     {
-        if (! class_exists(Plan::class)) {
-            throw new RuntimeException('The homeside/saas package is not installed; a controlled plan cannot be granted.');
+        if (! static::saasPackageInstalled()) {
+            return;
         }
 
         $user = User::query()->where('email', $email)->first();
@@ -821,7 +835,7 @@ class E2EDatabaseSeeder extends Seeder
      */
     public function entitlementStateFor(User $user): array
     {
-        if (! class_exists(FeatureGate::class)) {
+        if (! static::saasPackageInstalled()) {
             return ['plan_key' => null, 'households_own_cap' => null];
         }
 
