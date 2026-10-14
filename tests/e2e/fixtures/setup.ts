@@ -35,6 +35,57 @@ export function setRegistrationPolicy(
     runArtisan(['e2e:policy', channel, policy]);
 }
 
+export interface RegistrationProfile {
+    gate: string;
+    defaults: string;
+    policies: { web: string; api: string; google: string };
+}
+
+/**
+ * Read the registration gate, defaults and effective policies the running E2E
+ * application server resolves.
+ *
+ * The SaaS scenarios assert this reports the package's gate/defaults so the
+ * suite proves it is exercising the commercial admission path.
+ */
+export function registrationProfile(): RegistrationProfile {
+    return JSON.parse(runArtisan(['e2e:registration-profile'])) as RegistrationProfile;
+}
+
+/**
+ * Create or refresh the CONTROLLED entitlement plans (caps 1, 2, 3).
+ *
+ * The controlled limits live in the E2E fixture, never in the application; the
+ * capacity scenarios assert against these values and nothing else.
+ */
+export function seedControlledPlans(): void {
+    runArtisan(['e2e:plan', 'seed']);
+}
+
+export interface GrantControlledPlanOptions {
+    own?: number;
+    reset?: boolean;
+}
+
+/**
+ * Assign a controlled plan to a fixture account and seed how many households it
+ * already owns. `reset` clears its previous grants and owned households first,
+ * keeping each scenario's baseline deterministic.
+ */
+export function grantControlledPlan(
+    email: string,
+    plan: 'e2e-small' | 'e2e-medium' | 'e2e-large',
+    options: GrantControlledPlanOptions = {},
+): void {
+    const args = ['e2e:plan', 'grant', email, plan, `--own=${options.own ?? 0}`];
+
+    if (options.reset === true) {
+        args.push('--reset');
+    }
+
+    runArtisan(args);
+}
+
 export interface HouseholdAccessState {
     profile: string | null;
     module_access: Record<string, string>;
@@ -60,6 +111,9 @@ export interface RegistrationState {
     rejection_released_by: string | null;
     rejection_released_at: string | null;
     active_household: string | null;
+    owned_households: string[];
+    plan_key: string | null;
+    households_own_cap: number | null;
     household_access: Record<string, HouseholdAccessState>;
 }
 

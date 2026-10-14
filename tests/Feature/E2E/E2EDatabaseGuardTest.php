@@ -85,6 +85,22 @@ class E2EDatabaseGuardTest extends TestCase
         $this->artisan('e2e:user-state', ['email' => 'nobody@homeside.test'])
             ->expectsOutputToContain('not an E2E database')
             ->assertExitCode(1);
+
+        $this->artisan('e2e:plan', ['action' => 'seed'])
+            ->expectsOutputToContain('not an E2E database')
+            ->assertExitCode(1);
+
+        $this->artisan('e2e:plan', [
+            'action' => 'grant',
+            'email' => 'plan.small@homeside.test',
+            'plan' => 'e2e-small',
+        ])
+            ->expectsOutputToContain('not an E2E database')
+            ->assertExitCode(1);
+
+        $this->artisan('e2e:registration-profile')
+            ->expectsOutputToContain('not an E2E database')
+            ->assertExitCode(1);
     }
 
     public function test_the_real_destructive_commands_refuse_a_non_testing_environment(): void

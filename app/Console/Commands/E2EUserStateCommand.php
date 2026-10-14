@@ -11,6 +11,7 @@ use App\Models\RegistrationAudit;
 use App\Models\RegistrationBlock;
 use App\Models\User;
 use App\Support\Registration\RegistrationIdentifier;
+use Database\Seeders\E2EDatabaseSeeder;
 use Illuminate\Console\Command;
 use Symfony\Component\Console\Command\Command as SymfonyCommand;
 
@@ -49,6 +50,9 @@ class E2EUserStateCommand extends Command
                 'active_identity_block' => app(RegistrationBlockRepository::class)
                     ->isBlocked(RegistrationIdentifier::EMAIL, $email),
                 'google_linked' => false,
+                'owned_households' => [],
+                'plan_key' => null,
+                'households_own_cap' => null,
                 ...$this->blockState($email),
             ], JSON_THROW_ON_ERROR));
 
@@ -94,6 +98,12 @@ class E2EUserStateCommand extends Command
             'active_household' => $user->active_household_id !== null
                 ? Household::query()->whereKey($user->active_household_id)->value('name')
                 : null,
+            'owned_households' => Household::query()
+                ->where('owner_id', $user->id)
+                ->orderBy('name')
+                ->pluck('name')
+                ->all(),
+            ...app(E2EDatabaseSeeder::class)->entitlementStateFor($user),
             'household_access' => HouseholdMember::query()
                 ->where('user_id', $user->id)
                 ->with('household')

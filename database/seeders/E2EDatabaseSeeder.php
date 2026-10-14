@@ -17,6 +17,10 @@ use App\Models\RegistrationBlock;
 use App\Models\Role;
 use App\Models\User;
 use App\Support\Registration\RegistrationIdentifier;
+use HomeSide\Saas\Actions\AssignGrant;
+use HomeSide\Saas\Models\Plan;
+use HomeSide\Saas\Models\PlanVersion;
+use HomeSide\Saas\Support\FeatureGate;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
@@ -74,6 +78,41 @@ class E2EDatabaseSeeder extends Seeder
 
     public const CREATOR = 'creator@homeside.test';
 
+    /**
+     * Fixture accounts for the controlled household-capacity scenarios.
+     *
+     * They start with no grant and no owned household; `e2e:plan grant` assigns
+     * one of the controlled `e2e-small` / `e2e-medium` / `e2e-large` plans (caps
+     * 1 / 2 / 3) and seeds their owned state, so capacity is always known and
+     * never a production commercial value.
+     */
+    public const PLAN_SMALL = 'plan.small@homeside.test';
+
+    public const PLAN_MEDIUM = 'plan.medium@homeside.test';
+
+    public const PLAN_LARGE = 'plan.large@homeside.test';
+
+    /**
+     * A member (not owner) of the seeded household Alpha.
+     *
+     * The invited-member scenario uses it to prove the account's OWN plan
+     * governs its ownership capacity, never the plan of the household it was
+     * invited into.
+     */
+    public const PLAN_MEMBER = 'plan.member@homeside.test';
+
+    public const PLAN_UPGRADE = 'plan.upgrade@homeside.test';
+
+    public const PLAN_DOWNGRADE = 'plan.downgrade@homeside.test';
+
+    /**
+     * Two accounts for the owner-tampering scenario: the authenticated creator
+     * and the identity the request tries to hand ownership to.
+     */
+    public const PLAN_TAMPER = 'plan.tamper@homeside.test';
+
+    public const PLAN_TARGET = 'plan.target@homeside.test';
+
     public const GOOGLE_PENDING = 'google.pending@homeside.test';
 
     public const GOOGLE_LINKED = 'google.linked@homeside.test';
@@ -96,6 +135,22 @@ class E2EDatabaseSeeder extends Seeder
     public const HOUSEHOLD_ALPHA = 'E2E Household Alpha';
 
     public const HOUSEHOLD_BETA = 'E2E Household Beta';
+
+    /**
+     * The CONTROLLED household-ownership capacities the capacity scenarios
+     * grant.
+     *
+     * These are deliberately NOT the package's production quantities: the E2E
+     * suite asserts against these known values only, so a change to a
+     * commercial plan can never silently change what a scenario proves.
+     *
+     * @var array<string, int>
+     */
+    public const CONTROLLED_PLAN_QUOTAS = [
+        'e2e-small' => 1,
+        'e2e-medium' => 2,
+        'e2e-large' => 3,
+    ];
 
     /** @var array<string, array<string, mixed>> */
     private array $secrets = [];
@@ -248,6 +303,78 @@ class E2EDatabaseSeeder extends Seeder
                 'account_status' => AccountStatus::Active->value,
                 'verified' => true,
             ],
+            'plan_small' => [
+                'email' => self::PLAN_SMALL,
+                'name' => 'E2E Plan Small',
+                'roles' => ['user'],
+                'two_factor' => true,
+                'approval_status' => ApprovalStatus::Approved->value,
+                'account_status' => AccountStatus::Active->value,
+                'verified' => true,
+            ],
+            'plan_medium' => [
+                'email' => self::PLAN_MEDIUM,
+                'name' => 'E2E Plan Medium',
+                'roles' => ['user'],
+                'two_factor' => true,
+                'approval_status' => ApprovalStatus::Approved->value,
+                'account_status' => AccountStatus::Active->value,
+                'verified' => true,
+            ],
+            'plan_large' => [
+                'email' => self::PLAN_LARGE,
+                'name' => 'E2E Plan Large',
+                'roles' => ['user'],
+                'two_factor' => true,
+                'approval_status' => ApprovalStatus::Approved->value,
+                'account_status' => AccountStatus::Active->value,
+                'verified' => true,
+            ],
+            'plan_member' => [
+                'email' => self::PLAN_MEMBER,
+                'name' => 'E2E Plan Invited Member',
+                'roles' => ['user'],
+                'two_factor' => true,
+                'approval_status' => ApprovalStatus::Approved->value,
+                'account_status' => AccountStatus::Active->value,
+                'verified' => true,
+            ],
+            'plan_upgrade' => [
+                'email' => self::PLAN_UPGRADE,
+                'name' => 'E2E Plan Upgrade',
+                'roles' => ['user'],
+                'two_factor' => true,
+                'approval_status' => ApprovalStatus::Approved->value,
+                'account_status' => AccountStatus::Active->value,
+                'verified' => true,
+            ],
+            'plan_downgrade' => [
+                'email' => self::PLAN_DOWNGRADE,
+                'name' => 'E2E Plan Downgrade',
+                'roles' => ['user'],
+                'two_factor' => true,
+                'approval_status' => ApprovalStatus::Approved->value,
+                'account_status' => AccountStatus::Active->value,
+                'verified' => true,
+            ],
+            'plan_tamper' => [
+                'email' => self::PLAN_TAMPER,
+                'name' => 'E2E Plan Tamper',
+                'roles' => ['user'],
+                'two_factor' => true,
+                'approval_status' => ApprovalStatus::Approved->value,
+                'account_status' => AccountStatus::Active->value,
+                'verified' => true,
+            ],
+            'plan_target' => [
+                'email' => self::PLAN_TARGET,
+                'name' => 'E2E Plan Target',
+                'roles' => ['user'],
+                'two_factor' => true,
+                'approval_status' => ApprovalStatus::Approved->value,
+                'account_status' => AccountStatus::Active->value,
+                'verified' => true,
+            ],
             'google_pending' => [
                 'email' => self::GOOGLE_PENDING,
                 'name' => 'E2E Google Pending',
@@ -350,6 +477,7 @@ class E2EDatabaseSeeder extends Seeder
             ['household' => 'alpha', 'user' => 'approver', 'profile' => HouseholdAccessProfile::Reader],
             ['household' => 'alpha', 'user' => 'blocked', 'profile' => HouseholdAccessProfile::Buyer],
             ['household' => 'alpha', 'user' => 'restricted', 'profile' => HouseholdAccessProfile::Reader],
+            ['household' => 'alpha', 'user' => 'plan_member', 'profile' => HouseholdAccessProfile::Reader],
             ['household' => 'beta', 'user' => 'admin', 'profile' => HouseholdAccessProfile::Admin],
             ['household' => 'beta', 'user' => 'creator', 'profile' => HouseholdAccessProfile::Member],
             ['household' => 'beta', 'user' => 'invited', 'profile' => HouseholdAccessProfile::Reader],
@@ -574,6 +702,135 @@ class E2EDatabaseSeeder extends Seeder
             ->pluck('id');
 
         $role->permissions()->sync($permissions);
+    }
+
+    /**
+     * Create or refresh the CONTROLLED entitlement plans (caps 1, 2, 3).
+     *
+     * Unlike the package's production seeder, the E2E fixture ALWAYS rewrites
+     * its published version: the quota is the assertion target, so a stale
+     * value from an earlier run must never survive.
+     *
+     * @throws RuntimeException When the commercial package is not installed.
+     */
+    public function seedControlledPlans(): void
+    {
+        if (! class_exists(Plan::class)) {
+            throw new RuntimeException('The homeside/saas package is not installed; the controlled plans cannot be seeded.');
+        }
+
+        $sortOrder = 10;
+
+        foreach (self::CONTROLLED_PLAN_QUOTAS as $key => $cap) {
+            $plan = Plan::query()->updateOrCreate(
+                ['key' => $key],
+                [
+                    'name' => strtoupper(str_replace('e2e-', '', $key)).' (E2E)',
+                    'description' => 'Controlled E2E plan with a fixed household-ownership quota.',
+                    'visibility' => 'public',
+                    'sort_order' => $sortOrder++,
+                    'is_default' => false,
+                ],
+            );
+
+            PlanVersion::query()->updateOrCreate(
+                ['plan_id' => $plan->id, 'version' => 1],
+                [
+                    'features' => [
+                        'lists' => true,
+                        'economy' => true,
+                        'recipes' => true,
+                        'ai_image_recognition' => false,
+                        'ai_assistant' => false,
+                    ],
+                    'quotas' => [
+                        'households_own' => $cap,
+                        'storage_mb' => 1024,
+                        'ai_image_monthly' => 0,
+                        'ai_assistant_monthly' => 0,
+                    ],
+                    'published_at' => now(),
+                ],
+            );
+        }
+    }
+
+    /**
+     * Assign a controlled plan to a fixture account and seed its owned state.
+     *
+     * @param  string  $email  The fixture account email.
+     * @param  string  $planKey  The controlled plan key to grant.
+     * @param  int  $own  The number of households the account already owns.
+     * @param  bool  $reset  Delete the account's owned households and active grants first.
+     *
+     * @throws RuntimeException When the package is absent or the fixture/plan is unknown.
+     */
+    public function grantControlledPlan(string $email, string $planKey, int $own = 0, bool $reset = false): void
+    {
+        if (! class_exists(Plan::class)) {
+            throw new RuntimeException('The homeside/saas package is not installed; a controlled plan cannot be granted.');
+        }
+
+        $user = User::query()->where('email', $email)->first();
+
+        if ($user === null) {
+            throw new RuntimeException("No fixture account exists for [{$email}].");
+        }
+
+        if ($reset) {
+            // Delete only what the scenario owns. The plan fixtures never own a
+            // seeded household, so this cannot touch the stable E2E households.
+            Household::query()
+                ->where('owner_id', $user->id)
+                ->get()
+                ->each(fn (Household $household) => $household->delete());
+        }
+
+        $version = PlanVersion::query()
+            ->whereHas('plan', fn ($query) => $query->where('key', $planKey))
+            ->where('version', 1)
+            ->first();
+
+        if ($version === null) {
+            throw new RuntimeException("The controlled plan [{$planKey}] is not seeded; run e2e:plan seed first.");
+        }
+
+        // The real domain action replaces any active grant and flushes the
+        // resolver memo, exactly as the admin grant flow does.
+        app(AssignGrant::class)->execute($user, $version, null, 'e2e controlled plan fixture');
+
+        for ($index = 1; $index <= max(0, $own); $index++) {
+            Household::factory()->create([
+                'name' => sprintf('E2E Plan %s owned %d', $planKey, $index),
+                'created_by' => $user->id,
+            ]);
+        }
+    }
+
+    /**
+     * Read the commercial entitlement state of an account, when the package is
+     * installed.
+     *
+     * The plan key and the `households_own` quota are the controlled values the
+     * capacity scenarios assert against, so exposing them here is how a spec
+     * proves "the account is under its limit" without reading the database.
+     * On a Community-only checkout the package is absent and both stay null.
+     *
+     * @param  User  $user  The fixture account to inspect.
+     * @return array{plan_key: string|null, households_own_cap: int|null} The entitlement state.
+     */
+    public function entitlementStateFor(User $user): array
+    {
+        if (! class_exists(FeatureGate::class)) {
+            return ['plan_key' => null, 'households_own_cap' => null];
+        }
+
+        $entitlement = app(FeatureGate::class)->for($user);
+
+        return [
+            'plan_key' => $entitlement->planKey,
+            'households_own_cap' => $entitlement->quota('households_own'),
+        ];
     }
 
     /**
