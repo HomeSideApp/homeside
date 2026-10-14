@@ -62,7 +62,11 @@ defineProps<{
                     placeholder="email@example.com"
                     @blur="validate"
                 />
-                <InputError :message="errors.email" />
+                <InputError
+                    :message="errors.email"
+                    role="alert"
+                    data-test="login-error"
+                />
             </div>
 
             <div class="grid gap-2">

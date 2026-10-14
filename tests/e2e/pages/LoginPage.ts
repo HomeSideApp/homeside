@@ -18,7 +18,18 @@ export class LoginPage {
     async submitCredentials(email: string, password: string): Promise<void> {
         await this.page.getByLabel('Email address').fill(email);
         await this.page.getByLabel('Password', { exact: true }).fill(password);
-        await this.page.getByRole('button', { name: 'Log in' }).click();
+
+        // The form is submitted over Inertia's XHR. Waiting for the login
+        // POST's response makes the visit settle before any later assertion
+        // runs, so an error or challenge assertion cannot race the redirect.
+        await Promise.all([
+            this.page.waitForResponse(
+                (response) =>
+                    response.request().method() === 'POST' &&
+                    new URL(response.url()).pathname === '/login',
+            ),
+            this.page.getByRole('button', { name: 'Log in' }).click(),
+        ]);
     }
 
     async expectChallenge(): Promise<void> {
@@ -39,8 +50,17 @@ export class LoginPage {
         await this.page.waitForURL(/\/dashboard/);
     }
 
+    /**
+     * Assert the login form shows the given validation error.
+     *
+     * The message is scoped to the real error element (the email field's
+     * `role="alert"` container), not a bare `getByText` over the whole page: a
+     * page-level text match can hit an ancestor or a second occurrence and is
+     * then either a strict-mode violation or a match that resolves before the
+     * element is painted.
+     */
     async expectLoginError(message: string | RegExp): Promise<void> {
-        await expect(this.page.getByText(message)).toBeVisible();
+        await expect(this.page.getByRole('alert').filter({ hasText: message })).toBeVisible();
     }
 
     /**
