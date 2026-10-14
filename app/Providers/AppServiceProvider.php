@@ -7,6 +7,7 @@ use App\Contracts\CryptoPriceFetcher;
 use App\Contracts\EntitlementGate;
 use App\Contracts\RegistrationBlockRepository;
 use App\Contracts\RegistrationGate;
+use App\Contracts\RegistrationPolicyDefaults;
 use App\Enums\AppLocale;
 use App\Enums\ApprovalStatus;
 use App\Enums\RegistrationAuditAction;
@@ -31,6 +32,7 @@ use App\Policies\AiProviderPolicy;
 use App\Policies\RegistrationApprovalPolicy;
 use App\Policies\RegistrationSettingsPolicy;
 use App\Services\Auth\SelfHostedRegistrationGate;
+use App\Services\Auth\SelfHostedRegistrationPolicyDefaults;
 use App\Services\Economy\CoinGeckoPriceFetcher;
 use App\Support\Auth\AuthenticationBootstrapRepository as EloquentAuthenticationBootstrapRepository;
 use App\Support\Auth\GoogleDriverRegistrar;
@@ -75,6 +77,7 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->configureEntitlements();
+        $this->configureRegistrationDefaults();
         $this->configureRegistration();
         $this->configureRegistrationBlocks();
         $this->configureAuthenticationBootstraps();
@@ -153,6 +156,29 @@ class AppServiceProvider extends ServiceProvider
     protected function configureEntitlements(): void
     {
         $this->app->bindIf(EntitlementGate::class, NullEntitlementGate::class);
+    }
+
+    /**
+     * Bind the fallback registration policy behind its app-owned port.
+     *
+     * Community owns the contract and its self-hosted defaults: a fresh install
+     * starts closed so nobody can register over the network until the operator
+     * asks for it. Using `bindIf` (NOT `bind`) keeps the provider registration
+     * order-independent. Package-discovered providers register BEFORE the
+     * application's own providers, so when a commercial package installs its
+     * own defaults its `bind` runs first and this `bindIf` yields; if the order
+     * were ever reversed, this `bindIf` would register the self-hosted defaults
+     * and the package's later `bind` would still overwrite them. Either way the
+     * package wins, so Community never needs to know whether that package
+     * exists. Do not "fix" this to a plain `bind`: that would run last and
+     * silently overwrite the commercial defaults.
+     *
+     * The binding is deliberately not shared, matching RegistrationSettings:
+     * every fresh resolution must observe the current binding.
+     */
+    protected function configureRegistrationDefaults(): void
+    {
+        $this->app->bindIf(RegistrationPolicyDefaults::class, SelfHostedRegistrationPolicyDefaults::class);
     }
 
     /**

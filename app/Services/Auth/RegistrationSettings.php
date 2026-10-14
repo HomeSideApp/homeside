@@ -2,6 +2,7 @@
 
 namespace App\Services\Auth;
 
+use App\Contracts\RegistrationPolicyDefaults;
 use App\Enums\HouseholdCreationPolicy;
 use App\Enums\InvitationPolicy;
 use App\Enums\RegistrationChannel;
@@ -13,23 +14,17 @@ use InvalidArgumentException;
 /**
  * Reads and writes the platform registration policy.
  *
- * The service owns the whole settings surface and the secure self-hosted
- * defaults. Defaults and their rationale:
+ * The service owns the whole settings surface: the per-channel policies, the
+ * invitation policies and the household-creation policy. When no row exists for
+ * a policy-gated channel the fallback comes from the injected
+ * {@see RegistrationPolicyDefaults} contract, so a different distribution can
+ * open a fresh install differently without duplicating any decision logic.
  *
- *  - Web registration: `disabled`. A password form is the easiest channel to
- *    abuse on a public host, so it stays off until the operator asks for it.
- *  - API registration: `disabled`. Same reasoning, and the endpoint is
- *    reachable without a browser.
- *  - Google registration: `approval_required`. Federated sign-in is convenient,
- *    but the identity is external, so an administrator decides.
- *  - Household invitations: `enabled`. Inviting people is the normal onboarding
- *    path of a (private) self-hosted install, and the invitation itself carries
- *    the operator's decision, so no extra gate is needed.
- *  - Admin invitations: `enabled`. An administrator already has the authority
- *    to create accounts; refusing the flow by default only breaks onboarding.
- *  - Self-hosted household creation: `allowed`. The operator chose to run the
- *    install for their own household, and the per-user tri-state override plus
- *    the entitlement gate still apply, so `allowed` delegates rather than grants.
+ * Stored rows always win over the defaults; the defaults are consulted only
+ * when there is no readable value to honour. The invitation defaults
+ * (`enabled`) and the self-hosted household-creation default (`allowed`) stay
+ * here: they describe the invitation vocabulary and the household axis, while
+ * the injected contract is about channel admission.
  *
  * The service is autowired and deliberately NOT a singleton: resolving it more
  * than once in a request must never hand back a stale object. Within a real
@@ -47,6 +42,17 @@ final class RegistrationSettings
     private const INVITATION_KEY_PREFIX = 'registration.invitations.';
 
     private const HOUSEHOLD_CREATION_KEY = 'registration.household_creation';
+
+    /**
+     * Bind the admission fallback behind its contract.
+     *
+     * The contract is injected rather than resolved at call time so every fresh
+     * `RegistrationSettings` observes the current binding (autowiring gives a
+     * new defaults instance per resolution; nothing is cached across requests).
+     *
+     * @param  RegistrationPolicyDefaults  $defaults  The fallback policy source.
+     */
+    public function __construct(private RegistrationPolicyDefaults $defaults) {}
 
     /**
      * Resolve the policy that governs the channel.
@@ -71,10 +77,10 @@ final class RegistrationSettings
         $stored = $this->read(self::KEY_PREFIX.$channel->value);
 
         if ($stored === null) {
-            return $this->defaultFor($channel);
+            return $this->defaults->defaultFor($channel);
         }
 
-        return RegistrationPolicy::tryFrom($stored) ?? $this->defaultFor($channel);
+        return RegistrationPolicy::tryFrom($stored) ?? $this->defaults->defaultFor($channel);
     }
 
     /**
@@ -196,22 +202,6 @@ final class RegistrationSettings
         PlatformSetting::setString(self::HOUSEHOLD_CREATION_KEY, $policy->value);
 
         $this->flush();
-    }
-
-    /**
-     * Get the secure self-hosted default for a policy-gated channel.
-     *
-     * @param  RegistrationChannel  $channel  The channel to resolve.
-     * @return RegistrationPolicy The default policy.
-     */
-    private function defaultFor(RegistrationChannel $channel): RegistrationPolicy
-    {
-        return match ($channel) {
-            RegistrationChannel::Web, RegistrationChannel::Api => RegistrationPolicy::Disabled,
-            RegistrationChannel::Google => RegistrationPolicy::ApprovalRequired,
-            RegistrationChannel::HouseholdInvitation,
-            RegistrationChannel::AdminInvitation => RegistrationPolicy::Open,
-        };
     }
 
     /**

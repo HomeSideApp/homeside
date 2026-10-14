@@ -3,6 +3,7 @@
 namespace Tests\Feature\Registration;
 
 use App\Contracts\RegistrationGate;
+use App\Contracts\RegistrationPolicyDefaults;
 use App\Enums\RegistrationChannel;
 use App\Enums\RegistrationDecision;
 use App\Enums\RegistrationPolicy;
@@ -54,6 +55,36 @@ class RegistrationGateTest extends TestCase
     }
 
     public function test_every_channel_and_policy_combination_maps_to_the_expected_decision(): void
+    {
+        $this->assertEveryChannelAndPolicyMapsToTheExpectedDecision();
+    }
+
+    public function test_the_decision_mapping_is_unaffected_by_the_defaults_binding(): void
+    {
+        // A different defaults implementation only changes what the fallback is
+        // when nothing is stored; it must never change how a policy maps to a
+        // decision. Re-resolve the consumers so they pick up the new binding.
+        app()->bind(RegistrationPolicyDefaults::class, fn (): RegistrationPolicyDefaults => new class implements RegistrationPolicyDefaults
+        {
+            public function defaultFor(RegistrationChannel $channel): RegistrationPolicy
+            {
+                return RegistrationPolicy::ApprovalRequired;
+            }
+        });
+
+        $this->settings = app(RegistrationSettings::class);
+        $this->gate = app(RegistrationGate::class);
+
+        $this->assertEveryChannelAndPolicyMapsToTheExpectedDecision();
+    }
+
+    /**
+     * Assert the full channel x policy decision matrix.
+     *
+     * Extracted so both the self-hosted defaults and a swapped defaults binding
+     * run the exact same matrix instead of two parallel copies.
+     */
+    private function assertEveryChannelAndPolicyMapsToTheExpectedDecision(): void
     {
         foreach (RegistrationChannel::cases() as $channel) {
             if ($channel->isInvitation()) {
