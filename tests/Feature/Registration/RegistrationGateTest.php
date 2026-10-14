@@ -29,6 +29,11 @@ class RegistrationGateTest extends TestCase
     {
         parent::setUp();
 
+        // This class asserts the self-hosted policy vocabulary and defaults.
+        // Bind them explicitly so the commercial package's registration
+        // defaults/gate cannot leak in when it is installed.
+        $this->useSelfHostedRegistration();
+
         $this->gate = app(RegistrationGate::class);
         $this->settings = app(RegistrationSettings::class);
     }

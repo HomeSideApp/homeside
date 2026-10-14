@@ -414,6 +414,11 @@ class RegistrationChannelsTest extends TestCase
 
     public function test_the_api_capabilities_endpoint_publishes_the_policies(): void
     {
+        // The assertion below reads the WEB channel's untouched default, which
+        // is `disabled` only for the self-hosted implementation. Bind it
+        // explicitly so the commercial package's defaults cannot leak in.
+        $this->useSelfHostedRegistration();
+
         app(RegistrationSettings::class)->setPolicy(RegistrationChannel::Api, RegistrationPolicy::ApprovalRequired);
 
         $this->getJson(route('api.v1.auth.registration'))->assertOk()

@@ -40,6 +40,10 @@ class ApiRegistrationTest extends TestCase
 
     public function test_api_registration_is_disabled_by_default(): void
     {
+        // "By default" means the self-hosted default, so bind the self-hosted
+        // gate explicitly rather than asserting whatever the container holds.
+        $this->useSelfHostedRegistration();
+
         Notification::fake();
 
         $response = $this->postJson(route('api.v1.auth.register'), $this->payload('blocked@example.com'));

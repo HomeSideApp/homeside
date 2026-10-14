@@ -19,6 +19,17 @@ class RegistrationDisabledTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        // Both cases assert the self-hosted default (web registration
+        // disabled). Name the implementation under test: the commercial package
+        // installs its own defaults binding, and an ambient assertion would
+        // verify that package instead of the self-hosted behaviour.
+        $this->useSelfHostedRegistration();
+    }
+
     /**
      * GET /register answers 200 without an operable form when the channel is disabled.
      *

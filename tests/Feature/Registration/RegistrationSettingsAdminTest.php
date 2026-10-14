@@ -38,6 +38,11 @@ class RegistrationSettingsAdminTest extends TestCase
 
     public function test_an_authorised_admin_sees_the_settings_page_with_the_persisted_values(): void
     {
+        // The page falls back to the self-hosted defaults for the untouched
+        // channels. Bind them explicitly so the assertion names the
+        // implementation under test instead of the ambient container state.
+        $this->useSelfHostedRegistration();
+
         $settings = app(RegistrationSettings::class);
         $settings->setPolicy(RegistrationChannel::Google, RegistrationPolicy::Open);
         $settings->setInvitationPolicy(RegistrationChannel::HouseholdInvitation, InvitationPolicy::Disabled);
@@ -73,6 +78,8 @@ class RegistrationSettingsAdminTest extends TestCase
 
     public function test_a_user_without_the_permission_is_forbidden_on_get_and_post(): void
     {
+        $this->useSelfHostedRegistration();
+
         $user = User::factory()->create();
         $user->assignRole('user');
 
@@ -110,6 +117,8 @@ class RegistrationSettingsAdminTest extends TestCase
 
     public function test_an_invalid_enum_value_is_rejected_and_nothing_is_persisted(): void
     {
+        $this->useSelfHostedRegistration();
+
         $this->actingAs($this->admin())
             ->from(route('admin.registrations.settings'))
             ->put(route('admin.registrations.settings.update'), $this->payload([
@@ -128,6 +137,8 @@ class RegistrationSettingsAdminTest extends TestCase
 
     public function test_a_precognitive_request_validates_with_zero_side_effects(): void
     {
+        $this->useSelfHostedRegistration();
+
         $admin = $this->admin();
 
         $this->actingAs($admin)
@@ -234,8 +245,10 @@ class RegistrationSettingsAdminTest extends TestCase
 
         app(RegistrationSettings::class)->setHouseholdCreationPolicy(HouseholdCreationPolicy::Allowed);
 
-        // Allowed keeps delegating: the tri-state override and the entitlement
-        // gate still decide.
+        // Allowed keeps delegating: the tri-state override still decides the
+        // structural answer, while capacity is decided later by the
+        // authoritative in-transaction assertion (the 402), not by this
+        // predicate.
         $this->assertTrue(app(PlatformAccess::class)->canCreateHouseholds($user));
         $this->assertFalse(
             app(PlatformAccess::class)->canCreateHouseholds(User::factory()->withoutHouseholdCreation()->create()),

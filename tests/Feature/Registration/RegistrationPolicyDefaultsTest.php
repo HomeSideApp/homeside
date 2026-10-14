@@ -33,6 +33,17 @@ class RegistrationPolicyDefaultsTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        // The documented defaults and the gate implementation below are the
+        // self-hosted ones. Bind them explicitly so the assertions name the
+        // implementation under test instead of depending on whether the
+        // commercial package is installed and has bound its own.
+        $this->useSelfHostedRegistration();
+    }
+
     public function test_each_channel_resolves_the_documented_self_hosted_default_through_the_contract(): void
     {
         $defaults = app(RegistrationPolicyDefaults::class);
