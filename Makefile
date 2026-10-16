@@ -166,6 +166,10 @@ install-saas:
 		exit 1; \
 	}
 	$(SAAS_SAIL) up -d
-	$(SAAS_SAIL) composer require 'homeside/saas:^0.1' --no-interaction
-	$(SAAS_SAIL) artisan saas:install --pages
+	# Composer must run as root here: vendor/homeside/ is created by container
+	# operations owned by root, so a symlink attempt as the sail user fails with
+	# "Symlink from /var/www/saas ... failed". The package's own Makefile installs
+	# the same way.
+	$(SAAS_SAIL) exec -u root laravel.test composer require 'homeside/saas:^0.1' --no-interaction
+	$(SAAS_SAIL) exec -u root laravel.test php artisan saas:install --pages
 	@echo "Installed homeside/saas and published its pages. Run 'npm run build' next."
