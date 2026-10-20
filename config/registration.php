@@ -37,6 +37,37 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Single-use bootstrap lifetimes
+    |--------------------------------------------------------------------------
+    |
+    | A bootstrap grant is the credential that lets a browser start (or recover)
+    | a two-factor enrolment without a session. Its lifetime depends on WHAT the
+    | grant is for, because the two purposes carry different risk:
+    |
+    |  - `two_factor_enrolment` (12 hours): the person has to read the mail,
+    |    install an authenticator and come back. Thirty minutes made a slow
+    |    afternoon a dead end. The grant only lets its holder set up a factor on
+    |    an account they just proved they own, and completing it grants no
+    |    session unless approval, email verification and account status allow it.
+    |
+    |  - `account_recovery` (30 minutes): this one can REPLACE the existing second
+    |    factor, so a stolen mailbox with a long-lived link becomes a permanent
+    |    takeover. Keep it short.
+    |
+    | Both are `env`-overridable. A non-positive or non-numeric value falls back
+    | to the shipped default instead of producing an unusable grant.
+    |
+    */
+
+    'bootstrap' => [
+        'ttl_minutes' => [
+            'two_factor_enrolment' => (int) env('REGISTRATION_ENROLMENT_TTL_MINUTES', 720),
+            'account_recovery' => (int) env('REGISTRATION_RECOVERY_TTL_MINUTES', 30),
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Registration rate limits
     |--------------------------------------------------------------------------
     |
@@ -63,6 +94,21 @@ return [
     'rate_limits' => [
         'per_ip' => (int) env('REGISTRATION_RATE_LIMIT_PER_IP', 10),
         'per_identifier' => (int) env('REGISTRATION_RATE_LIMIT_PER_IDENTIFIER', 5),
+
+        // Resending the enrolment link for a token that already expired
+        // (the `/auth/bootstrap/{token}/2fa` resend endpoint). Two axes: one
+        // host cannot hammer the endpoint, and one token cannot be turned into
+        // a mail cannon. The token axis is keyed by a digest of the token, so
+        // the cache never holds a redeemable credential.
+        'enrolment_resend_per_ip' => (int) env('REGISTRATION_ENROLMENT_RESEND_PER_IP', 5),
+        'enrolment_resend_per_token' => (int) env('REGISTRATION_ENROLMENT_RESEND_PER_TOKEN', 3),
+
+        // The "I do not have a link" form: it is unauthenticated and it sends
+        // mail, so it is limited per source IP and per normalised email
+        // address. The address axis is deliberately NOT keyed by IP: a
+        // distributed set of hosts must not be able to flood one mailbox.
+        'enrolment_link_per_ip' => (int) env('REGISTRATION_ENROLMENT_LINK_PER_IP', 5),
+        'enrolment_link_per_identifier' => (int) env('REGISTRATION_ENROLMENT_LINK_PER_IDENTIFIER', 3),
     ],
 
 ];

@@ -46,11 +46,33 @@ interface AuthenticationBootstrapRepository
     /**
      * Resolve an active grant without consuming it, for a pre-check.
      *
+     * This is the AUTHORISING lookup: it filters on `consumed_at IS NULL` and
+     * an unexpired `expires_at`, so an expired, consumed or unknown token all
+     * collapse into `null`. Use it whenever the answer decides whether a
+     * credential may be redeemed.
+     *
      * @param  string  $rawToken  The token as presented by the client.
      * @param  AuthenticationBootstrapPurpose  $purpose  The purpose the token must hold.
      * @return AuthenticationBootstrap|null The active grant, or null when none matches.
      */
     public function findActive(string $rawToken, AuthenticationBootstrapPurpose $purpose): ?AuthenticationBootstrap;
+
+    /**
+     * Resolve a grant of this purpose whatever its state, without consuming it.
+     *
+     * This is the CLASSIFYING lookup, and it must never authorise anything: it
+     * ignores expiry and consumption on purpose so a transport can tell
+     * `expired but genuine` apart from `unknown` and from `already used`, and
+     * therefore decide what to show. A grant it returns may be expired or
+     * spent; only {@see self::findActive()} and {@see self::consume()} may
+     * authorise a redemption. A grant that a reissue deleted is unknown here,
+     * which is exactly what a superseded link should look like.
+     *
+     * @param  string  $rawToken  The token as presented by the client.
+     * @param  AuthenticationBootstrapPurpose  $purpose  The purpose the token must hold.
+     * @return AuthenticationBootstrap|null The grant in any state, or null when the token was never issued for this purpose.
+     */
+    public function findAnyState(string $rawToken, AuthenticationBootstrapPurpose $purpose): ?AuthenticationBootstrap;
 
     /**
      * Invalidate every outstanding grant for one user and purpose.

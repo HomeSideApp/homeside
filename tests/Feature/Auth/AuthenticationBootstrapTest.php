@@ -66,13 +66,22 @@ class AuthenticationBootstrapTest extends TestCase
         $this->assertGuest();
     }
 
-    public function test_an_expired_token_fails(): void
+    public function test_an_expired_token_offers_a_resend_instead_of_a_dead_end(): void
     {
         $user = User::factory()->create();
         $token = app(AuthenticationBootstrapRepository::class)
             ->issue($user, AuthenticationBootstrapPurpose::TwoFactorEnrolment, -1);
 
-        $this->get($this->showUrl($token))->assertRedirect(route('login'));
+        // Genuine but expired, and the account still has no second factor: the
+        // only recoverable state, so it renders the resend page.
+        $this->get($this->showUrl($token))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page): Assert => $page
+                ->component('auth/ResendEnrolmentLink')
+                ->where('mode', 'expired')
+            );
+
+        // Still not a credential: it stays un-redeemable and creates no session.
         $this->assertNull(app(AuthenticationBootstrapRepository::class)->findActive($token, AuthenticationBootstrapPurpose::TwoFactorEnrolment));
         $this->assertGuest();
     }

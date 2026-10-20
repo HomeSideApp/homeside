@@ -363,6 +363,35 @@ class AppServiceProvider extends ServiceProvider
                 Limit::perMinute($perIdentifier)->by('registration-identity:'.Str::transliterate($identity).'|'.$request->ip()),
             ];
         });
+
+        // Resending the link for an expired enrolment token. The token is the
+        // credential, so the per-token axis is keyed by a DIGEST of it: the
+        // rate-limit store must never hold something that can be redeemed.
+        RateLimiter::for('enrolment-resend', function (Request $request) {
+            $token = (string) $request->route('token');
+            $perIp = (int) config('registration.rate_limits.enrolment_resend_per_ip', 5);
+            $perToken = (int) config('registration.rate_limits.enrolment_resend_per_token', 3);
+
+            return [
+                Limit::perMinute($perIp)->by('enrolment-resend-ip:'.$request->ip()),
+                Limit::perMinute($perToken)->by('enrolment-resend-token:'.hash('sha256', $token)),
+            ];
+        });
+
+        // The unauthenticated "I do not have a link" form sends mail, so it is
+        // limited per source IP and per normalised address. The address axis is
+        // NOT keyed by IP on purpose: a distributed set of hosts must not be
+        // able to flood one mailbox.
+        RateLimiter::for('enrolment-link', function (Request $request) {
+            $identity = Str::lower(trim((string) $request->input('email')));
+            $perIp = (int) config('registration.rate_limits.enrolment_link_per_ip', 5);
+            $perIdentifier = (int) config('registration.rate_limits.enrolment_link_per_identifier', 3);
+
+            return [
+                Limit::perMinute($perIp)->by('enrolment-link-ip:'.$request->ip()),
+                Limit::perMinute($perIdentifier)->by('enrolment-link-identity:'.Str::transliterate($identity)),
+            ];
+        });
     }
 
     protected function configureObservers(): void

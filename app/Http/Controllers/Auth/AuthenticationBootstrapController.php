@@ -3,9 +3,11 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Actions\Auth\CompleteAuthenticationBootstrap;
+use App\Actions\Auth\CreateAuthenticationBootstrap;
 use App\Contracts\AuthenticationBootstrapRepository;
 use App\Enums\AuthenticationBootstrapPurpose;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\ResendEnrolmentLinkRequest;
 use App\Models\AuthenticationBootstrap;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
@@ -20,23 +22,36 @@ use PragmaRX\Google2FA\Google2FA;
  *
  * It replaces the retired signed `GET /otp/setup/{user}` pair. The token — not
  * a user id — is the credential, it is bound to the `TwoFactorEnrolment`
- * purpose, it expires in 30 minutes and it is consumed exactly once by the
- * confirm step.
+ * purpose, it lives as long as `AuthenticationBootstrapPurpose::ttlMinutes()`
+ * says (12 hours by default, because the visitor has to find the mail and
+ * install an authenticator) and it is consumed exactly once by the confirm
+ * step.
  *
- * Opening the page never creates a session, whatever the state of the token.
- * A session is established only after the TOTP code is verified AND the account
- * is approved, active and email-verified; otherwise the enrolment still
+ * Three outcomes, and only one of them is offered an action:
+ *
+ *  - an active, unconsumed token shows the enrolment page;
+ *  - a GENUINE but EXPIRED token for an account that still has no second factor
+ *    and may use the application shows the resend page. That is the whole point
+ *    of the classification below: without it an expired link is a dead end,
+ *    because `otp/forgot` refuses accounts that have no factor to recover;
+ *  - anything else (unknown, already consumed, superseded by a reissue, an
+ *    account that already enrolled, or a blocked/rejected/suspended account)
+ *    returns one generic state with no action at all.
+ *
+ * Opening any of these pages never creates a session, whatever the state of the
+ * token. A session is established only after the TOTP code is verified AND the
+ * account is approved, active and email-verified; otherwise the enrolment still
  * completes and the visitor is sent to log in.
  *
  * The raw token travels in our own URL and in the Inertia prop for the form
  * action, and nowhere else: it is never placed in a third-party URL, never
- * written to a log line and never persisted server-side (only its keyed digest
- * is).
+ * written to a log line, never rendered on the resend page and never persisted
+ * server-side (only its keyed digest is).
  */
 final class AuthenticationBootstrapController extends Controller
 {
     /**
-     * Show the enrolment page for a valid, active, unconsumed token.
+     * Show the enrolment page, or the resend page when the link genuinely expired.
      *
      * @param  Request  $request  The incoming HTTP request.
      * @param  string  $token  The plaintext bootstrap token.
@@ -48,7 +63,10 @@ final class AuthenticationBootstrapController extends Controller
         string $token,
         AuthenticationBootstrapRepository $bootstraps,
     ): Response|RedirectResponse {
-        $bootstrap = $bootstraps->findActive($token, AuthenticationBootstrapPurpose::TwoFactorEnrolment);
+        // The classifying lookup ignores expiry and consumption on purpose; it
+        // decides what to SHOW. Nothing here authorises a redemption: the
+        // confirm step re-resolves the grant with the authorising lookup.
+        $bootstrap = $bootstraps->findAnyState($token, AuthenticationBootstrapPurpose::TwoFactorEnrolment);
 
         if ($bootstrap === null) {
             return $this->invalidState();
@@ -58,6 +76,17 @@ final class AuthenticationBootstrapController extends Controller
 
         if ($user === null) {
             return $this->invalidState();
+        }
+
+        // A spent grant is never a candidate for a resend: the credential was
+        // already redeemed, and re-minting it would hand a fresh one to whoever
+        // still holds the URL.
+        if ($bootstrap->consumed_at !== null) {
+            return $this->invalidState();
+        }
+
+        if ($this->isGenuinelyExpired($bootstrap)) {
+            return $this->expiredState($token, $user);
         }
 
         if ($user->hasEnabledTwoFactorAuthentication()) {
@@ -74,6 +103,49 @@ final class AuthenticationBootstrapController extends Controller
             'secret' => $secret,
             'confirmUrl' => route('auth.bootstrap.two-factor.confirm', ['token' => $token]),
         ]);
+    }
+
+    /**
+     * Issue and mail a fresh enrolment grant for a genuinely expired link.
+     *
+     * Eligibility is the same as the page that offers the button: the token had
+     * to be genuine and expired, the account must still have no second factor
+     * and must be allowed to use the application. Everything else is a silent
+     * no-op with the SAME response, so the endpoint never becomes an oracle for
+     * "this token existed" or "this account is blocked".
+     *
+     * A reissue invalidates the previous grant (the issuance action always does
+     * that), so the link the visitor could not use stops working the moment a
+     * new one is mailed.
+     *
+     * @param  ResendEnrolmentLinkRequest  $request  The validated request.
+     * @param  string  $token  The plaintext bootstrap token that expired.
+     * @param  AuthenticationBootstrapRepository  $bootstraps  The bootstrap repository.
+     * @param  CreateAuthenticationBootstrap  $create  The single-use bootstrap issuer.
+     * @return RedirectResponse The HTTP response.
+     */
+    public function resend(
+        ResendEnrolmentLinkRequest $request,
+        string $token,
+        AuthenticationBootstrapRepository $bootstraps,
+        CreateAuthenticationBootstrap $create,
+    ): RedirectResponse {
+        $bootstrap = $bootstraps->findAnyState($token, AuthenticationBootstrapPurpose::TwoFactorEnrolment);
+        $user = $bootstrap?->user;
+
+        $resendable = $bootstrap !== null
+            && $user !== null
+            && $this->isGenuinelyExpired($bootstrap)
+            && ! $user->hasEnabledTwoFactorAuthentication()
+            && $user->canAccessApplication();
+
+        if ($resendable) {
+            $create->execute($user, AuthenticationBootstrapPurpose::TwoFactorEnrolment);
+        }
+
+        // The same redirect and the same message in every branch: resendable or
+        // not, the visitor learns nothing about the token or the account.
+        return $this->resendRequested();
     }
 
     /**
@@ -137,6 +209,54 @@ final class AuthenticationBootstrapController extends Controller
     }
 
     /**
+     * Determine whether a grant is genuine, unspent and simply too old.
+     *
+     * A consumed grant is not "expired": offering to resend it would turn an
+     * already-redeemed credential into a fresh one for whoever holds the URL.
+     *
+     * The check is expressed on `expires_at` directly instead of through
+     * `AuthenticationBootstrap::isActive()` because that helper compares the
+     * cast attribute against `Illuminate\Support\Carbon`, while the application
+     * configures `Date::use(Carbon\CarbonImmutable::class)`; the `instanceof`
+     * therefore never matches and the helper reports every grant as inactive.
+     *
+     * @param  AuthenticationBootstrap  $bootstrap  The grant resolved by the classifying lookup.
+     * @return bool True when only the clock, and nothing else, closed the gate.
+     */
+    private function isGenuinelyExpired(AuthenticationBootstrap $bootstrap): bool
+    {
+        return $bootstrap->consumed_at === null
+            && $bootstrap->expires_at !== null
+            && $bootstrap->expires_at->isPast();
+    }
+
+    /**
+     * Decide what a grant that is no longer active may offer.
+     *
+     * Only a genuinely expired grant for an account that still needs a second
+     * factor AND may use the application is offered a resend. A consumed grant,
+     * an account that already enrolled (recovery, not enrolment, is its path) or
+     * an account without access all get the generic state, byte for byte the
+     * same as an unknown token.
+     *
+     * @param  string  $token  The plaintext token, used only to build the resend action URL.
+     * @param  User  $user  The account the grant belongs to.
+     * @return Response|RedirectResponse The HTTP response.
+     */
+    private function expiredState(string $token, User $user): Response|RedirectResponse
+    {
+        if ($user->hasEnabledTwoFactorAuthentication() || ! $user->canAccessApplication()) {
+            return $this->invalidState();
+        }
+
+        return Inertia::render('auth/ResendEnrolmentLink', [
+            'mode' => 'expired',
+            'resendUrl' => route('auth.bootstrap.two-factor.resend', ['token' => $token]),
+            'requestUrl' => null,
+        ]);
+    }
+
+    /**
      * Return the clear "this link is not usable" state without a session.
      *
      * The message is intentionally identical for an unknown, expired and
@@ -147,6 +267,16 @@ final class AuthenticationBootstrapController extends Controller
     private function invalidState(): RedirectResponse
     {
         return to_route('login')->with('status', __('app.errors.bootstrap_invalid'));
+    }
+
+    /**
+     * Acknowledge a resend request without saying whether anything was sent.
+     *
+     * @return RedirectResponse The HTTP response.
+     */
+    private function resendRequested(): RedirectResponse
+    {
+        return to_route('auth.enrolment.resend')->with('status', __('app.auth.enrolment_link_sent'));
     }
 
     /**

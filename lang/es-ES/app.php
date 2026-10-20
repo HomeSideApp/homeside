@@ -12,6 +12,7 @@ return [
         'invalid_otp' => 'El código OTP no es válido. Compruébalo e inténtalo de nuevo.',
         'otp_not_configured' => 'Este usuario no tiene OTP configurado.',
         'otp_reset_link_sent' => 'Si existe una cuenta con ese correo, se ha enviado un enlace para restablecer el OTP.',
+        'enrolment_link_sent' => 'Si existe una cuenta pendiente de inscribir la verificación en dos pasos, le hemos enviado un enlace nuevo.',
         'password_reset_link_sent' => 'Si existe una cuenta con ese correo, se ha enviado un enlace para restablecer la contraseña.',
         'password_reset' => 'Tu contraseña se ha restablecido. Ya puedes iniciar sesión.',
         'reset_session_expired' => 'La sesión ha caducado. Inténtalo de nuevo.',

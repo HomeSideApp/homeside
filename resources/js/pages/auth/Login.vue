@@ -118,6 +118,17 @@ defineProps<{
                 {{ t('auth.login.forgotPassword') }}
             </TextLink>
         </div>
+
+        <div class="text-center text-sm">
+            <TextLink
+                href="/auth/enrolment/resend"
+                class="text-muted-foreground underline"
+                :tabindex="7"
+                data-test="login-resend-enrolment"
+            >
+                {{ t('auth.login.noEnrolmentLink') }}
+            </TextLink>
+        </div>
     </Form>
 
     <div class="mt-6 flex flex-col items-center gap-2">

@@ -56,6 +56,7 @@ export default {
             google: 'Continue with Google',
             forgotOtp: 'Forgot your OTP?',
             forgotPassword: 'Forgot your password?',
+            noEnrolmentLink: 'No enrolment link?',
         },
         confirm: {
             title: 'Confirm password',
@@ -73,6 +74,20 @@ export default {
             title: 'Reset OTP',
             description: 'Enter your email to receive an OTP reset link',
             submit: 'Send OTP reset link',
+        },
+        resendEnrolment: {
+            expiredTitle: 'This enrolment link expired',
+            expiredDescription:
+                'Your registration is not finished yet. Request a new link to set up your authenticator app.',
+            expiredBody:
+                'The link you opened is no longer valid because too much time passed. Request a new one and it will arrive by email.',
+            requestTitle: 'Request an enrolment link',
+            requestDescription:
+                'Enter your email and, if your account still needs two-factor authentication, we will send you a new link.',
+            resend: 'Resend link',
+            submit: 'Send me a link',
+            return: 'Or, return to',
+            login: 'log in',
         },
         resetPassword: {
             title: 'Reset password',

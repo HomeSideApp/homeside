@@ -8,6 +8,7 @@ use App\Http\Controllers\Auth\ForgotPasswordController;
 use App\Http\Controllers\Auth\GoogleAuthController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\RegisterController;
+use App\Http\Controllers\Auth\ResendEnrolmentLinkController;
 use App\Http\Controllers\Auth\ResetOtpController;
 use App\Http\Controllers\Auth\ResetPasswordController;
 use App\Http\Controllers\Auth\TwoFactorChallengeController;
@@ -37,10 +38,26 @@ Route::middleware('guest')->group(function () {
 
     // Single-use two-factor bootstrap (replaces the retired signed otp.setup
     // pair). The token is the credential; the page never creates a session.
+    //
+    // An EXPIRED but genuine token renders the resend page instead of a dead
+    // end, and the resend endpoint mints a new grant through the same issuance
+    // path that mails it. Both axes are throttled: per source IP and per token
+    // (keyed by a digest of the token, never the token itself).
     Route::get('auth/bootstrap/{token}/2fa', [AuthenticationBootstrapController::class, 'show'])
         ->middleware('throttle:otp')->name('auth.bootstrap.two-factor.show');
     Route::post('auth/bootstrap/{token}/2fa', [AuthenticationBootstrapController::class, 'confirm'])
         ->middleware('throttle:otp')->name('auth.bootstrap.two-factor.confirm');
+    Route::post('auth/bootstrap/{token}/2fa/resend', [AuthenticationBootstrapController::class, 'resend'])
+        ->middleware('throttle:enrolment-resend')->name('auth.bootstrap.two-factor.resend');
+
+    // "I do not have an enrolment link": the token-free way back into the
+    // enrolment flow, identified by email. Distinct from `otp/forgot` (which
+    // requires an existing second factor) and throttled per IP and per
+    // normalised address because it is unauthenticated and it sends mail.
+    Route::get('auth/enrolment/resend', [ResendEnrolmentLinkController::class, 'show'])
+        ->name('auth.enrolment.resend');
+    Route::post('auth/enrolment/resend', [ResendEnrolmentLinkController::class, 'store'])
+        ->middleware('throttle:enrolment-link')->name('auth.enrolment.resend.store');
 });
 
 Route::get('google/otp/setup', [GoogleAuthController::class, 'showOtpSetup'])->name('google.otp.setup');

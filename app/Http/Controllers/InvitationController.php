@@ -85,9 +85,10 @@ class InvitationController
      * Build the single-use enrolment URL for a freshly completed account.
      *
      * A signed `otp.setup` URL is deliberately NOT used: the token is bound to
-     * the user AND the purpose, expires in 30 minutes and is consumed once.
-     * When the account already has a second factor there is nothing to enrol,
-     * so the user goes to login instead.
+     * the user AND the purpose, lives for the enrolment lifetime (12 hours by
+     * default) and is consumed once. Issuance also mails the link. When the
+     * account already has a second factor there is nothing to enrol, so the
+     * user goes to login instead.
      *
      * @param  User  $user  The account that just completed registration.
      * @param  CreateAuthenticationBootstrap  $bootstraps  The bootstrap issuer.

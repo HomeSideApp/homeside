@@ -57,6 +57,7 @@ export default {
             google: 'Continuar con Google',
             forgotOtp: '¿Has olvidado tu OTP?',
             forgotPassword: '¿Has olvidado tu contraseña?',
+            noEnrolmentLink: '¿No tienes enlace de inscripción?',
         },
         confirm: {
             title: 'Confirmar contraseña',
@@ -76,6 +77,20 @@ export default {
             description:
                 'Introduce tu correo para recibir un enlace de restablecimiento del OTP',
             submit: 'Enviar enlace de restablecimiento del OTP',
+        },
+        resendEnrolment: {
+            expiredTitle: 'Este enlace de inscripción ha caducado',
+            expiredDescription:
+                'Tu registro aún no ha terminado. Solicita un enlace nuevo para configurar tu aplicación de autenticación.',
+            expiredBody:
+                'El enlace que has abierto ya no es válido porque ha pasado demasiado tiempo. Solicita uno nuevo y lo recibirás por correo.',
+            requestTitle: 'Solicitar un enlace de inscripción',
+            requestDescription:
+                'Introduce tu correo y, si tu cuenta aún necesita la verificación en dos pasos, te enviaremos un enlace nuevo.',
+            resend: 'Reenviar enlace',
+            submit: 'Enviarme un enlace',
+            return: 'O vuelve a',
+            login: 'iniciar sesión',
         },
         resetPassword: {
             title: 'Restablecer contraseña',

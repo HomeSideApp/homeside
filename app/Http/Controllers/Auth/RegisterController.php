@@ -93,11 +93,17 @@ final class RegisterController extends Controller
         // a dead end. The bootstrap is onboarding only: the session is
         // established at the END of the enrolment flow, and withheld until
         // approval, email verification and account status all allow it.
+        //
+        // The same issuance mails the link (see CreateAuthenticationBootstrap),
+        // so closing the tab is no longer the end of the road.
         return redirect()->to($this->enrolmentUrl($outcome->user, $bootstraps));
     }
 
     /**
      * Build the single-use enrolment URL for a freshly registered visitor.
+     *
+     * The lifetime is the enrolment one (12 hours by default), and issuance
+     * also mails the link, so the visitor who closes the tab can still finish.
      *
      * @param  User  $user  The account that just registered.
      * @param  CreateAuthenticationBootstrap  $bootstraps  The bootstrap issuer.

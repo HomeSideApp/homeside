@@ -34,6 +34,16 @@ use RuntimeException;
  * `expires_at`. The database row is the arbiter: whichever concurrent request
  * updates the row first wins and every other one observes an affected-row count
  * of zero, so a token is redeemable at most once even under a race.
+ *
+ * Two lookups, two jobs
+ * ---------------------
+ * `findActive()` is the authorising lookup: expired, consumed and unknown all
+ * collapse into `null`, which is what a consumption path needs. `findAnyState()`
+ * is the classifying lookup: it deliberately ignores expiry and consumption so a
+ * transport can tell a genuinely expired link (offer to resend it) from an
+ * unknown or already used one (say nothing). Only the authorising lookup and
+ * `consume()` may let a credential through; `findAnyState()` is for deciding
+ * what to show.
  */
 final class AuthenticationBootstrapRepository implements AuthenticationBootstrapRepositoryContract
 {
@@ -96,6 +106,17 @@ final class AuthenticationBootstrapRepository implements AuthenticationBootstrap
     {
         return AuthenticationBootstrap::query()
             ->active()
+            ->where('token_hash', $this->hash($purpose, $rawToken))
+            ->where('purpose', $purpose->value)
+            ->first();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function findAnyState(string $rawToken, AuthenticationBootstrapPurpose $purpose): ?AuthenticationBootstrap
+    {
+        return AuthenticationBootstrap::query()
             ->where('token_hash', $this->hash($purpose, $rawToken))
             ->where('purpose', $purpose->value)
             ->first();

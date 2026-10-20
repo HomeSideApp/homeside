@@ -71,8 +71,10 @@ class InviteLinkController extends Controller
      * Build the single-use enrolment URL for a freshly registered invitee.
      *
      * The old signed `otp.setup` URL is retired: the bootstrap token is bound
-     * to the user AND the enrolment purpose, expires in 30 minutes and can be
-     * consumed exactly once, so a link that leaks stops being a session.
+     * to the user AND the enrolment purpose, lives for the enrolment lifetime
+     * (12 hours by default) and can be consumed exactly once, so a link that
+     * leaks stops being a session. Issuance also mails the link, so an invitee
+     * who closes the tab can still finish.
      *
      * @param  User  $user  The account that just registered.
      * @param  CreateAuthenticationBootstrap  $bootstraps  The bootstrap issuer.

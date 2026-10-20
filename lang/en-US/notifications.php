@@ -44,4 +44,15 @@ return [
         'current_code' => 'Your current OTP will continue to work until you configure a new one.',
         'action' => 'Reset OTP',
     ],
+    'enrolment_link' => [
+        'subject' => 'Finish setting up your account on :app',
+        'line' => 'Your account on :app still needs a two-factor authentication app before you can sign in.',
+        'instructions' => 'Select the button below to set it up.',
+        'valid_hour' => 'This link is valid for one hour.',
+        'valid_hours' => 'This link is valid for :hours hours.',
+        'valid_minute' => 'This link is valid for one minute.',
+        'valid_minutes' => 'This link is valid for :minutes minutes.',
+        'action' => 'Finish setting up two-factor authentication',
+        'not_you' => 'If you did not create this account, you can ignore this email and nothing will change.',
+    ],
 ];

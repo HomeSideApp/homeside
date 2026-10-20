@@ -12,6 +12,7 @@ return [
         'invalid_otp' => 'The OTP code is invalid. Check it and try again.',
         'otp_not_configured' => 'This user does not have OTP configured.',
         'otp_reset_link_sent' => 'If an account matching your email exists, an OTP reset link has been sent.',
+        'enrolment_link_sent' => 'If an account is waiting for two-factor enrolment, we have sent it a new link.',
         'password_reset_link_sent' => 'If an account matching your email exists, a password reset link has been sent.',
         'password_reset' => 'Your password has been reset. You can now sign in.',
         'reset_session_expired' => 'The session has expired. Try again.',
