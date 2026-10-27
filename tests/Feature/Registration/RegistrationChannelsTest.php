@@ -19,7 +19,7 @@ use App\Models\HouseholdInviteLink;
 use App\Models\RegistrationAudit;
 use App\Models\Role;
 use App\Models\User;
-use App\Notifications\InviteUserNotification;
+use App\Notifications\VerifyEmail;
 use App\Services\Auth\RegistrationSettings;
 use App\Support\Registration\RegistrationIdentifier;
 use Database\Seeders\RolesAndPermissionsSeeder;
@@ -121,7 +121,11 @@ class RegistrationChannelsTest extends TestCase
         $open = User::where('email', 'web-open@example.com')->firstOrFail();
         $this->assertSame(ApprovalStatus::Approved->value, $open->approval_status);
         $this->assertTrue($open->hasRole('user'));
-        Notification::assertSentTo($open, InviteUserNotification::class);
+        // Web registration must send the address-ownership proof, not the
+        // invitation mail (which points at a different flow and cannot verify).
+        Notification::assertSentTo($open, VerifyEmail::class, function (VerifyEmail $notification) use ($open): bool {
+            return str_contains($notification->toMail($open)->actionUrl, '/verify-email/');
+        });
         $this->assertDatabaseHas('registration_audits', [
             'user_id' => $open->id,
             'action' => 'registration_created',
