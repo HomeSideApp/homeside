@@ -28,7 +28,7 @@ return [
     ],
     'verify_email' => [
         'subject' => 'Activate your account on :app',
-        'line' => 'Your account has been created. Select the link to set your password and activate your account.',
+        'line' => 'Your account has been created. Confirm this email address to finish setting it up.',
         'action' => 'Verify email',
     ],
     'reset_password' => [

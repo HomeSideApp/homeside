@@ -4,7 +4,7 @@ namespace App\Models;
 
 use App\Enums\AccountStatus;
 use App\Enums\AppLocale;
-use App\Notifications\InviteUserNotification;
+use App\Notifications\VerifyEmail;
 use App\Support\PlatformAccess;
 use App\Traits\HasPermissionsTrait;
 use Database\Factories\UserFactory;
@@ -91,10 +91,16 @@ class User extends Authenticatable implements HasLocalePreference, MustVerifyEma
 
     /**
      * Send the email verification notification.
+     *
+     * This is the address-ownership proof, NOT an invitation. An earlier version
+     * sent the invitation mail here, which pointed at the admin invitation route
+     * and asked an already-registered person to choose a password again — so the
+     * account never received a link that could actually verify the address, and
+     * every self-registered account stayed stuck behind the verification gate.
      */
     public function sendEmailVerificationNotification(): void
     {
-        $this->notify(new InviteUserNotification);
+        $this->notify(new VerifyEmail);
     }
 
     public function preferredLocale(): string

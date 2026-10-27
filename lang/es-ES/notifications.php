@@ -28,7 +28,7 @@ return [
     ],
     'verify_email' => [
         'subject' => 'Activa tu cuenta en :app',
-        'line' => 'Tu cuenta ha sido creada. Pulsa el enlace para establecer tu contraseña y activar tu cuenta.',
+        'line' => 'Tu cuenta ha sido creada. Confirmá esta dirección de correo para terminar de configurarla.',
         'action' => 'Verificar email',
     ],
     'reset_password' => [
