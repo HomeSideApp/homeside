@@ -5,6 +5,18 @@
          colors="true"
 >
     <testsuites>
+        <testsuite name="Unit">
+            <directory>tests/Unit</directory>
+            <!--
+                tests/Unit/Ai is stale: it references App\Ai\Contracts\*, App\Ai\Context\*
+                and App\Ai\Execution\*, which no longer exist (the contracts live in
+                HomeSide\AiAgents\Contracts\* now). Those files never ran because the Unit
+                suite was not registered anywhere, so the breakage only surfaced when the
+                suite was added. Excluded rather than deleted: they are not ours to remove,
+                but a directory that aborts the whole suite cannot stay loadable.
+            -->
+            <exclude>tests/Unit/Ai</exclude>
+        </testsuite>
         <testsuite name="Feature">
             <directory>tests/Feature</directory>
         </testsuite>
