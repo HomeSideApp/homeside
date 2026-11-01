@@ -94,6 +94,22 @@ class ReceiptTextParserTest extends TestCase
     TEXT;
 
     /**
+     * Raw text captured from the CONNOR ticket (eng, psm 6). The real `TOTAL $19.95` of the
+     * photo was not recognised; what survived is the pre-discount `Original Total`, which
+     * the OCR mangled into `gina) Total`, plus the `YOU SAVE` line.
+     */
+    private const CONNOR_TEXT = <<<'TEXT'
+    CONNOR
+    Pr: 03 4074 3600
+    9599118905044 COBEX SKTANY’ JEAN
+    gina) Total “$23,185.00
+    U SAVI-$29,175.05
+    oT of $1.81 a
+    $20.00
+    19.9
+    TEXT;
+
+    /**
      * Excerpt captured from the H&M ticket: the merchant is the bare `HaM` line and the
      * payable total is the German `BON TOTAL` line.
      */
@@ -459,6 +475,125 @@ class ReceiptTextParserTest extends TestCase
             '`Fecha; 26.01.13` is dd.mm.yy and means 26 January 2013, not 1926 or 2026.'
         );
         $this->assertSame(2600, $result?->amount_minor);
+    }
+
+    public function test_a_retired_currency_line_never_wins_over_the_euro_total(): void
+    {
+        $result = $this->parser()->parse("GASOLINERA\nTOTAL EUROS 28,84\nTOTAL PESETAS 4.188,81");
+
+        $this->assertSame(
+            2884,
+            $result?->amount_minor,
+            'The pesetas line is the historical conversion printed next to the euro amount, not the amount that was charged.'
+        );
+    }
+
+    public function test_a_receipt_that_only_prints_the_pesetas_total_has_no_payable_amount(): void
+    {
+        $this->assertNull(
+            $this->parser()->parse("GASOLINERA\nTOTAL PESETAS 4.010"),
+            'Without the euro total there is no payable amount on the receipt, so the import must fall back to AI.'
+        );
+    }
+
+    public function test_every_retired_currency_spelling_is_discarded(): void
+    {
+        foreach (['TOTAL PESETAS 4.010', 'TOTAL PTS 4.010', 'TOTAL PTAS. 4.010', 'TOTALE LIRE 4.500', 'TOTAL FRANCOS 500', 'TOTAL MARCOS 500'] as $text) {
+            $this->assertNull(
+                $this->parser()->parse("TIENDA\n".$text),
+                "`{$text}` labels a currency that no longer exists, so it is never the payable amount."
+            );
+        }
+
+        $this->assertSame(
+            2884,
+            $this->parser()->parse("GASOLINERA\nTOTAL LIRAS 4.500\nTOTAL EUROS 28,84")?->amount_minor
+        );
+    }
+
+    public function test_the_original_total_never_beats_the_payable_total(): void
+    {
+        $result = $this->parser()->parse("TIENDA\nOriginal Total \$29,195.00\nTOTAL \$19.95");
+
+        $this->assertSame(
+            1995,
+            $result?->amount_minor,
+            'The original total is the price before the discount, not what the customer paid.'
+        );
+    }
+
+    public function test_a_receipt_that_only_prints_the_original_total_has_no_payable_amount(): void
+    {
+        $this->assertNull(
+            $this->parser()->parse("CONNOR\nOriginal Total \$29,195.00\nYOU SAVE \$29,175.05"),
+            'When only the pre-discount price survived the OCR there is no payable amount to report.'
+        );
+    }
+
+    public function test_every_pre_discount_label_is_discarded(): void
+    {
+        foreach (['TOTAL ORIGINAL 29,00', 'ORIGINAL 29,00', 'PRECIO ORIGINAL 29,00', 'ANTES DE DESCUENTO 29,00', 'PVP 29,00', 'P.V.P. 29,00'] as $line) {
+            $this->assertNull(
+                $this->parser()->parse("TIENDA\n".$line),
+                "`{$line}` is the pre-discount price, so it is never the payable amount."
+            );
+        }
+    }
+
+    public function test_the_measured_connor_original_total_is_discarded(): void
+    {
+        $this->assertNull(
+            $this->parser()->parse(self::CONNOR_TEXT),
+            'The real `TOTAL $19.95` was not recognised, and the mangled `gina) Total` line is the `Original Total` of the photo.'
+        );
+    }
+
+    public function test_a_photo_of_two_receipts_returns_one_of_the_euro_totals(): void
+    {
+        $result = $this->parser()->parse(
+            "TOTAL EUROS 28,84 TOTAL EUROS 220\nTOTAL PESETAS 4.188,81 TOTAL PESETAS: 4.010"
+        );
+
+        $this->assertContains(
+            $result?->amount_minor,
+            [2884, 22000],
+            'Both `TOTAL EUROS` lines of a two-ticket photo are payable amounts; the pesetas lines never are.'
+        );
+    }
+
+    public function test_a_payable_total_that_merely_resembles_a_discarded_label_is_kept(): void
+    {
+        $this->assertSame(
+            2500,
+            $this->parser()->parse("TIENDA\nTOTAL FINAL 25,00")?->amount_minor,
+            '`FINAL` shares letters with the mangled `original` but is a real payable total.'
+        );
+        $this->assertSame(
+            1200,
+            $this->parser()->parse("LIBRERIA\nTOTAL PAGINA 12,00")?->amount_minor,
+            '`PAGINA` contains `gina` but not the OCR-damaged tail of `original` in a pre-discount line.'
+        );
+        $this->assertSame(
+            2884,
+            $this->parser()->parse("GASOLINERA\nTOTAL EUROS 28,84")?->amount_minor,
+            'The euro line of the same ticket must survive the retired-currency discard.'
+        );
+        $this->assertSame(
+            2500,
+            $this->parser()->parse("FLORISTERIA\nTOTAL 4 LIRIOS 25,00")?->amount_minor,
+            '`LIRIOS` starts like `LIRAS` but is a product, so the line is still a payable total.'
+        );
+        $this->assertSame(
+            2500,
+            $this->parser()->parse("TIENDA\nTOTAL DEMO 25,00")?->amount_minor,
+            '`DEM` only marks a retired currency on a word boundary.'
+        );
+    }
+
+    public function test_the_payable_total_is_unaffected_by_the_two_discards(): void
+    {
+        $this->assertSame(5995, $this->parser()->parse("TIENDA\nTOTAL 59,95")?->amount_minor);
+        $this->assertSame(2500, $this->parser()->parse("MERCADO\nSUBTOTAL 10,00\nTOTAL 25,00")?->amount_minor);
     }
 
     public function test_the_measured_tickets_without_a_readable_date_stay_null(): void

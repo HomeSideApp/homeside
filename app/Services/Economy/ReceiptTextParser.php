@@ -116,6 +116,47 @@ final class ReceiptTextParser
     private const MIN_COLUMN_HEADER_WORDS = 2;
 
     /**
+     * Labels of currencies that no longer exist, so a line carrying one is never the
+     * payable total.
+     *
+     * Measured need: the photo of two Spanish filling-station tickets reads
+     * `TOTAL EUROS 28,84 TOTAL EUROS 220` above
+     * `TOTAL PESETAS 4.188,81 TOTAL PESETAS: 4.010`. Both lines are labelled `TOTAL`, so
+     * they tie on strength and the last one — the pesetas — won, returning 40,10 when the
+     * amount charged was 28,84. Spanish receipts print the pesetas conversion next to the
+     * euro amount for reference; that is the same situation the other retired currencies
+     * are in (Italian lira, French franc, German mark), so all of them are discarded.
+     */
+    private const OBSOLETE_CURRENCY_PATTERN = '/\b(pesetas?|pts|ptas|liras?|lire|itl|francos?|frf|marcos?|dem)\b/u';
+
+    /**
+     * Labels of the price printed *before* the discount: never the amount that was paid.
+     *
+     * Measured need: the CONNOR ticket prints `Original Total $29,195.00` next to
+     * `YOU SAVE $29,175.05`, while the real `TOTAL $19.95` was not recognised at all. The
+     * pre-discount price is a strong `TOTAL` line, so it used to be reported as the amount
+     * charged. `ANTES DE DESCUENTO` and `CON DESCUENTO` need no alternative here: the
+     * NON_TOTAL_WORDS already reject every line that mentions a discount.
+     */
+    private const ORIGINAL_TOTAL_PATTERN = '/\b(?:original\w*)\b/u';
+
+    /**
+     * The retail `PVP` (precio de venta al público) label in its printed spellings.
+     */
+    private const RETAIL_PRICE_PATTERN = '/\bp\s*\.?\s*v\s*\.?\s*p\b/u';
+
+    /**
+     * OCR-damaged spellings of `original` in a pre-discount total line.
+     *
+     * The parser is tolerant with labels because that is what the engine returns: on the
+     * CONNOR ticket `Original Total` came back as `gina) Total` in one variant and as
+     * `plrtoinal Total` in another. The tail of the word is what survives, so the match is
+     * anchored on it, at the start of a token or after a consonant — which keeps real words
+     * that merely contain the same letters (`pagina`) out of the discard.
+     */
+    private const ORIGINAL_TOTAL_OCR_TAIL_PATTERN = '/(?:^|[^aeiou\s])(?:gina|ginal|oinal)\b/u';
+
+    /**
      * Words that never identify a merchant name.
      */
     private const NON_TITLE_WORDS = 'total|subtotal|subtotale|totale|importe|precio|price|amount|amt|montant|suma|summe|fecha|date|hora|time|hde|cif|cuit|cuil|nif|iva|vat|tax|ticket|factura|invoice|receipt|tel|tlf|fax|telefono|telephone|phone|trans|operacion|table|mesa|due|change|vuelto|cambio|merci|gracias|thank|client|cliente|card|tarjeta|cash|efectivo|item|cant|qty|desc|descripcion|description|servicio|service|contrapartida|acumulada|evento|cuota|goles|puntos|articulo|artikel|bon|rue|via|calle|avda|avenida|piazza|gasse|strasse|blvd|boulevard';
@@ -209,6 +250,10 @@ final class ReceiptTextParser
      *   3. Within the same strength the last occurrence wins: totals are printed at the foot,
      *      so the bottom-most occurrence of the same label is the payable one.
      *
+     * Lines that are excluded before any of the above: the item-table column headers, the
+     * tax/discount/change lines, the retired-currency conversions and the pre-discount
+     * total. See {@see amountLineStrength()}.
+     *
      * The lines travel with the amount because the currency is decided next to it: the
      * marker that counts is the one printed on the payable line (or right below it when the
      * amount is printed underneath its label), not one that happens to appear anywhere else
@@ -264,6 +309,10 @@ final class ReceiptTextParser
             return 0;
         }
 
+        if ($this->isNonPayableAmountLine($normalized)) {
+            return 0;
+        }
+
         if (preg_match(self::STRONG_LABEL_PATTERN, $normalized) === 1) {
             return self::STRENGTH_STRONG;
         }
@@ -277,6 +326,29 @@ final class ReceiptTextParser
         }
 
         return 0;
+    }
+
+    /**
+     * Decide whether a normalized line labels a price that is not the amount paid.
+     *
+     * Two families are rejected here, both measured on real tickets and both discarded
+     * *before* the strength hierarchy runs, so a discarded line can never win a tie:
+     *
+     *   1. A retired currency (`TOTAL PESETAS`, `TOTAL PTS`, `TOTALE LIRE`, ...). It is the
+     *      historical conversion the ticket prints for reference, not what was charged.
+     *   2. The pre-discount price (`ORIGINAL TOTAL`, `TOTAL ORIGINAL`, `PRECIO ORIGINAL`,
+     *      `PVP`, and the OCR-damaged spellings of `original`). It is what the goods cost
+     *      before the discount, not what the customer paid.
+     *
+     * @param  string  $normalized  The lower-cased, ASCII-folded line.
+     * @return bool True when the line cannot carry the payable total.
+     */
+    private function isNonPayableAmountLine(string $normalized): bool
+    {
+        return preg_match(self::OBSOLETE_CURRENCY_PATTERN, $normalized) === 1
+            || preg_match(self::ORIGINAL_TOTAL_PATTERN, $normalized) === 1
+            || preg_match(self::ORIGINAL_TOTAL_OCR_TAIL_PATTERN, $normalized) === 1
+            || preg_match(self::RETAIL_PRICE_PATTERN, $normalized) === 1;
     }
 
     /**
