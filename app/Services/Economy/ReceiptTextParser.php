@@ -54,16 +54,97 @@ final class ReceiptTextParser
     ];
 
     /**
+     * Strength of the payable-total family: a strong label always outranks a weaker one.
+     *
+     * Measured need: on the Zara ticket the `IMPORTE` of an item-table column header used
+     * to win over the real `Total`, so `IMPORTE` alone is a medium label, never a strong
+     * one, and `SUBTOTAL`/`BASE IMPONIBLE` are weak.
+     */
+    private const STRENGTH_STRONG = 3;
+
+    /**
+     * Strength of `IMPORTE`, the label Spanish receipts print when they print no `TOTAL`.
+     */
+    private const STRENGTH_MEDIUM = 2;
+
+    /**
+     * Strength of subtotals and taxable bases: only used when nothing stronger is legible.
+     */
+    private const STRENGTH_WEAK = 1;
+
+    /**
+     * Strong payable-total labels: `TOTAL`, `TOTALE` (with its `EUR`/`EUROP`/`EURO` suffix),
+     * `TOTAL A PAGAR`, `TOTAL TTC`, `AMOUNT DUE`, `SUMA`, `A PAGAR` and `TOT.`.
+     *
+     * The bare word alternatives cover the suffixed forms, and the word boundaries keep
+     * `SUBTOTAL`/`TOTALE` out of the `TOTAL`/`TOT` match instead of relying on pattern order.
+     */
+    private const STRONG_LABEL_PATTERN = '/\b(total|totale|tot|suma|amount|amt|montant|a\s*pagar)\b/u';
+
+    /**
+     * Medium payable-total label: `IMPORTE`.
+     */
+    private const MEDIUM_LABEL_PATTERN = '/\bimporte\b/u';
+
+    /**
+     * Weak labels: a subtotal is not the payable amount.
+     */
+    private const WEAK_LABEL_PATTERN = '/\b(sub\s*-?\s*total|subtotale|sous\s*-?\s*total|base\s*imponible|base\s*imposable)\b/u';
+
+    /**
      * Words that make an amount line a non-total (tax, discount, change, line item).
      *
      * `TTC` (French, tax included) and `A PAGAR` are deliberately absent: they are totals.
+     * `PUNTOS`, `GOLES`, `PARTE` and `CUOTA` are bet-market nouns: on the measured
+     * sports-betting ticket `TOTAL PUNTOS EQ.` labels a market, so its trailing market
+     * code must never be read as the payable amount.
      */
-    private const NON_TOTAL_WORDS = 'iva|i\.v\.a|vat|tax|taxe|impuesto|descuento|discount|remise|ahorro|saving|savings|change|vuelto|cambio|propina|tip|quantity|cantidad|unidades|articulos|items|qty';
+    private const NON_TOTAL_WORDS = 'iva|i\.v\.a|vat|tax|taxe|impuesto|descuento|discount|remise|ahorro|saving|savings|change|vuelto|cambio|propina|tip|quantity|cantidad|unidades|articulos|items|qty|puntos|goles|parte|cuota';
+
+    /**
+     * Column-header words of the item table.
+     *
+     * A line that names two or more of them is a column header, not a total: on the Zara
+     * ticket `TS 108 PUN PRECIO IMPORTE A` carries the `108` of the header row and used to
+     * win over the real `Total 1 59,95` printed at the foot.
+     */
+    private const COLUMN_HEADER_WORDS = '/\b(importe|precio|price|p\s*[.]?\s*unit(?:ario)?|u\s*[.]?\s*price|cant(?:idad)?|articulo|descripcion)\b/u';
+
+    /**
+     * Minimum number of distinct column-header words that makes a line a header.
+     */
+    private const MIN_COLUMN_HEADER_WORDS = 2;
 
     /**
      * Words that never identify a merchant name.
      */
-    private const NON_TITLE_WORDS = 'total|subtotal|importe|amount|amt|montant|suma|fecha|date|hora|time|hde|cuit|cuil|nif|iva|vat|tax|ticket|factura|invoice|receipt|tel|telefono|telephone|phone|table|mesa|due|change|vuelto|cambio|merci|gracias|thank|client|cliente|card|tarjeta|cash|efectivo|item|cant|qty|desc|descripcion|description|servicio|service';
+    private const NON_TITLE_WORDS = 'total|subtotal|subtotale|totale|importe|precio|price|amount|amt|montant|suma|summe|fecha|date|hora|time|hde|cif|cuit|cuil|nif|iva|vat|tax|ticket|factura|invoice|receipt|tel|tlf|fax|telefono|telephone|phone|trans|operacion|table|mesa|due|change|vuelto|cambio|merci|gracias|thank|client|cliente|card|tarjeta|cash|efectivo|item|cant|qty|desc|descripcion|description|servicio|service|contrapartida|acumulada|evento|cuota|goles|puntos|articulo|artikel|bon|rue|via|calle|avda|avenida|piazza|gasse|strasse|blvd|boulevard';
+
+    /**
+     * Number of leading lines scored for the merchant name.
+     *
+     * The name sits at the top of the receipt, so a short window keeps the store's own
+     * footer (`TARJETA FIDELIDAD SEPHORA`, `Vielen Dank ...`) from outscoring it. The
+     * measured tickets resolve the merchant inside this window, and widening it starts to
+     * lose `Sephora Cosmeticos España, S.L.` to a later, more regular line.
+     */
+    private const TITLE_WINDOW = 8;
+
+    /**
+     * Characters trimmed from the edges of a candidate name: punctuation and typographic
+     * quotes, never `?`/`¿`, which must keep hurting the line that carries them.
+     */
+    private const TITLE_TRIM_CHARACTERS = " \t\n\r\0\x0B.,:;-_=|*#·•\"'§€$%()[]{}\u{2018}\u{2019}\u{201C}\u{201D}\u{00AB}\u{00BB}\u{2013}\u{2014}";
+
+    /**
+     * Characters that mark a line as OCR noise rather than a name.
+     */
+    private const TITLE_NOISE_CHARACTERS = '/[|~§^\\\\*=<>@#\/]/u';
+
+    /**
+     * Runs of two or more consecutive symbols, a strong sign of OCR noise.
+     */
+    private const TITLE_SYMBOL_RUNS = '/(?:[^\p{L}\p{N}\s]){2,}/u';
 
     /**
      * Parse receipt text into structured economic data.
@@ -118,22 +199,28 @@ final class ReceiptTextParser
     /**
      * Find the payable amount in minor units.
      *
-     * Total lines win over subtotal lines, and among the totals the largest value wins:
-     * a receipt can print `TOTAL ARTICULOS 3` next to the real payable total, but the
-     * payable total is the biggest number of the total family.
+     * Three rules, all measured on real tickets:
+     *
+     *   1. Label hierarchy. A strong label (`TOTAL`, `TOTALE EUROP`, `TOTAL A PAGAR`,
+     *      `AMOUNT DUE`, `A PAGAR`, `TOT.`) always outranks `IMPORTE`, which always outranks
+     *      a subtotal. A weak label never wins while a strong one is legible.
+     *   2. Column headers are not totals. A line that names two item-table columns is the
+     *      header of the table, whatever amount it carries.
+     *   3. Within the same strength the last occurrence wins: totals are printed at the foot,
+     *      so the bottom-most occurrence of the same label is the payable one.
      *
      * @param  list<string>  $lines  The recognised lines.
      * @return int|null The amount in minor units, or null when no total is legible.
      */
     private function extractAmountMinor(array $lines): ?int
     {
-        $totals = [];
-        $subtotals = [];
+        $bestAmount = null;
+        $bestStrength = 0;
 
         foreach ($lines as $index => $line) {
-            $kind = $this->classifyAmountLine($line);
+            $strength = $this->amountLineStrength($line);
 
-            if ($kind === null) {
+            if ($strength === 0) {
                 continue;
             }
 
@@ -143,47 +230,63 @@ final class ReceiptTextParser
                 continue;
             }
 
-            if ($kind === 'total') {
-                $totals[] = $amount;
-            } else {
-                $subtotals[] = $amount;
+            // A later line of the same strength replaces the earlier one; a weaker label
+            // never replaces a stronger one.
+            if ($strength >= $bestStrength) {
+                $bestAmount = $amount;
+                $bestStrength = $strength;
             }
         }
 
-        if ($totals !== []) {
-            return max($totals);
-        }
-
-        if ($subtotals !== []) {
-            return max($subtotals);
-        }
-
-        return null;
+        return $bestAmount;
     }
 
     /**
-     * Classify a line as a total, a subtotal or neither.
+     * Rate how strongly a line claims to carry the payable total.
      *
      * @param  string  $line  A recognised line.
-     * @return string|null `total`, `subtotal`, or null when the line is not an amount line.
+     * @return int One of the STRENGTH_* constants, or 0 when the line is not an amount line.
      */
-    private function classifyAmountLine(string $line): ?string
+    private function amountLineStrength(string $line): int
     {
         $normalized = Str::lower(Str::ascii($line));
 
-        if (preg_match('/sub\s*-?\s*total|sous\s*-?\s*total/u', $normalized) === 1) {
-            return 'subtotal';
-        }
-
-        if (preg_match('/\b(total|tot|importe|amount|amt|montant|suma|a\s*pagar)\b/u', $normalized) !== 1) {
-            return null;
+        if ($this->isColumnHeader($normalized)) {
+            return 0;
         }
 
         if (preg_match('/\b('.self::NON_TOTAL_WORDS.')\b/u', $normalized) === 1) {
-            return null;
+            return 0;
         }
 
-        return 'total';
+        if (preg_match(self::STRONG_LABEL_PATTERN, $normalized) === 1) {
+            return self::STRENGTH_STRONG;
+        }
+
+        if (preg_match(self::MEDIUM_LABEL_PATTERN, $normalized) === 1) {
+            return self::STRENGTH_MEDIUM;
+        }
+
+        if (preg_match(self::WEAK_LABEL_PATTERN, $normalized) === 1) {
+            return self::STRENGTH_WEAK;
+        }
+
+        return 0;
+    }
+
+    /**
+     * Decide whether a normalized line is a column header of the item table.
+     *
+     * @param  string  $normalized  The lower-cased, ASCII-folded line.
+     * @return bool True when the line names more than one item-table column.
+     */
+    private function isColumnHeader(string $normalized): bool
+    {
+        if (preg_match_all(self::COLUMN_HEADER_WORDS, $normalized, $matches) === false) {
+            return false;
+        }
+
+        return count(array_unique($matches[1])) >= self::MIN_COLUMN_HEADER_WORDS;
     }
 
     /**
@@ -406,41 +509,142 @@ final class ReceiptTextParser
     /**
      * Find the merchant name.
      *
-     * The merchant is the first line that looks like a name: it has real letters, is not a
-     * date, does not contain a receipt keyword and is not a bare number.
+     * Measured need: taking the first line that cleared a weak filter returned garbage such
+     * as `hiwtacón mesas?` (Zara) and `s C A Ah madrid` (a bar), because the OCR noise sits
+     * above the real name. So the leading lines are scored and the best one wins.
+     *
+     * The score rewards what a merchant name looks like — several words, mostly letters,
+     * few digits, upper case — and penalizes what OCR noise and receipt boilerplate look
+     * like. Position is part of the score because the merchant is printed at the top; it
+     * must stay small enough that `APUESTAS DEPORTIVAS` still beats the longer construction
+     * below it, and strong enough that `ZARA` beats the noise line above it.
      *
      * @param  list<string>  $lines  The recognised lines.
      * @return string|null The merchant name, or null when no line looks like one.
      */
     private function extractTitle(array $lines): ?string
     {
-        foreach ($lines as $line) {
-            $candidate = trim($line, " \t\n\r\0\x0B.,:;-_=|*#·•\"'§€$%()[]{}");
+        $bestTitle = null;
+        $bestScore = null;
 
-            if (mb_strlen($candidate) < 3) {
+        foreach (array_slice($lines, 0, self::TITLE_WINDOW) as $index => $line) {
+            $score = $this->titleScore($line, $index);
+
+            if ($score === null) {
                 continue;
             }
 
-            $letters = (int) preg_match_all('/\p{L}/u', $candidate);
-            $visible = (int) preg_match_all('/\S/u', $candidate);
-
-            if ($letters < 3 || $letters * 2 < $visible) {
-                continue;
+            if ($bestScore === null || $score > $bestScore) {
+                $candidate = trim($line, self::TITLE_TRIM_CHARACTERS);
+                $bestTitle = Str::limit($candidate, 80, '');
+                $bestScore = $score;
             }
-
-            if ($this->extractDate($candidate) !== null) {
-                continue;
-            }
-
-            $normalized = Str::lower(Str::ascii($candidate));
-
-            if (preg_match('/\b('.self::NON_TITLE_WORDS.')\b/u', $normalized) === 1) {
-                continue;
-            }
-
-            return Str::limit($candidate, 80, '');
         }
 
-        return null;
+        return $bestTitle;
+    }
+
+    /**
+     * Score one leading line as a merchant name.
+     *
+     * @param  string  $line  The recognised line.
+     * @param  int  $index  Its position among the leading lines, 0 being the first.
+     * @return float|null The score, or null when the line cannot be a merchant name.
+     */
+    private function titleScore(string $line, int $index): ?float
+    {
+        $candidate = trim($line, self::TITLE_TRIM_CHARACTERS);
+
+        if (mb_strlen($candidate) < 3) {
+            return null;
+        }
+
+        $letters = $this->countMatches('/\p{L}/u', $candidate);
+        $visible = $this->countMatches('/\S/u', $candidate);
+
+        if ($letters < 3 || $letters * 2 < $visible) {
+            return null;
+        }
+
+        if ($this->extractDate($candidate) !== null) {
+            return null;
+        }
+
+        if (preg_match('/\b('.self::NON_TITLE_WORDS.')\b/u', Str::lower(Str::ascii($candidate))) === 1) {
+            return null;
+        }
+
+        $tokens = preg_split('/[^\p{L}\p{N}]+/u', $candidate, -1, PREG_SPLIT_NO_EMPTY) ?: [];
+
+        $informativeTokens = 0;
+        $singleLetterTokens = 0;
+        $mixedTokens = 0;
+        $wordTokens = 0;
+        $twoLetterWordTokens = 0;
+
+        foreach ($tokens as $token) {
+            $length = mb_strlen($token);
+            $hasLetters = preg_match('/\p{L}/u', $token) === 1;
+
+            if ($length >= 2) {
+                $informativeTokens++;
+            } elseif ($hasLetters) {
+                $singleLetterTokens++;
+            }
+
+            if ($hasLetters && $length >= 2) {
+                $wordTokens++;
+
+                if ($length === 2) {
+                    $twoLetterWordTokens++;
+                }
+            }
+
+            if ($hasLetters && preg_match('/\p{N}/u', $token) === 1) {
+                $mixedTokens++;
+            }
+        }
+
+        // A line whose words are mostly two letters long is a mangled OCR fragment
+        // (`Ll ei 7 mon`), not a merchant name: real words of a receipt are longer, and
+        // rejecting the fragments is a hard gate because their score is indistinguishable
+        // from that of the noise line above them.
+        if ($wordTokens > 0 && $twoLetterWordTokens * 2 > $wordTokens) {
+            return null;
+        }
+
+        $digits = $this->countMatches('/\p{N}/u', $candidate);
+        $uppercase = $this->countMatches('/\p{Lu}/u', $candidate);
+        $noise = $this->countMatches(self::TITLE_NOISE_CHARACTERS, $candidate);
+        $runs = $this->countMatches(self::TITLE_SYMBOL_RUNS, $candidate);
+        $question = preg_match('/[?¿]/u', $candidate) === 1 ? 1 : 0;
+        $capsRatio = $letters > 0 ? $uppercase / $letters : 0.0;
+        $density = $visible > 0 ? $letters / $visible : 0.0;
+
+        return $letters
+            + $informativeTokens * 2
+            + $capsRatio * 2
+            + $density * 2
+            - $digits * 3
+            - $singleLetterTokens * 2
+            - $mixedTokens * 6
+            - $noise * 4
+            - $question * 10
+            - $runs * 6
+            + (self::TITLE_WINDOW - $index);
+    }
+
+    /**
+     * Count non-overlapping matches of a pattern.
+     *
+     * @param  string  $pattern  A PCRE pattern.
+     * @param  string  $subject  The text to scan.
+     * @return int The number of matches, 0 when the pattern does not apply.
+     */
+    private function countMatches(string $pattern, string $subject): int
+    {
+        $count = preg_match_all($pattern, $subject);
+
+        return $count === false ? 0 : $count;
     }
 }

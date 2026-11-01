@@ -55,6 +55,73 @@ class ReceiptTextParserTest extends TestCase
     THANK YOU FOR SHOPPING WITH US
     TEXT;
 
+    /**
+     * Raw text captured from the Zara ticket (psm 6, spa). `TS 108 PUN PRECIO IMPORTE A`
+     * is the column header of the item table, and the payable total is the later
+     * `Total 1 59,95` — the measured ground truth read from the paper ticket.
+     */
+    private const ZARA_TEXT = <<<'TEXT'
+    hiwtacón mesas?
+    ZARA, CC. LAS GLORIAS, L 404
+    TLF: +34 934 860 134
+    07/02/2013 14 25 79446
+    127974308 01 Trans: 345681
+    Fecha Expedición/Operación 07/02/2013
+    TS 108 PUN PRECIO IMPORTE A
+    o m0oa Ta 59,95 V
+    10001194 1210320104037 BOTIN TACÓN
+    Total 1 59,95
+    Efectivo EUR 100,00,
+    Cambro Efectivo EUR 40,05
+    TEXT;
+
+    /**
+     * Excerpt captured from the sports-betting ticket: the payable amount is `IMPORTE
+     * APUESTA`, while `TOTAL PUNTOS EQ.` labels a bet market and must not win.
+     */
+    private const APUESTAS_TEXT = <<<'TEXT'
+    ” juegging
+    APUESTAS DEPORTIVAS
+    APUESTA CONTRAPARTIDA ACUMULADA
+    1- copa del Rey 24/10/2017
+    Evento: Real Murcia - F.C.
+    2 Mod: Total Puntos Eq.
+    visitante (74,5)
+    cuota: 1,20
+    Importe apuesta : 5,00 €
+    cuota acumulada : 399)
+    Premio Posible E 17505: €
+    TEXT;
+
+    /**
+     * Excerpt captured from the H&M ticket: the merchant is the bare `HaM` line and the
+     * payable total is the German `BON TOTAL` line.
+     */
+    private const HM_TEXT = <<<'TEXT'
+    HaM
+    Shop. 609
+    Kurfurstendamm 20-24. Tel 030/ 8826299
+    10719 Berlin
+    04012002 18:40 F7—K7 Bon.nr 115
+    KASSLERER4OSS SALES9
+    1 ARTIKEL
+    SUMME EUR 1.90
+    BON TOTAL IN DEN == 3.72
+    TEXT;
+
+    /**
+     * Excerpt captured from the Sephora ticket: the legal name is the merchant, the
+     * `SEPHORA GRAN VIA` store line below it is not.
+     */
+    private const SEPHORA_TEXT = <<<'TEXT'
+    Sephora Cosmeticos España, S.L.
+    CIF : B84227461
+    SEPHORA GRAN VIA
+    €. C. Gran Vía C/ Literatura 1-3
+    TEL: 93 259 15 30 FAX : 93 259 00 13
+    TOTAL EUR 52.50
+    TEXT;
+
     public function test_it_reads_the_total_and_currency_from_the_avenue_ticket(): void
     {
         $result = $this->parser()->parse(self::AVENUE_TEXT);
@@ -151,6 +218,88 @@ class ReceiptTextParserTest extends TestCase
         $this->assertSame(13500, $result?->amount_minor);
     }
 
+    public function test_it_reads_the_real_zara_total_and_not_the_column_header(): void
+    {
+        $result = $this->parser()->parse(self::ZARA_TEXT);
+
+        $this->assertSame(
+            5995,
+            $result?->amount_minor,
+            '`TS 108 PUN PRECIO IMPORTE A` is the item-table column header, not the total: the payable amount is `Total 1 59,95`.'
+        );
+        $this->assertStringContainsString('ZARA', (string) $result?->title);
+    }
+
+    public function test_a_column_header_line_never_beats_a_later_total(): void
+    {
+        $result = $this->parser()->parse("LIBRERIA\nCANT PRECIO IMPORTE 108,00\nTotal 42,00");
+
+        $this->assertSame(4200, $result?->amount_minor, 'A line naming two column headers is a header, not a total.');
+    }
+
+    public function test_a_base_imponible_never_beats_the_total(): void
+    {
+        $result = $this->parser()->parse("MERCADO\nBASE IMPONIBLE 10,00\nTOTAL A PAGAR 25,00");
+
+        $this->assertSame(2500, $result?->amount_minor);
+    }
+
+    public function test_the_strongest_total_label_wins_over_a_subtotal(): void
+    {
+        $result = $this->parser()->parse("MERCADO\nSUBTOTAL 10,00\nTOTAL 25,00");
+
+        $this->assertSame(2500, $result?->amount_minor);
+    }
+
+    public function test_it_reads_the_french_totale_labels(): void
+    {
+        $this->assertSame(900, $this->parser()->parse("BOULANGERIE\nTOTALE EUROP 9,00")?->amount_minor);
+        $this->assertSame(900, $this->parser()->parse("BOULANGERIE\nTOTALE 9,00")?->amount_minor);
+    }
+
+    public function test_an_importe_label_alone_is_still_read(): void
+    {
+        $result = $this->parser()->parse("TABAC\nIMPORTE 42,00");
+
+        $this->assertSame(4200, $result?->amount_minor, 'Receipts that only print IMPORTE must keep working.');
+    }
+
+    public function test_the_last_total_wins_because_totals_are_printed_at_the_foot(): void
+    {
+        $result = $this->parser()->parse("TIENDA\nTOTAL 108,00\nTOTAL A PAGAR 59,95");
+
+        $this->assertSame(5995, $result?->amount_minor, 'Among equally strong labels the last one is the payable total.');
+    }
+
+    public function test_a_later_subtotal_never_beats_the_total_above_it(): void
+    {
+        $result = $this->parser()->parse("MERCADO\nTOTAL 25,00\nSUBTOTAL 10,00");
+
+        $this->assertSame(2500, $result?->amount_minor, 'Being later must not let a weak label outrank a strong one.');
+    }
+
+    public function test_a_column_header_is_never_read_as_the_only_amount(): void
+    {
+        $this->assertNull(
+            $this->parser()->parse("BOUTIQUE\nPRECIO IMPORTE 108,00"),
+            'A receipt whose only amount-bearing line is the item-table header has no readable total.'
+        );
+    }
+
+    public function test_it_reads_the_abbreviated_tot_label(): void
+    {
+        $result = $this->parser()->parse("KIOSCO\nTOT. 12,00");
+
+        $this->assertSame(1200, $result?->amount_minor);
+    }
+
+    public function test_a_bet_market_total_does_not_beat_the_importe_apuesta(): void
+    {
+        $result = $this->parser()->parse(self::APUESTAS_TEXT);
+
+        $this->assertSame(500, $result?->amount_minor, '`TOTAL PUNTOS EQ.` labels a bet market, not the payable amount.');
+    }
+
     public function test_an_impossible_year_drops_the_date_instead_of_losing_the_amount(): void
     {
         $result = $this->parser()->parse("BODEGA\n12/03/1800\nTOTAL 10,00");
@@ -207,6 +356,20 @@ class ReceiptTextParserTest extends TestCase
         $result = $this->parser()->parse("COFFEE SHOP\nNov 22, 2016\nTOTAL 10,00");
 
         $this->assertSame('2016-11-22', $result?->occurred_at?->toDateString());
+    }
+
+    public function test_a_question_mark_noise_line_does_not_become_the_merchant(): void
+    {
+        $result = $this->parser()->parse("hiwtacón mesas?\nFERRETERIA SAN MARTIN\nTOTAL 10,00");
+
+        $this->assertSame('FERRETERIA SAN MARTIN', $result?->title);
+    }
+
+    public function test_the_measured_merchant_names_are_preserved(): void
+    {
+        $this->assertSame('APUESTAS DEPORTIVAS', $this->parser()->parse(self::APUESTAS_TEXT)?->title);
+        $this->assertSame('HaM', $this->parser()->parse(self::HM_TEXT)?->title);
+        $this->assertSame('Sephora Cosmeticos España, S.L', $this->parser()->parse(self::SEPHORA_TEXT)?->title);
     }
 
     public function test_items_and_taxes_stay_empty_in_this_version(): void
