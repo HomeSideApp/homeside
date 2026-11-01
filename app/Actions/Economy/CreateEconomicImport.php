@@ -17,12 +17,23 @@ use App\Models\User;
  */
 final class CreateEconomicImport
 {
+    /**
+     * The entitlement port stays injected even though uploading no longer meters: the
+     * credit moved to the analysis job, which only spends it when the offline pass cannot
+     * read the ticket. Keeping the dependency keeps this consumer on the app-owned port
+     * (instead of reaching for the commercial package) for the quota checks a future
+     * upload-level limit would need.
+     */
     public function __construct(
         private readonly EntitlementGate $entitlements,
     ) {}
 
     /**
      * Create an economic import and enqueue its document analysis.
+     *
+     * Uploading no longer meters anything: the analysis job reads the ticket offline
+     * first, and only reserves a recognition credit when that free pass cannot find the
+     * total. A plan without image recognition can therefore still upload a ticket.
      *
      * @param  CreateEconomicImportData  $data  The document and requested sections for the import.
      * @param  Household|null  $household  The household scope, or null for a private import.
@@ -48,11 +59,9 @@ final class CreateEconomicImport
             'requested_sections' => $data->requested_sections,
         ]);
 
-        // Meter one AI recognition credit before enqueueing; denied or
-        // exhausted quotas never reach the queue (inert while SaaS disabled).
-        $operationId = $this->entitlements->reserveTicketRecognition($user, $import->id);
-
-        AnalyzeEconomicDocumentJob::dispatch($import->id, $operationId);
+        // The job reserves the credit itself, and only if the offline pass cannot read
+        // the receipt, so no operation id is handed over here.
+        AnalyzeEconomicDocumentJob::dispatch($import->id);
 
         return $import;
     }

@@ -2,6 +2,8 @@
 
 namespace Tests\Feature\Economy;
 
+use App\Contracts\ReceiptTextExtractor;
+use App\Services\Economy\ReceiptTextParser;
 use App\Services\Economy\TicketAnalyzer;
 use HomeSide\AiAgents\AiAgentManager;
 use Tests\TestCase;
@@ -14,11 +16,18 @@ class TicketAnalyzerPromptTest extends TestCase
     /**
      * Build the analyzer with a stubbed agent manager.
      *
+     * The offline collaborators are stubbed too: this test only covers the prompt the AI
+     * path builds, not the offline reading layer.
+     *
      * @return TicketAnalyzer The analyzer under test.
      */
     private function analyzer(): TicketAnalyzer
     {
-        return new TicketAnalyzer($this->mock(AiAgentManager::class));
+        return new TicketAnalyzer(
+            $this->mock(AiAgentManager::class),
+            $this->mock(ReceiptTextExtractor::class),
+            new ReceiptTextParser,
+        );
     }
 
     public function test_title_is_always_requested_even_without_optional_sections(): void

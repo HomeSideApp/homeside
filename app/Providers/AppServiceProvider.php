@@ -5,6 +5,7 @@ namespace App\Providers;
 use App\Contracts\AuthenticationBootstrapRepository;
 use App\Contracts\CryptoPriceFetcher;
 use App\Contracts\EntitlementGate;
+use App\Contracts\ReceiptTextExtractor;
 use App\Contracts\RegistrationBlockRepository;
 use App\Contracts\RegistrationGate;
 use App\Contracts\RegistrationPolicyDefaults;
@@ -34,6 +35,7 @@ use App\Policies\RegistrationSettingsPolicy;
 use App\Services\Auth\SelfHostedRegistrationGate;
 use App\Services\Auth\SelfHostedRegistrationPolicyDefaults;
 use App\Services\Economy\CoinGeckoPriceFetcher;
+use App\Services\Economy\TesseractReceiptTextExtractor;
 use App\Support\Auth\AuthenticationBootstrapRepository as EloquentAuthenticationBootstrapRepository;
 use App\Support\Auth\GoogleDriverRegistrar;
 use App\Support\NullEntitlementGate;
@@ -99,6 +101,7 @@ class AppServiceProvider extends ServiceProvider
         $this->configureRegistrationPolicies();
         $this->configureRegistrationNotifications();
         $this->configureCryptoPrices();
+        $this->configureReceiptTextExtraction();
         $this->configureJobMonitoring();
         $this->configureGoogleProvider();
     }
@@ -140,6 +143,19 @@ class AppServiceProvider extends ServiceProvider
     protected function configureCryptoPrices(): void
     {
         $this->app->bind(CryptoPriceFetcher::class, CoinGeckoPriceFetcher::class);
+    }
+
+    /**
+     * Bind the offline receipt text reader behind its contract.
+     *
+     * The analysis job reads a ticket offline before spending a metered AI recognition,
+     * so the offline engine is swappable: tests fake this port, and a deploy whose image has
+     * no Tesseract binary gets an extractor that returns null, which sends every import down
+     * the AI path exactly as before.
+     */
+    protected function configureReceiptTextExtraction(): void
+    {
+        $this->app->bind(ReceiptTextExtractor::class, TesseractReceiptTextExtractor::class);
     }
 
     /**
