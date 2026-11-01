@@ -122,6 +122,32 @@ class ReceiptTextParserTest extends TestCase
     TOTAL EUR 52.50
     TEXT;
 
+    /**
+     * Raw text captured from the bar ticket: a Spanish receipt with no currency symbol
+     * anywhere, a `dd.mm.yy` date and an ISO-form date printed below it.
+     */
+    private const BAR_TEXT = <<<'TEXT'
+    ,
+    - e /
+    s C A Ah madrid
+    . Hapos y DIOSOS.
+    24 h :
+    E ¿ h
+    = Mesa 40 l
+    -/ »
+    =)
+    : '
+    -4
+    z o MA
+    4,60
+    : Total 26,00
+    - 23,64
+    + 2,6
+    E SALON
+    Fecha; 26.01.13, Hora:2143
+    2013/01/26 21:41
+    TEXT;
+
     public function test_it_reads_the_total_and_currency_from_the_avenue_ticket(): void
     {
         $result = $this->parser()->parse(self::AVENUE_TEXT);
@@ -300,12 +326,151 @@ class ReceiptTextParserTest extends TestCase
         $this->assertSame(500, $result?->amount_minor, '`TOTAL PUNTOS EQ.` labels a bet market, not the payable amount.');
     }
 
+    public function test_the_currency_is_read_from_the_amount_line_not_from_a_distant_equivalent(): void
+    {
+        $result = $this->parser()->parse("CASA DE CAMBIO\nTOTAL \$ 1.000\nEQUIV. EUR 90,00");
+
+        $this->assertSame(100000, $result?->amount_minor);
+        $this->assertSame(
+            'ARS',
+            $result?->currency,
+            'The amount is the peso total; the EUR marker belongs to a conversion line, not to it.'
+        );
+    }
+
+    public function test_an_amount_line_wins_over_a_distant_marker_of_another_currency(): void
+    {
+        $this->assertSame(
+            'EUR',
+            $this->parser()->parse("BOULANGERIE\nTOTAL TTC 135,00 €\nEQUIV. US\$ 150,00")?->currency,
+            'The euro sign sits on the payable line, so the distant US\$ must not win.'
+        );
+
+        $this->assertSame(
+            'USD',
+            $this->parser()->parse("DUTY FREE\nTOTAL US\$ 120,00\nEQUIVALENTE EUR 92,00")?->currency,
+            'US\$ is unambiguous and outranks the distant word EUR.'
+        );
+    }
+
+    public function test_a_us_dollar_marker_is_never_read_as_a_peso(): void
+    {
+        $result = $this->parser()->parse("ELECTRONICS STORE\nTOTAL US\$ 120,00");
+
+        $this->assertSame(12000, $result?->amount_minor);
+        $this->assertSame('USD', $result?->currency, '`US$` contains `$`: the peso reading must never come first.');
+    }
+
+    public function test_a_bare_dollar_sign_is_read_as_a_peso(): void
+    {
+        $result = $this->parser()->parse("ALMACEN DON PEDRO\nTOTAL \$ 1.234,56");
+
+        $this->assertSame(123456, $result?->amount_minor);
+        $this->assertSame('ARS', $result?->currency, 'A bare `$` on an Argentine receipt is a peso.');
+    }
+
+    public function test_an_explicit_ars_code_is_read(): void
+    {
+        $result = $this->parser()->parse("SUPERMERCADO NORTE\nTOTAL 1.234,56 ARS");
+
+        $this->assertSame(123456, $result?->amount_minor);
+        $this->assertSame('ARS', $result?->currency);
+    }
+
+    public function test_the_full_text_fallback_keeps_the_signal_order(): void
+    {
+        $result = $this->parser()->parse("CASA DE CAMBIO\nTOTAL 120,00\nENTREGADO US\$ 120,00\nEQUIVALENTE EUR 92,00");
+
+        $this->assertSame(
+            'USD',
+            $result?->currency,
+            'When the amount line carries no marker, an explicit US\$ still outranks a distant EUR.'
+        );
+    }
+
+    public function test_the_currency_travels_with_an_amount_printed_below_its_label(): void
+    {
+        $this->assertSame(
+            'EUR',
+            $this->parser()->parse("BOULANGERIE\nTOTAL A PAGAR\n135,00 €")?->currency,
+            'When the number is printed under the label, both lines belong to the amount block.'
+        );
+    }
+
+    public function test_an_argentine_us_dollar_marker_is_read_as_usd(): void
+    {
+        $this->assertSame(
+            'USD',
+            $this->parser()->parse("ELECTRONICS STORE\nTOTAL U\$S 120,00")?->currency,
+            '`U$S` is the local spelling of the US dollar and must not fall through to the peso reading.'
+        );
+    }
+
+    public function test_the_signal_priority_holds_across_the_whole_text(): void
+    {
+        $result = $this->parser()->parse("CAMBIO\nTOTAL 120,00\nCAJA \$ 500,00\nENTREGADO US\$ 120,00");
+
+        $this->assertSame(
+            'USD',
+            $result?->currency,
+            'In the whole-text fallback an explicit US\$ outranks a bare `$` printed above it.'
+        );
+    }
+
+    public function test_a_receipt_without_any_currency_marker_falls_back_to_ars(): void
+    {
+        $this->assertSame(
+            'ARS',
+            $this->parser()->parse("PANADERIA LA ESQUINA\nTOTAL 250")?->currency,
+            'No marker means ARS by product decision: the app is Argentine and the review screen lets the person correct it.'
+        );
+    }
+
     public function test_an_impossible_year_drops_the_date_instead_of_losing_the_amount(): void
     {
         $result = $this->parser()->parse("BODEGA\n12/03/1800\nTOTAL 10,00");
 
         $this->assertSame(1000, $result?->amount_minor);
         $this->assertNull($result?->occurred_at, 'A year out of the plausible range must not be invented.');
+    }
+
+    public function test_the_measured_dates_are_pinned(): void
+    {
+        $this->assertSame(
+            '2017-10-24',
+            $this->parser()->parse(self::APUESTAS_TEXT)?->occurred_at?->toDateString(),
+            'The betting ticket prints `24/10/2017`.'
+        );
+
+        $this->assertSame(
+            '2013-02-07',
+            $this->parser()->parse(self::ZARA_TEXT)?->occurred_at?->toDateString(),
+            'The Zara ticket prints `07/02/2013` in dd/mm/yyyy order.'
+        );
+    }
+
+    public function test_a_dot_separated_two_digit_year_is_read_from_the_bar_ticket(): void
+    {
+        $result = $this->parser()->parse(self::BAR_TEXT);
+
+        $this->assertSame(
+            '2013-01-26',
+            $result?->occurred_at?->toDateString(),
+            '`Fecha; 26.01.13` is dd.mm.yy and means 26 January 2013, not 1926 or 2026.'
+        );
+        $this->assertSame(2600, $result?->amount_minor);
+    }
+
+    public function test_the_measured_tickets_without_a_readable_date_stay_null(): void
+    {
+        $this->assertNull(
+            $this->parser()->parse(self::HM_TEXT)?->occurred_at,
+            'The H&M ticket has no readable date, so none may be invented.'
+        );
+        $this->assertNull(
+            $this->parser()->parse(self::SEPHORA_TEXT)?->occurred_at,
+            'The Sephora ticket has no readable date, so none may be invented.'
+        );
     }
 
     public function test_a_receipt_without_a_date_keeps_occurred_at_null(): void

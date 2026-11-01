@@ -156,16 +156,16 @@ final class ReceiptTextParser
     {
         $lines = $this->lines($text);
 
-        $amountMinor = $this->extractAmountMinor($lines);
+        $total = $this->extractTotal($lines);
 
-        if ($amountMinor === null) {
+        if ($total === null) {
             return null;
         }
 
         return new ReceiptAnalysisResultData(
             title: $this->extractTitle($lines),
-            amount_minor: $amountMinor,
-            currency: $this->detectCurrency($text),
+            amount_minor: $total['amount_minor'],
+            currency: $this->detectCurrency($total['lines'], $text),
             place: null,
             occurred_at: $this->extractDate($text),
             items: [],
@@ -197,7 +197,7 @@ final class ReceiptTextParser
     }
 
     /**
-     * Find the payable amount in minor units.
+     * Find the payable amount in minor units, together with the lines that printed it.
      *
      * Three rules, all measured on real tickets:
      *
@@ -209,12 +209,17 @@ final class ReceiptTextParser
      *   3. Within the same strength the last occurrence wins: totals are printed at the foot,
      *      so the bottom-most occurrence of the same label is the payable one.
      *
+     * The lines travel with the amount because the currency is decided next to it: the
+     * marker that counts is the one printed on the payable line (or right below it when the
+     * amount is printed underneath its label), not one that happens to appear anywhere else
+     * on the paper.
+     *
      * @param  list<string>  $lines  The recognised lines.
-     * @return int|null The amount in minor units, or null when no total is legible.
+     * @return array{amount_minor: int, lines: list<string>}|null The amount in minor units and its source lines, or null when no total is legible.
      */
-    private function extractAmountMinor(array $lines): ?int
+    private function extractTotal(array $lines): ?array
     {
-        $bestAmount = null;
+        $best = null;
         $bestStrength = 0;
 
         foreach ($lines as $index => $line) {
@@ -224,7 +229,7 @@ final class ReceiptTextParser
                 continue;
             }
 
-            $amount = $this->lineAmountMinor($line, $lines[$index + 1] ?? null);
+            $amount = $this->lineAmount($line, $lines[$index + 1] ?? null);
 
             if ($amount === null) {
                 continue;
@@ -233,12 +238,12 @@ final class ReceiptTextParser
             // A later line of the same strength replaces the earlier one; a weaker label
             // never replaces a stronger one.
             if ($strength >= $bestStrength) {
-                $bestAmount = $amount;
+                $best = $amount;
                 $bestStrength = $strength;
             }
         }
 
-        return $bestAmount;
+        return $best;
     }
 
     /**
@@ -292,16 +297,19 @@ final class ReceiptTextParser
     /**
      * Read the amount of an amount line, falling back to the line printed right after it.
      *
+     * The lines that produced the amount are returned with it so the currency can be read
+     * from the same place the number was read from.
+     *
      * @param  string  $line  The amount line.
      * @param  string|null  $nextLine  The following line, when the amount is printed below its label.
-     * @return int|null The amount in minor units, or null when the line carries no unambiguous number.
+     * @return array{amount_minor: int, lines: list<string>}|null The amount in minor units and its source lines, or null when the line carries no unambiguous number.
      */
-    private function lineAmountMinor(string $line, ?string $nextLine): ?int
+    private function lineAmount(string $line, ?string $nextLine): ?array
     {
         $amount = $this->rightmostAmountMinor($line);
 
         if ($amount !== null) {
-            return $amount;
+            return ['amount_minor' => $amount, 'lines' => [$line]];
         }
 
         if ($nextLine === null) {
@@ -314,7 +322,13 @@ final class ReceiptTextParser
             return null;
         }
 
-        return $this->toMinorUnits($matches[1]);
+        $amount = $this->toMinorUnits($matches[1]);
+
+        if ($amount === null) {
+            return null;
+        }
+
+        return ['amount_minor' => $amount, 'lines' => [$line, $nextLine]];
     }
 
     /**
@@ -391,25 +405,103 @@ final class ReceiptTextParser
     /**
      * Detect the receipt currency.
      *
-     * `€`/`EUR` and `USD` are explicit markers; a bare `$` is read as ARS, which is also
-     * the documented default when no marker survived the OCR.
+     * The marker that counts is the one printed next to the payable amount, so the search
+     * starts on the lines that produced the amount and only then widens to the whole
+     * recognised text: a ticket whose total is `TOTAL $ 1.000` is a peso ticket even when a
+     * `EQUIV. EUR` sits in its footer.
      *
-     * @param  string  $text  The recognised text.
+     * Signal order, which is the same in both passes because it is a property of the
+     * markers and not of where they are found:
+     *
+     *   1. `US$`/`USD` → USD. `US$` is checked first because it *contains* `$`: reading the
+     *      dollar sign before it would turn every US-dollar receipt into an Argentine peso.
+     *   2. `€`/`EUR` → EUR.
+     *   3. `ARS` → ARS, matched on word boundaries so `NARS` in a product name is not a
+     *      peso marker.
+     *   4. A bare `$` → ARS.
+     *
+     * With no marker at all the answer is ARS. That is a product decision, not a guess: the
+     * application is Argentine, most receipts arrive in pesos, and the parsed amount is
+     * shown on the review screen where the person confirms or corrects the currency before
+     * anything is saved. Deriving a currency from the receipt date, the merchant's language
+     * or the address would be inventing data, so it is never done.
+     *
+     * @param  list<string>  $amountLines  The lines the payable amount was read from.
+     * @param  string  $text  The whole recognised text, used only when those lines carry no marker.
      * @return string The ISO currency code.
      */
-    private function detectCurrency(string $text): string
+    private function detectCurrency(array $amountLines, string $text): string
     {
-        $upper = Str::upper($text);
+        return $this->currencyOfLines($amountLines)
+            ?? $this->currencyOfLines($this->lines($text))
+            ?? 'ARS';
+    }
 
-        if (str_contains($text, '€') || preg_match('/\bEUR\b/u', $upper) === 1) {
-            return 'EUR';
+    /**
+     * Read the strongest currency marker of a block of lines.
+     *
+     * One pass per signal, in priority order, so the order holds across the whole block and
+     * not only inside one line: an explicit `US$` in the footer outranks a `$` printed
+     * above it instead of losing to document order.
+     *
+     * @param  list<string>  $lines  The lines to scan.
+     * @return string|null The ISO currency code, or null when no line carries a marker.
+     */
+    private function currencyOfLines(array $lines): ?string
+    {
+        foreach ($lines as $line) {
+            if ($this->lineHasUsDollar($line)) {
+                return 'USD';
+            }
         }
 
-        if (preg_match('/\bUSD\b/u', $upper) === 1 || str_contains($text, 'US$')) {
-            return 'USD';
+        foreach ($lines as $line) {
+            if ($this->lineHasEuro($line)) {
+                return 'EUR';
+            }
         }
 
-        return 'ARS';
+        foreach ($lines as $line) {
+            if (preg_match('/\bARS\b/u', Str::upper($line)) === 1) {
+                return 'ARS';
+            }
+        }
+
+        foreach ($lines as $line) {
+            if (str_contains($line, '$')) {
+                return 'ARS';
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Decide whether a line carries a US-dollar marker.
+     *
+     * `US$` and its Argentine spelling `U$S` are checked before the bare `$` everywhere,
+     * because both contain it: reading `$` first would turn every US-dollar receipt into a
+     * peso.
+     *
+     * @param  string  $line  A recognised line.
+     */
+    private function lineHasUsDollar(string $line): bool
+    {
+        $upper = Str::upper($line);
+
+        return str_contains($upper, 'US$')
+            || preg_match('/\bU\$S\b/u', $upper) === 1
+            || preg_match('/\bUSD\b/u', $upper) === 1;
+    }
+
+    /**
+     * Decide whether a line carries a euro marker.
+     *
+     * @param  string  $line  A recognised line.
+     */
+    private function lineHasEuro(string $line): bool
+    {
+        return str_contains($line, '€') || preg_match('/\bEUR\b/u', Str::upper($line)) === 1;
     }
 
     /**
