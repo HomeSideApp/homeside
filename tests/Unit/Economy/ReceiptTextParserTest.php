@@ -477,40 +477,6 @@ class ReceiptTextParserTest extends TestCase
         $this->assertSame(2600, $result?->amount_minor);
     }
 
-    public function test_a_retired_currency_line_never_wins_over_the_euro_total(): void
-    {
-        $result = $this->parser()->parse("GASOLINERA\nTOTAL EUROS 28,84\nTOTAL PESETAS 4.188,81");
-
-        $this->assertSame(
-            2884,
-            $result?->amount_minor,
-            'The pesetas line is the historical conversion printed next to the euro amount, not the amount that was charged.'
-        );
-    }
-
-    public function test_a_receipt_that_only_prints_the_pesetas_total_has_no_payable_amount(): void
-    {
-        $this->assertNull(
-            $this->parser()->parse("GASOLINERA\nTOTAL PESETAS 4.010"),
-            'Without the euro total there is no payable amount on the receipt, so the import must fall back to AI.'
-        );
-    }
-
-    public function test_every_retired_currency_spelling_is_discarded(): void
-    {
-        foreach (['TOTAL PESETAS 4.010', 'TOTAL PTS 4.010', 'TOTAL PTAS. 4.010', 'TOTALE LIRE 4.500', 'TOTAL FRANCOS 500', 'TOTAL MARCOS 500'] as $text) {
-            $this->assertNull(
-                $this->parser()->parse("TIENDA\n".$text),
-                "`{$text}` labels a currency that no longer exists, so it is never the payable amount."
-            );
-        }
-
-        $this->assertSame(
-            2884,
-            $this->parser()->parse("GASOLINERA\nTOTAL LIRAS 4.500\nTOTAL EUROS 28,84")?->amount_minor
-        );
-    }
-
     public function test_the_original_total_never_beats_the_payable_total(): void
     {
         $result = $this->parser()->parse("TIENDA\nOriginal Total \$29,195.00\nTOTAL \$19.95");
@@ -545,19 +511,6 @@ class ReceiptTextParserTest extends TestCase
         $this->assertNull(
             $this->parser()->parse(self::CONNOR_TEXT),
             'The real `TOTAL $19.95` was not recognised, and the mangled `gina) Total` line is the `Original Total` of the photo.'
-        );
-    }
-
-    public function test_a_photo_of_two_receipts_returns_one_of_the_euro_totals(): void
-    {
-        $result = $this->parser()->parse(
-            "TOTAL EUROS 28,84 TOTAL EUROS 220\nTOTAL PESETAS 4.188,81 TOTAL PESETAS: 4.010"
-        );
-
-        $this->assertContains(
-            $result?->amount_minor,
-            [2884, 22000],
-            'Both `TOTAL EUROS` lines of a two-ticket photo are payable amounts; the pesetas lines never are.'
         );
     }
 

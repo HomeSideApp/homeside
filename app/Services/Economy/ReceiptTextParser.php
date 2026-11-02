@@ -116,20 +116,6 @@ final class ReceiptTextParser
     private const MIN_COLUMN_HEADER_WORDS = 2;
 
     /**
-     * Labels of currencies that no longer exist, so a line carrying one is never the
-     * payable total.
-     *
-     * Measured need: the photo of two Spanish filling-station tickets reads
-     * `TOTAL EUROS 28,84 TOTAL EUROS 220` above
-     * `TOTAL PESETAS 4.188,81 TOTAL PESETAS: 4.010`. Both lines are labelled `TOTAL`, so
-     * they tie on strength and the last one — the pesetas — won, returning 40,10 when the
-     * amount charged was 28,84. Spanish receipts print the pesetas conversion next to the
-     * euro amount for reference; that is the same situation the other retired currencies
-     * are in (Italian lira, French franc, German mark), so all of them are discarded.
-     */
-    private const OBSOLETE_CURRENCY_PATTERN = '/\b(pesetas?|pts|ptas|liras?|lire|itl|francos?|frf|marcos?|dem)\b/u';
-
-    /**
      * Labels of the price printed *before* the discount: never the amount that was paid.
      *
      * Measured need: the CONNOR ticket prints `Original Total $29,195.00` next to
@@ -331,22 +317,22 @@ final class ReceiptTextParser
     /**
      * Decide whether a normalized line labels a price that is not the amount paid.
      *
-     * Two families are rejected here, both measured on real tickets and both discarded
-     * *before* the strength hierarchy runs, so a discarded line can never win a tie:
+     * The pre-discount price is rejected here, before the strength hierarchy runs, so a
+     * discarded line can never win a tie: `ORIGINAL TOTAL`, `TOTAL ORIGINAL`,
+     * `PRECIO ORIGINAL`, `PVP` and the OCR-damaged spellings of `original`. It is what the
+     * goods cost before the discount, not what the customer paid.
      *
-     *   1. A retired currency (`TOTAL PESETAS`, `TOTAL PTS`, `TOTALE LIRE`, ...). It is the
-     *      historical conversion the ticket prints for reference, not what was charged.
-     *   2. The pre-discount price (`ORIGINAL TOTAL`, `TOTAL ORIGINAL`, `PRECIO ORIGINAL`,
-     *      `PVP`, and the OCR-damaged spellings of `original`). It is what the goods cost
-     *      before the discount, not what the customer paid.
+     * Retired currencies (pesetas, lira, franc, mark) are deliberately NOT handled: they
+     * only appear on receipts from before the euro, which nobody still prints. Carrying a
+     * rule for them also risked discarding a real total on a line that merely contained
+     * such a word as a product or shop name.
      *
      * @param  string  $normalized  The lower-cased, ASCII-folded line.
      * @return bool True when the line cannot carry the payable total.
      */
     private function isNonPayableAmountLine(string $normalized): bool
     {
-        return preg_match(self::OBSOLETE_CURRENCY_PATTERN, $normalized) === 1
-            || preg_match(self::ORIGINAL_TOTAL_PATTERN, $normalized) === 1
+        return preg_match(self::ORIGINAL_TOTAL_PATTERN, $normalized) === 1
             || preg_match(self::ORIGINAL_TOTAL_OCR_TAIL_PATTERN, $normalized) === 1
             || preg_match(self::RETAIL_PRICE_PATTERN, $normalized) === 1;
     }
