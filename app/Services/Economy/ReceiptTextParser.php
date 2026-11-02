@@ -3,6 +3,8 @@
 namespace App\Services\Economy;
 
 use App\Data\Economy\ReceiptAnalysisResultData;
+use App\Data\Economy\ReceiptItemAnalysisData;
+use App\Data\Economy\ReceiptTaxAnalysisData;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 
@@ -20,8 +22,21 @@ use Illuminate\Support\Str;
  * import falls back to the metered AI path; a receipt with a readable amount and an
  * unreadable date is still a win, because the date is left null instead of being invented.
  *
- * Line items and taxes are deliberately out of scope for the offline layer: they are
- * decidable only by the AI path today, and the review screen lets the user add them.
+ * Line items and taxes are the risky part of this layer, because a line of items is far
+ * more fragile than the line of the total: the OCR merges quantity, description and price
+ * into one row, and a garbled description hurts nobody while an invented amount does — the
+ * person reviewing the import checks the total, not every row. So the parser never reports
+ * items it cannot verify: the recognised amounts must add up to the payable total (within a
+ * small, configured tolerance) or every item is dropped. No items is better than false
+ * items, and an empty list simply leaves the review screen with nothing to pre-fill.
+ *
+ * The tax breakdown is informative and is never reconciled against the total: Spanish
+ * tickets print tax-inclusive prices, so `base + amount` is not expected to equal what was
+ * paid. Only the invariants a component cannot violate are enforced (a positive amount that
+ * never exceeds the payable total), and several rates are allowed on one receipt.
+ *
+ * Both blocks can be switched off in `config/economy.php`, which restores the previous
+ * behaviour exactly: an empty list for that section.
  */
 final class ReceiptTextParser
 {
@@ -32,6 +47,51 @@ final class ReceiptTextParser
      * a wrong amount on a confirmed transaction is worse than falling back to the AI.
      */
     private const MAX_AMOUNT_MINOR = 100_000_000;
+
+    /**
+     * Upper bound on recognised line items.
+     *
+     * No ticket prints forty priced rows, so a text that yields more is OCR noise exploded
+     * into numbered rows: reconciling that against the total would be meaningless, and the
+     * review screen would be filled with fiction.
+     */
+    private const MAX_ITEMS = 40;
+
+    /**
+     * Upper bound on recognised tax components: real tickets print one per tax rate.
+     */
+    private const MAX_TAXES = 8;
+
+    /**
+     * A price printed on an item line: a number with exactly two decimals, optionally
+     * grouped in thousands (`4,00`, `1.234,56`, `1,234.56`).
+     *
+     * The two decimals are required. A row that lost a digit (`59,2`) is not a price this
+     * layer can trust, and rejecting it costs only the item: the reconciliation guard would
+     * drop the whole list anyway, which is exactly the intended failure mode.
+     */
+    private const MONEY_TOKEN_PATTERN = '/\d+(?:[.,]\d{3})*[.,]\d{2}(?!\d)/u';
+
+    /**
+     * The optional leading quantity of an item line.
+     *
+     * An integer from 1 to 99 at the very start of the line, optionally followed by `x`
+     * (`2x CAFE CON LECHE 4,00`), always followed by a space before the description. The
+     * space is what keeps a product code (`10001194 1210320104037 BOTIN TACON`) from being
+     * read as a quantity, and the two-digit limit keeps a long code from being truncated.
+     */
+    private const QUANTITY_PREFIX_PATTERN = '/^\s*(\d{1,2})\s*(?:[xX](?![\p{L}\p{N}]))?\s+/u';
+
+    /**
+     * A tax line: the printed label, the rate and the amount, in that order.
+     *
+     * Measured shapes: `IVA 21% 10,40`, `IVA al 21,00% 59,2`, `TVA 20% 5,00`,
+     * `VAT 20% 1,20`, `IVA 10% 0,82`. The label is captured as printed, the rate accepts a
+     * comma decimal (`21,00`) and the amount accepts one or two decimals because some
+     * engines drop the trailing zero of `59,20`. Word lookarounds around the label keep
+     * `TVA` out of `TVAR` and `IVA` out of a product name that merely contains it.
+     */
+    private const TAX_LINE_PATTERN = '/(?<![\p{L}])(?<label>i\.?\s?v\.?\s?a\.?|tva|vat|igic|mwst|impuesto|tax)(?![\p{L}])[^\d%]{0,20}(?<rate>\d{1,3}(?:[.,]\d{1,2})?)\s*%[^\d]{0,12}(?<amount>\d+(?:[.,]\d{1,2})?)(?![\d.,])/iu';
 
     /**
      * Month names in the three languages receipts show up in, after ASCII folding.
@@ -229,8 +289,8 @@ final class ReceiptTextParser
             currency: $this->detectCurrency($total['lines'], $text),
             place: null,
             occurred_at: $this->extractDate($text),
-            items: [],
-            taxes: [],
+            items: $this->extractItems($lines, $total['amount_minor']),
+            taxes: $this->extractTaxes($lines, $total['amount_minor']),
         );
     }
 
@@ -492,6 +552,324 @@ final class ReceiptTextParser
         }
 
         return $minor;
+    }
+
+    /**
+     * Find the line items of the receipt, and only when they reconcile with the total.
+     *
+     * This is the guard the whole section exists for. A recognised line is a guess — the
+     * engine merges quantity, description and price, and one misread digit is invisible to
+     * the person confirming the import, who checks the total and not every row. So the
+     * amounts are added up and compared to the payable total, and when they disagree the
+     * list is discarded whole: a partial list is worse than no list, because the missing row
+     * silently carries the difference.
+     *
+     * The guard also runs on the empty case, which makes `[]` the answer when the ticket has
+     * no priced item line at all (see {@see itemsReconcile()}).
+     *
+     * @param  list<string>  $lines  The recognised lines.
+     * @param  int  $totalMinor  The payable total in minor units, the value the items must add up to.
+     * @return list<ReceiptItemAnalysisData> The verified items, or an empty list when they do not reconcile.
+     */
+    private function extractItems(array $lines, int $totalMinor): array
+    {
+        if (! (bool) config('economy.ocr.items.enabled', true)) {
+            return [];
+        }
+
+        $items = [];
+        $limit = (int) config('economy.ocr.items.max', self::MAX_ITEMS);
+
+        foreach ($lines as $line) {
+            if (count($items) >= $limit) {
+                break;
+            }
+
+            $item = $this->itemFromLine($line);
+
+            if ($item !== null) {
+                $items[] = $item;
+            }
+        }
+
+        return $this->itemsReconcile($items, $totalMinor) ? $items : [];
+    }
+
+    /**
+     * Read one line as an item, or reject it.
+     *
+     * A candidate looks like `<cantidad?> <descripción> <precio>`: an optional quantity of 1
+     * to 99 at the start, a description, and a price as the last money-shaped number of the
+     * line. Everything that is not a product row is rejected first — totals, subtotals,
+     * taxable bases, column headers, tax lines, payment methods, discounts, changes and the
+     * pre-discount prices — by reusing the vocabulary the total reader already uses for the
+     * same purpose.
+     *
+     * @param  string  $line  A recognised line.
+     * @return ReceiptItemAnalysisData|null The item, or null when the line is not a product row.
+     */
+    private function itemFromLine(string $line): ?ReceiptItemAnalysisData
+    {
+        $normalized = Str::lower(Str::ascii($line));
+
+        // No price, no item: the row has to carry its own amount, and the amount has to be
+        // printed with two decimals.
+        if (preg_match_all(self::MONEY_TOKEN_PATTERN, $line, $moneyMatches, PREG_OFFSET_CAPTURE) === false
+            || ($moneyMatches[0] ?? []) === []) {
+            return null;
+        }
+
+        if ($this->itemLineIsNotProduct($line, $normalized)) {
+            return null;
+        }
+
+        /** @var array{0: string, 1: int} $priceToken The last money token of the line with its offset. */
+        $priceToken = end($moneyMatches[0]);
+
+        $totalMinor = $this->toMinorUnits($priceToken[0]);
+
+        if ($totalMinor === null) {
+            return null;
+        }
+
+        // The description is what is left once the price and the quantity prefix are gone.
+        $remainder = substr($line, 0, $priceToken[1]).' '.substr($line, $priceToken[1] + strlen($priceToken[0]));
+
+        $quantity = 1;
+
+        if (preg_match(self::QUANTITY_PREFIX_PATTERN, $remainder, $quantityMatch) === 1) {
+            $quantity = (int) $quantityMatch[1];
+
+            if ($quantity < 1) {
+                return null;
+            }
+
+            $remainder = substr($remainder, strlen($quantityMatch[0]));
+        }
+
+        $name = $this->itemName($remainder);
+
+        if ($name === null) {
+            return null;
+        }
+
+        return new ReceiptItemAnalysisData(
+            name: $name,
+            quantity: $quantity,
+            unit_amount_minor: (int) round($totalMinor / $quantity),
+            total_minor: $totalMinor,
+        );
+    }
+
+    /**
+     * Decide whether a line is something other than a product row.
+     *
+     * The checks are the ones the total reader already applies, reused on purpose so both
+     * sections agree on what a total, a column header, a pre-discount price or a payment
+     * method looks like: a line the total reader refuses to read as a total must never
+     * become an item either.
+     *
+     * @param  string  $line  A recognised line.
+     * @param  string  $normalized  The lower-cased, ASCII-folded line.
+     * @return bool True when the line is not a product row.
+     */
+    private function itemLineIsNotProduct(string $line, string $normalized): bool
+    {
+        if ($this->amountLineStrength($line) !== 0) {
+            return true;
+        }
+
+        if ($this->isColumnHeader($normalized) || $this->isNonPayableAmountLine($normalized)) {
+            return true;
+        }
+
+        if (preg_match(self::TAX_LINE_PATTERN, $line) === 1 || str_contains($line, '%')) {
+            return true;
+        }
+
+        if (preg_match('/\b('.self::NON_TOTAL_WORDS.')\b/u', $normalized) === 1) {
+            return true;
+        }
+
+        return preg_match('/\b('.self::NON_TITLE_WORDS.')\b/u', $normalized) === 1;
+    }
+
+    /**
+     * Turn what is left of an item line into a description, or reject it.
+     *
+     * The description must read like a product: at least one real word of three letters, no
+     * date, no stray number and none of the boilerplate the receipt prints around the table.
+     * A row that is only a number, a fragment of the same length as the digit columns it sat
+     * next to (`m0oa Ta`) or an address is dropped instead of being reported as a product
+     * name.
+     *
+     * The stray-number rule is what keeps a merged table row out. An item row is
+     * `<cantidad?> <descripción> <precio>`, so a bare integer left between the description and
+     * the price is a column the engine glued to the row — an aisle number, a code, the `77`
+     * of the measured `yoTaL 77 135,00 §` line. Those rows cannot be trusted and, since a
+     * single wrong row forces the reconciliation guard to discard the whole list, rejecting
+     * them loses nothing that was verifiable.
+     *
+     * @param  string  $remainder  The line without its price and without its quantity prefix.
+     * @return string|null The cleaned description, or null when it does not look like one.
+     */
+    private function itemName(string $remainder): ?string
+    {
+        $name = preg_replace('/\s+/u', ' ', trim($remainder, self::TITLE_TRIM_CHARACTERS)) ?? '';
+        $name = Str::limit(trim($name), 80, '');
+
+        // One run of three letters is what separates a description from an exploded table
+        // cell: `BOTIN TACON`, `CAFE CON LECHE`, `yoTaL` pass; `M0oa Ta` and `4,60` do not.
+        if (preg_match('/\p{L}{3,}/u', $name) !== 1) {
+            return null;
+        }
+
+        if (preg_match('/(?<![\p{L}\d])\d+(?![\p{L}\d])/u', $name) === 1) {
+            return null;
+        }
+
+        if ($this->extractDate($name) !== null) {
+            return null;
+        }
+
+        return $name;
+    }
+
+    /**
+     * Decide whether the recognised items add up to the payable total.
+     *
+     * The tolerance is the larger of a flat allowance in minor units and a relative one, so
+     * the rounding of a cheap ticket and of an expensive one are both covered. An empty list
+     * never reconciles: with nothing to verify, there is nothing to report.
+     *
+     * @param  list<ReceiptItemAnalysisData>  $items  The recognised items.
+     * @param  int  $totalMinor  The payable total in minor units.
+     * @return bool True when the items can be reported.
+     */
+    private function itemsReconcile(array $items, int $totalMinor): bool
+    {
+        if ($items === []) {
+            return false;
+        }
+
+        $sum = 0;
+
+        foreach ($items as $item) {
+            $sum += $item->total_minor;
+        }
+
+        return abs($sum - $totalMinor) <= $this->reconciliationToleranceMinor($totalMinor);
+    }
+
+    /**
+     * Resolve the reconciliation allowance for one receipt.
+     *
+     * @param  int  $totalMinor  The payable total in minor units.
+     * @return int The allowance in minor units.
+     */
+    private function reconciliationToleranceMinor(int $totalMinor): int
+    {
+        $flat = (int) config('economy.ocr.items.tolerance_minor', 5);
+        $relative = (int) round($totalMinor * (float) config('economy.ocr.items.tolerance_ratio', 0.02));
+
+        return max($flat, $relative);
+    }
+
+    /**
+     * Find the tax breakdown of the receipt.
+     *
+     * Several lines are kept on purpose: a Spanish ticket prints one component per rate
+     * (`IVA 10% ...` next to `IVA 21% ...`). The breakdown is never reconciled against the
+     * total, because prices are printed tax-included and `base + amount = total` is not an
+     * invariant of that layout — the breakdown only says which tax and which rate are on the
+     * paper.
+     *
+     * @param  list<string>  $lines  The recognised lines.
+     * @param  int  $totalMinor  The payable total in minor units.
+     * @return list<ReceiptTaxAnalysisData> The recognised components, possibly empty.
+     */
+    private function extractTaxes(array $lines, int $totalMinor): array
+    {
+        if (! (bool) config('economy.ocr.taxes.enabled', true)) {
+            return [];
+        }
+
+        $taxes = [];
+
+        foreach ($lines as $line) {
+            if (count($taxes) >= self::MAX_TAXES) {
+                break;
+            }
+
+            $tax = $this->taxFromLine($line, $totalMinor);
+
+            if ($tax !== null) {
+                $taxes[] = $tax;
+            }
+        }
+
+        return $taxes;
+    }
+
+    /**
+     * Read one line as a tax component, or reject it.
+     *
+     * A line qualifies only when it prints the three things together: the label, the rate
+     * and the amount. Two invariants are enforced, both of the kind a component cannot
+     * violate: the amount must be positive (a zero or missing tax is not a breakdown) and it
+     * must not exceed the payable total (no tax component is larger than the receipt).
+     *
+     * The taxable base is derived from the amount and the rate rather than read from the
+     * paper, because the base is what half the tickets do not print.
+     *
+     * @param  string  $line  A recognised line.
+     * @param  int  $totalMinor  The payable total in minor units.
+     * @return ReceiptTaxAnalysisData|null The component, or null when the line is not one.
+     */
+    private function taxFromLine(string $line, int $totalMinor): ?ReceiptTaxAnalysisData
+    {
+        if (preg_match(self::TAX_LINE_PATTERN, $line, $matches) !== 1) {
+            return null;
+        }
+
+        $rate = $this->toHundredths($matches['rate']);
+
+        if ($rate === null || $rate <= 0 || $rate > 10_000) {
+            return null;
+        }
+
+        $amountMinor = $this->toMinorUnits($matches['amount']);
+
+        if ($amountMinor === null || $amountMinor > $totalMinor) {
+            return null;
+        }
+
+        return new ReceiptTaxAnalysisData(
+            name: trim($matches['label'], " \t\n\r\0\x0B."),
+            rate: $rate,
+            taxable_base_minor: (int) round($amountMinor * 10_000 / $rate),
+            tax_amount_minor: $amountMinor,
+        );
+    }
+
+    /**
+     * Read a percentage as hundredths, the scale the tax payload uses.
+     *
+     * `21` and `21,00` both become 2100, which serializes as `21.00` — the same scale
+     * {@see ReceiptTaxAnalysisData::fromArray()} applies to the AI payload.
+     *
+     * @param  string  $token  The recognised rate.
+     * @return int|null The rate in hundredths, or null when the token is not a sane rate.
+     */
+    private function toHundredths(string $token): ?int
+    {
+        $token = str_replace(',', '.', trim($token));
+
+        if (preg_match('/^\d{1,3}(?:\.\d{1,2})?$/u', $token) !== 1) {
+            return null;
+        }
+
+        return (int) round((float) $token * 100);
     }
 
     /**

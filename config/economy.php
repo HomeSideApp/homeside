@@ -111,6 +111,69 @@ return [
         ],
 
         /*
+        | Line items of the receipt. Enabled by default: the layer is free and the
+        | reconciliation guard below decides whether the recognised lines are trustworthy.
+        | Disabling the block restores the pre-items behaviour: the offline result carries
+        | `items: []` and the review screen starts with an empty item list, exactly as before.
+        |
+        | Reconciliation is the whole safety story. An item line is much more fragile than the
+        | total line — the OCR mixes quantity, description and price on the same row — so a
+        | line is only reported when the recognised items add up to the payable total. A
+        | garbled description hurts nobody; an invented amount does, and the person reviewing
+        | the import checks the total, not every row. When the sum does not reconcile, every
+        | item is dropped instead of showing a partial, unverifiable list.
+        |
+        | `tolerance_minor` is the absolute allowance in minor units (5 = 0.05) and
+        | `tolerance_ratio` the relative one; the effective tolerance is the larger of the two,
+        | so a 2 % allowance covers a big ticket while the flat 0.05 still covers the rounding
+        | of a cheap one.
+        */
+        'items' => [
+
+            /*
+            | Emit recognised line items at all. When disabled, `items` stays empty even when
+            | the recognised lines add up to the total.
+            */
+            'enabled' => (bool) env('ECONOMY_OCR_ITEMS_ENABLED', true),
+
+            /*
+            | Hard cap on recognised items. A ticket never prints 40 priced lines; a text
+            | that yields more is OCR noise exploded into rows, and reconciling that against
+            | the total is meaningless.
+            */
+            'max' => (int) env('ECONOMY_OCR_ITEMS_MAX', 40),
+
+            /*
+            | Flat reconciliation allowance, in minor units. 5 = 0.05 of the receipt currency.
+            */
+            'tolerance_minor' => (int) env('ECONOMY_OCR_ITEMS_TOLERANCE_MINOR', 5),
+
+            /*
+            | Relative reconciliation allowance. The effective tolerance is the larger of this
+            | and `tolerance_minor`, so both a cheap ticket and an expensive one are covered.
+            */
+            'tolerance_ratio' => (float) env('ECONOMY_OCR_ITEMS_TOLERANCE_RATIO', 0.02),
+
+        ],
+
+        /*
+        | Tax breakdown of the receipt. Spanish prices are printed with the tax already
+        | included, so `base + amount = total` is NOT required and is never checked: the
+        | breakdown is informative and only says which tax and which rate are on the paper.
+        | The only invariants enforced are the ones a component cannot violate — a positive
+        | amount that never exceeds the payable total.
+        */
+        'taxes' => [
+
+            /*
+            | Emit the recognised tax breakdown at all. When disabled, `taxes` stays empty and
+            | the review screen starts with no tax lines, as before.
+            */
+            'enabled' => (bool) env('ECONOMY_OCR_TAXES_ENABLED', true),
+
+        ],
+
+        /*
         | PDF tickets. The upload accepts PDFs and they used to reach the AI path with no
         | offline chance at all. A PDF is read as a cascade, because the two readings measure
         | very differently: a digital PDF states its own text (measured: `PdfParser` returned

@@ -164,6 +164,23 @@ class ReceiptTextParserTest extends TestCase
     2013/01/26 21:41
     TEXT;
 
+    /**
+     * Raw text of a Spanish supermarket ticket with a two-unit line, a priced item table and
+     * a VAT breakdown. The amounts reconcile on purpose: 4,00 + 6,50 + 3,50 = 14,00, which
+     * is the printed total.
+     */
+    private const SUPERMARKET_TEXT = <<<'TEXT'
+    MERCADO CENTRAL
+    CIF B12345678
+    C/ MAYOR 12
+    02/03/2019 18:42
+    2x CAFE CON LECHE 4,00
+    1 TORTILLA DE PATATA 6,50
+    1 ZUMO DE NARANJA 3,50
+    IVA 10% 1,27
+    TOTAL 14,00
+    TEXT;
+
     public function test_it_reads_the_total_and_currency_from_the_avenue_ticket(): void
     {
         $result = $this->parser()->parse(self::AVENUE_TEXT);
@@ -625,13 +642,17 @@ class ReceiptTextParserTest extends TestCase
         $this->assertSame('Sephora Cosmeticos España, S.L', $this->parser()->parse(self::SEPHORA_TEXT)?->title);
     }
 
-    public function test_items_and_taxes_stay_empty_in_this_version(): void
+    public function test_the_avenue_ticket_reports_no_items_because_its_only_price_line_is_the_total(): void
     {
         $result = $this->parser()->parse(self::AVENUE_TEXT);
 
         $this->assertInstanceOf(ReceiptAnalysisResultData::class, $result);
-        $this->assertSame([], $result->items, 'Line items are deliberately out of scope for the offline layer.');
-        $this->assertSame([], $result->taxes);
+        $this->assertSame(
+            [],
+            $result->items,
+            'The only priced line is the mangled total row `yoTaL 77 135,00`, and a row that still carries a stray number is not a product row.'
+        );
+        $this->assertSame([], $result->taxes, 'The Avenue ticket prints no tax breakdown.');
         $this->assertNull($result->place);
     }
 
@@ -801,6 +822,234 @@ class ReceiptTextParserTest extends TestCase
             $this->parser()->parse("SUPERMERCADO\nFactura\nCIF B12345678\nTOTAL 28,84")?->currency,
             '`Factura` is printed in Spain too, so only `Factura B`/`Factura C` identify Argentina.'
         );
+    }
+
+    public function test_it_reads_the_item_lines_when_they_reconcile_with_the_total(): void
+    {
+        $result = $this->parser()->parse(self::SUPERMARKET_TEXT);
+
+        $this->assertNotNull($result);
+        $this->assertCount(3, $result->items);
+        $this->assertSame(
+            ['CAFE CON LECHE', 'TORTILLA DE PATATA', 'ZUMO DE NARANJA'],
+            array_map(static fn ($item) => $item->name, $result->items),
+            'The description is the line without its quantity and without its price.'
+        );
+        $this->assertSame(
+            [400, 650, 350],
+            array_map(static fn ($item) => $item->total_minor, $result->items),
+            '4,00 + 6,50 + 3,50 is the payable total of 14,00, so every row is reported.'
+        );
+    }
+
+    public function test_the_x_marker_sets_the_quantity_and_splits_the_unit_amount(): void
+    {
+        $items = $this->parser()->parse(self::SUPERMARKET_TEXT)?->items;
+
+        $this->assertIsArray($items);
+        $this->assertSame(2, $items[0]->quantity, '`2x CAFE CON LECHE 4,00` sells two units.');
+        $this->assertSame(400, $items[0]->total_minor);
+        $this->assertSame(200, $items[0]->unit_amount_minor, '4,00 over 2 units is 2,00 each.');
+        $this->assertSame(1, $items[1]->quantity, 'A line without a printed quantity is one unit.');
+    }
+
+    public function test_the_items_serialize_with_the_shape_the_review_screen_reads(): void
+    {
+        $payload = $this->parser()->parse(self::SUPERMARKET_TEXT)?->toArray();
+
+        $this->assertSame(
+            [
+                'name' => 'CAFE CON LECHE',
+                'quantity' => 2,
+                'unit_amount' => '2.00',
+                'total' => '4.00',
+            ],
+            $payload['items'][0] ?? null,
+            'Amounts are decimals in the payload, not minor units.'
+        );
+    }
+
+    public function test_items_that_do_not_reconcile_with_the_total_are_all_dropped(): void
+    {
+        $text = str_replace('TOTAL 14,00', 'TOTAL 15,00', self::SUPERMARKET_TEXT);
+
+        $result = $this->parser()->parse($text);
+
+        $this->assertSame(1500, $result?->amount_minor, 'The total itself is unaffected by the guard.');
+        $this->assertSame(
+            [],
+            $result?->items,
+            'The recognised amounts add up to 14,00 and the ticket says 15,00: a partial list would hide the missing row.'
+        );
+    }
+
+    public function test_a_rounding_difference_within_the_tolerance_still_reconciles(): void
+    {
+        $text = str_replace('TOTAL 14,00', 'TOTAL 14,04', self::SUPERMARKET_TEXT);
+
+        $this->assertCount(
+            3,
+            $this->parser()->parse($text)?->items,
+            'A four-cent difference is inside the allowed tolerance and must not discard the items.'
+        );
+    }
+
+    public function test_a_difference_above_the_tolerance_does_not_reconcile(): void
+    {
+        $text = str_replace('TOTAL 14,00', 'TOTAL 14,50', self::SUPERMARKET_TEXT);
+
+        $this->assertSame(
+            [],
+            $this->parser()->parse($text)?->items,
+            '0,50 is above both the flat 0,05 allowance and 2 % of 14,50.'
+        );
+    }
+
+    public function test_a_receipt_without_priced_item_lines_reports_no_items(): void
+    {
+        $result = $this->parser()->parse("TIENDA\nTOTAL 25,00");
+
+        $this->assertSame(2500, $result?->amount_minor);
+        $this->assertSame([], $result?->items);
+    }
+
+    public function test_the_gucci_rows_are_table_labels_and_are_not_reported_as_items(): void
+    {
+        $result = $this->parser()->parse(self::GUCCI_TEXT);
+
+        $this->assertSame(
+            [],
+            $result?->items,
+            '`Item 25.00` names a table cell, not a product, so the row is not a description the review screen can use.'
+        );
+        $this->assertSame([], $result?->taxes, '`VAT 01234567890` is a fiscal identifier, not a tax component.');
+    }
+
+    public function test_a_total_a_tax_or_a_change_line_never_becomes_an_item(): void
+    {
+        $result = $this->parser()->parse(
+            "TIENDA\nTOTAL 14,00\nIVA 21% 2,00\nCAMBIO 3,00\nEFECTIVO 20,00\nDESCUENTO 1,00\nPROPINA 1,00"
+        );
+
+        $this->assertSame(1400, $result?->amount_minor);
+        $this->assertSame([], $result?->items, 'Every one of those lines labels something other than a product row.');
+    }
+
+    public function test_it_reads_a_twenty_one_percent_tax_component(): void
+    {
+        $result = $this->parser()->parse("TIENDA\nIVA 21% 10,40\nTOTAL 59,95");
+
+        $this->assertCount(1, $result?->taxes);
+
+        $tax = $result->taxes[0];
+
+        $this->assertSame('IVA', $tax->name, 'The label is reported as it was printed.');
+        $this->assertSame(2100, $tax->rate, '21% is stored in hundredths, the scale of the AI payload.');
+        $this->assertSame(1040, $tax->tax_amount_minor);
+        $this->assertSame(4952, $tax->taxable_base_minor, '10,40 at 21% implies a taxable base of 49,52.');
+        $this->assertSame(
+            [
+                'name' => 'IVA',
+                'rate' => '21.00',
+                'taxable_base' => '49.52',
+                'amount' => '10.40',
+            ],
+            $result->toArray()['taxes'][0],
+            'The serialized component uses the rate in percent and decimals, as the review screen expects.'
+        );
+    }
+
+    public function test_it_reads_a_ten_percent_tax_component(): void
+    {
+        $tax = $this->parser()->parse("TIENDA\nIVA 10% 0,82\nTOTAL 10,00")?->taxes[0] ?? null;
+
+        $this->assertNotNull($tax);
+        $this->assertSame(1000, $tax->rate);
+        $this->assertSame(820, $tax->taxable_base_minor, '0,82 at 10% implies a taxable base of 8,20.');
+        $this->assertSame(82, $tax->tax_amount_minor);
+    }
+
+    public function test_a_rate_printed_with_a_comma_decimal_is_read(): void
+    {
+        $tax = $this->parser()->parse("TIENDA\nIVA al 21,00% 59,2\nTOTAL 59,95")?->taxes[0] ?? null;
+
+        $this->assertNotNull($tax, '`IVA al 21,00% 59,2` is the measured Spanish shape.');
+        $this->assertSame(2100, $tax->rate);
+        $this->assertSame(5920, $tax->tax_amount_minor, 'One decimal is completed to two, not read as 5,92.');
+        $this->assertSame(28190, $tax->taxable_base_minor);
+    }
+
+    public function test_a_tax_line_without_an_amount_is_discarded(): void
+    {
+        $result = $this->parser()->parse("TIENDA\nIVA 21%\nTOTAL 59,95");
+
+        $this->assertSame(5995, $result?->amount_minor);
+        $this->assertSame([], $result?->taxes, 'A rate without an amount is not a tax breakdown.');
+    }
+
+    public function test_a_tax_component_larger_than_the_total_is_discarded(): void
+    {
+        $result = $this->parser()->parse("TIENDA\nIVA 21% 90,00\nTOTAL 59,95");
+
+        $this->assertSame(5995, $result?->amount_minor);
+        $this->assertSame([], $result?->taxes, 'No component of a receipt can exceed the amount paid for it.');
+    }
+
+    public function test_every_printed_tax_rate_is_kept(): void
+    {
+        $result = $this->parser()->parse("TIENDA\nIVA 10% 0,82\nIVA 21% 10,40\nTOTAL 59,95");
+
+        $this->assertCount(2, $result?->taxes, 'A Spanish ticket prints one component per rate.');
+        $this->assertSame(
+            [1000, 2100],
+            array_map(static fn ($tax) => $tax->rate, $result->taxes),
+            'Both printed rates survive, in document order.'
+        );
+    }
+
+    public function test_the_spanish_tax_breakdown_is_not_reconciled_against_the_total(): void
+    {
+        $result = $this->parser()->parse(self::SUPERMARKET_TEXT);
+
+        $tax = $result?->taxes[0] ?? null;
+
+        $this->assertNotNull($tax, 'Spanish prices are printed tax-included, so the breakdown is informative.');
+        $this->assertNotSame(
+            $result?->amount_minor,
+            $tax->taxable_base_minor + $tax->tax_amount_minor,
+            '12,70 + 1,27 is not 14,00 and that is not an error: the tax is already inside the printed prices.'
+        );
+    }
+
+    public function test_items_are_discarded_when_the_item_section_is_disabled(): void
+    {
+        config(['economy.ocr.items.enabled' => false]);
+
+        $result = $this->parser()->parse(self::SUPERMARKET_TEXT);
+
+        $this->assertSame([], $result?->items, 'Disabling the section restores the previous empty list even when the rows reconcile.');
+        $this->assertCount(1, $result?->taxes, 'The tax section has its own switch and is unaffected.');
+    }
+
+    public function test_taxes_are_discarded_when_the_tax_section_is_disabled(): void
+    {
+        config(['economy.ocr.taxes.enabled' => false]);
+
+        $result = $this->parser()->parse(self::SUPERMARKET_TEXT);
+
+        $this->assertSame([], $result?->taxes);
+        $this->assertCount(3, $result?->items, 'The item section has its own switch and is unaffected.');
+    }
+
+    public function test_the_total_date_merchant_and_currency_are_unchanged_by_the_new_sections(): void
+    {
+        $result = $this->parser()->parse(self::SUPERMARKET_TEXT);
+
+        $this->assertSame(1400, $result?->amount_minor);
+        $this->assertSame('2019-03-02', $result?->occurred_at?->toDateString());
+        $this->assertSame('MERCADO CENTRAL', $result?->title);
+        $this->assertSame('EUR', $result?->currency, 'The CIF still decides the currency.');
+        $this->assertNull($result?->place);
     }
 
     /**
