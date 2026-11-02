@@ -116,6 +116,40 @@ final class ReceiptTextParser
     private const MIN_COLUMN_HEADER_WORDS = 2;
 
     /**
+     * Argentine fiscal identifiers: the strongest evidence that the receipt is a peso one.
+     *
+     * `CUIT`/`CUIL` are the Argentine tax ids, `AFIP` the tax authority, and
+     * `Responsable Inscripto`, `Factura B`/`Factura C` and `Monotributo` the Argentine
+     * VAT-regime labels. None of them is printed outside Argentina, so a single match
+     * settles the currency — including against a `€` left on the paper by a template, an
+     * OCR slip or a converted amount.
+     */
+    private const ARGENTINE_FISCAL_PATTERN = '/\b(?:cuit|cuil|afip|monotributo)\b|\bresponsable\s+inscript[oa]\b|\bfactura\s*[bc]\b/u';
+
+    /**
+     * Eurozone fiscal identifiers, matched against lower-cased ASCII-folded text.
+     *
+     * Spain `NIF`/`CIF`/`N.I.F.`/`C.I.F.`, Portugal `NIPT`/`NIPC`, France
+     * `SIRET`/`SIREN`/`RCS`/`TVA`, Italy `P.IVA`/`P IVA`/`Partita IVA`/`Codice Fiscale`,
+     * Germany and Austria `USt`/`USt-IdNr`/`MwSt`/`Mehrwertsteuer`/`UID`, the Netherlands
+     * and Belgium `BTW`, Croatia and Slovenia `PDV`, Finland `ALV`, Slovakia `DPH` and
+     * Lithuania `PVM`.
+     *
+     * Deliberately absent, because they do NOT identify the eurozone on their own:
+     *
+     *   - `IVA`: Argentina charges VAT at 21%, exactly like Spain, so a Spanish-looking
+     *     `IVA 21%` line is equally at home on a Buenos Aires receipt. Using it would
+     *     relabel Argentine tickets as European, which is the trap this rule exists to
+     *     avoid.
+     *   - `VAT`: the United Kingdom prints `VAT` too and is not in the eurozone, so a bare
+     *     `VAT` must fall through to the default instead of claiming EUR.
+     *
+     * `KM` (Lithuania) is checked separately on the raw text, upper case only, because
+     * the same two letters print as a distance unit in lower case.
+     */
+    private const EUROZONE_FISCAL_PATTERN = '/\b(?:n\s*\.?\s*i\s*\.?\s*f|c\s*\.?\s*i\s*\.?\s*f|nipt|nipc|siret|siren|rcs|tva|mwst|mehrwertsteuer|uid|btw|pdv|alv|dph|pvm|fpa)\b|\bp\s*\.?\s*iva\b|\bpartita\s+iva\b|\bcodice\s+fiscale\b|\bust(?:-idnr)?\b/u';
+
+    /**
      * Labels of the price printed *before* the discount: never the amount that was paid.
      *
      * Measured need: the CONNOR ticket prints `Original Total $29,195.00` next to
@@ -468,21 +502,41 @@ final class ReceiptTextParser
      * recognised text: a ticket whose total is `TOTAL $ 1.000` is a peso ticket even when a
      * `EQUIV. EUR` sits in its footer.
      *
-     * Signal order, which is the same in both passes because it is a property of the
-     * markers and not of where they are found:
+     * Measured need: deciding the currency only from a symbol and defaulting to ARS left 41
+     * of the 74 parseable tickets in the reference set as pesos, because most European
+     * receipts print no symbol at the total at all — they print a fiscal identifier instead
+     * (`CIF`, `NIF`, `SIRET`, `P.IVA`, `USt`, `MwSt`, `BTW`, `PDV`, `TVA`) or spell the
+     * currency out (`TOTAL EUROS 28,84`).
      *
-     *   1. `US$`/`USD` → USD. `US$` is checked first because it *contains* `$`: reading the
-     *      dollar sign before it would turn every US-dollar receipt into an Argentine peso.
-     *   2. `€`/`EUR` → EUR.
-     *   3. `ARS` → ARS, matched on word boundaries so `NARS` in a product name is not a
-     *      peso marker.
-     *   4. A bare `$` → ARS.
+     * Decision order, from strongest evidence to weakest:
      *
-     * With no marker at all the answer is ARS. That is a product decision, not a guess: the
-     * application is Argentine, most receipts arrive in pesos, and the parsed amount is
-     * shown on the review screen where the person confirms or corrects the currency before
-     * anything is saved. Deriving a currency from the receipt date, the merchant's language
-     * or the address would be inventing data, so it is never done.
+     *   1. An explicit foreign denomination printed on the amount lines —
+     *      `US$`/`USD`/`U$S` → USD, `£`/`GBP` → GBP. These are the only markers a receipt
+     *      cannot be ambiguous about, and they travel with the amount, so they outrank
+     *      everything else, including the Argentine fiscal ids: an Argentine invoice priced
+     *      in dollars prints both `CUIT` and `U$S`, and the dollars are the answer.
+     *   2. An Argentine fiscal identifier (`CUIT`, `CUIL`, `AFIP`, `Responsable Inscripto`,
+     *      `Factura B`/`C`, `Monotributo`) → ARS. This sits above the euro `€`/`EUR` marker
+     *      on purpose: those labels cannot be printed by a non-Argentine merchant, so when
+     *      one of them and a euro mark coexist the euro mark is a template leftover, an OCR
+     *      slip or an `EQUIV. EUR` conversion line, never the currency of the ticket. It
+     *      stays below step 1 because a dollar or pound marker is a denomination, not a
+     *      European mention.
+     *   3. A currency marker on the amount lines (see {@see currencyOfLines()}).
+     *   4. A currency marker anywhere else in the recognised text.
+     *   5. A eurozone fiscal identifier → EUR.
+     *   6. Otherwise ARS.
+     *
+     * `IVA` and `VAT` never decide anything by themselves, and that omission is the reason
+     * this order exists: Argentina charges VAT at 21%, exactly like Spain, so `IVA 21%` is
+     * equally good evidence on either side of the Atlantic; and `VAT` is printed in the
+     * United Kingdom, which does not use the euro. Both fall through to the default.
+     *
+     * The default is ARS. That is a product decision, not a guess: the application is
+     * Argentine, most receipts arrive in pesos, and the parsed amount is shown on the
+     * review screen where the person confirms or corrects the currency before anything is
+     * saved. Deriving a currency from the receipt date, the merchant's language or the
+     * address would be inventing data, so it is never done.
      *
      * @param  list<string>  $amountLines  The lines the payable amount was read from.
      * @param  string  $text  The whole recognised text, used only when those lines carry no marker.
@@ -490,9 +544,68 @@ final class ReceiptTextParser
      */
     private function detectCurrency(array $amountLines, string $text): string
     {
-        return $this->currencyOfLines($amountLines)
-            ?? $this->currencyOfLines($this->lines($text))
-            ?? 'ARS';
+        $lines = $this->lines($text);
+
+        return $this->foreignDenominationOfLines($amountLines)
+            ?? ($this->hasArgentineFiscalIdentifier($text) ? 'ARS' : null)
+            ?? $this->currencyOfLines($amountLines)
+            ?? $this->currencyOfLines($lines)
+            ?? ($this->hasEurozoneFiscalIdentifier($text) ? 'EUR' : 'ARS');
+    }
+
+    /**
+     * Read an unambiguous foreign denomination — dollars or pounds — from a block of lines.
+     *
+     * Kept apart from {@see currencyOfLines()} because it is the only currency evidence
+     * that outranks the Argentine fiscal identifiers: `U$S`/`US$` and `£` are printed by
+     * Argentine merchants too, on invoices denominated in dollars or pounds. It is only
+     * consulted for the amount lines, because a distant conversion line (`EQUIV. US$`) must
+     * never outrank a euro sign printed next to the payable total.
+     *
+     * @param  list<string>  $lines  The lines to scan.
+     * @return string|null The ISO currency code, or null when no line carries one.
+     */
+    private function foreignDenominationOfLines(array $lines): ?string
+    {
+        foreach ($lines as $line) {
+            if ($this->lineHasUsDollar($line)) {
+                return 'USD';
+            }
+        }
+
+        foreach ($lines as $line) {
+            if ($this->lineHasSterling($line)) {
+                return 'GBP';
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Decide whether the receipt prints an Argentine fiscal identifier.
+     *
+     * @param  string  $text  The whole recognised text.
+     */
+    private function hasArgentineFiscalIdentifier(string $text): bool
+    {
+        return preg_match(self::ARGENTINE_FISCAL_PATTERN, Str::lower(Str::ascii($text))) === 1;
+    }
+
+    /**
+     * Decide whether the receipt prints a eurozone fiscal identifier.
+     *
+     * `KM` (Lithuania) is matched upper case only, because the same letters print as a
+     * distance unit in lower case, and the Greek `ΦΠΑ` is matched on the raw text because
+     * ASCII folding does not transliterate it.
+     *
+     * @param  string  $text  The whole recognised text.
+     */
+    private function hasEurozoneFiscalIdentifier(string $text): bool
+    {
+        return preg_match(self::EUROZONE_FISCAL_PATTERN, Str::lower(Str::ascii($text))) === 1
+            || preg_match('/\bKM\b/u', $text) === 1
+            || preg_match('/\x{03C6}\x{03C0}\x{03B1}/iu', $text) === 1;
     }
 
     /**
@@ -500,7 +613,18 @@ final class ReceiptTextParser
      *
      * One pass per signal, in priority order, so the order holds across the whole block and
      * not only inside one line: an explicit `US$` in the footer outranks a `$` printed
-     * above it instead of losing to document order.
+     * above it instead of losing to document order. That ordering is the reason the whole
+     * block is walked once per signal instead of line by line.
+     *
+     * Signals, strongest first:
+     *
+     *   1. `US$`/`U$S`/`USD` → USD. `US$` is checked first because it *contains* `$`:
+     *      reading the dollar sign before it would turn every US-dollar receipt into a peso.
+     *   2. `€`/`EUR`/`EURO`/`EUROS` → EUR.
+     *   3. `£`/`GBP` → GBP.
+     *   4. `ARS` → ARS, matched on word boundaries so `NARS` in a product name is not a
+     *      peso marker.
+     *   5. A bare `$` → ARS.
      *
      * @param  list<string>  $lines  The lines to scan.
      * @return string|null The ISO currency code, or null when no line carries a marker.
@@ -516,6 +640,12 @@ final class ReceiptTextParser
         foreach ($lines as $line) {
             if ($this->lineHasEuro($line)) {
                 return 'EUR';
+            }
+        }
+
+        foreach ($lines as $line) {
+            if ($this->lineHasSterling($line)) {
+                return 'GBP';
             }
         }
 
@@ -555,11 +685,28 @@ final class ReceiptTextParser
     /**
      * Decide whether a line carries a euro marker.
      *
+     * `EURO`/`EUROS` are the spellings Spanish and Italian receipts print when the OCR
+     * loses the `€` glyph (`TOTAL EUROS 28,84`). The word boundaries keep `EUROPA`, a shop
+     * or street name, out of the match.
+     *
      * @param  string  $line  A recognised line.
      */
     private function lineHasEuro(string $line): bool
     {
-        return str_contains($line, '€') || preg_match('/\bEUR\b/u', Str::upper($line)) === 1;
+        return str_contains($line, '€') || preg_match('/\b(?:EUR|EUROS?)\b/u', Str::upper(Str::ascii($line))) === 1;
+    }
+
+    /**
+     * Decide whether a line carries a pound-sterling marker.
+     *
+     * The United Kingdom is not in the eurozone, so `£`/`GBP` is its own answer and never
+     * falls through to the euro fiscal identifiers.
+     *
+     * @param  string  $line  A recognised line.
+     */
+    private function lineHasSterling(string $line): bool
+    {
+        return str_contains($line, '£') || preg_match('/\bGBP\b/u', Str::upper($line)) === 1;
     }
 
     /**

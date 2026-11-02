@@ -644,6 +644,165 @@ class ReceiptTextParserTest extends TestCase
         $this->assertSame(Carbon::parse('2016-09-22')->toISOString(), $payload['occurred_at'] ?? null);
     }
 
+    public function test_a_spanish_cif_without_a_currency_symbol_is_read_as_euros(): void
+    {
+        $result = $this->parser()->parse("SUPERMERCADO\nCIF B12345678\nTOTAL 28,84");
+
+        $this->assertSame(2884, $result?->amount_minor);
+        $this->assertSame(
+            'EUR',
+            $result?->currency,
+            'A Spanish receipt with no symbol at the total prints its CIF instead, and that is enough to infer EUR.'
+        );
+    }
+
+    public function test_a_french_siret_without_a_currency_symbol_is_read_as_euros(): void
+    {
+        $result = $this->parser()->parse("BOULANGERIE\nSIRET 123 456 789 00012\nTOTAL 9,50");
+
+        $this->assertSame(950, $result?->amount_minor);
+        $this->assertSame('EUR', $result?->currency);
+    }
+
+    public function test_an_italian_partita_iva_without_a_currency_symbol_is_read_as_euros(): void
+    {
+        $result = $this->parser()->parse("TRATTORIA\nP.IVA 01234567890\nTOTAL 42,00");
+
+        $this->assertSame(4200, $result?->amount_minor);
+        $this->assertSame('EUR', $result?->currency);
+    }
+
+    public function test_a_dutch_btw_identifier_is_read_as_euros(): void
+    {
+        $this->assertSame(
+            'EUR',
+            $this->parser()->parse("CAFE\nBTW NL123456789B01\nTOTAL 4,20")?->currency
+        );
+    }
+
+    public function test_a_bare_vat_identifier_never_claims_the_euro(): void
+    {
+        $this->assertSame(
+            'ARS',
+            $this->parser()->parse("SHOP\nVAT 01234567890\nTOTAL 75.00")?->currency,
+            'The United Kingdom prints VAT too and is not in the eurozone, so a bare VAT must fall through to the default.'
+        );
+    }
+
+    public function test_an_argentine_cuit_wins_over_a_euro_sign(): void
+    {
+        $result = $this->parser()->parse("ALMACEN\nCUIT 20-12345678-9\nFactura B\nTOTAL 250,00 €");
+
+        $this->assertSame(25000, $result?->amount_minor);
+        $this->assertSame(
+            'ARS',
+            $result?->currency,
+            'A CUIT and a Factura B cannot come from a European merchant: the euro sign on the paper is a template leftover, not the currency.'
+        );
+    }
+
+    public function test_every_argentine_fiscal_identifier_wins_over_the_european_ones(): void
+    {
+        foreach (['CUIT 20-12345678-9', 'CUIL 27-12345678-4', 'AFIP 20-12345678-9', 'Responsable Inscripto', 'Factura C', 'Monotributo'] as $identifier) {
+            $result = $this->parser()->parse("TIENDA\n{$identifier}\nCIF B12345678\nTOTAL 250,00");
+
+            $this->assertSame(
+                'ARS',
+                $result?->currency,
+                "`{$identifier}` is an Argentine identifier, so the receipt is in pesos even next to a European CIF."
+            );
+        }
+    }
+
+    public function test_an_argentine_invoice_denominated_in_dollars_keeps_the_dollar(): void
+    {
+        $this->assertSame(
+            'USD',
+            $this->parser()->parse("ALMACEN\nCUIT 20-12345678-9\nTOTAL U\$S 250,00")?->currency,
+            'Argentine merchants do invoice in dollars, and an explicit U$S is stronger evidence than the fiscal id.'
+        );
+    }
+
+    public function test_a_bare_iva_rate_never_claims_the_euro(): void
+    {
+        $result = $this->parser()->parse("BAR\nIVA 21%\nTOTAL 26,00");
+
+        $this->assertSame(2600, $result?->amount_minor);
+        $this->assertSame(
+            'ARS',
+            $result?->currency,
+            'Argentina charges IVA at 21% like Spain, so IVA alone must resolve to the default instead of inferring EUR.'
+        );
+    }
+
+    public function test_a_bare_iva_line_does_not_override_an_explicit_euro_amount(): void
+    {
+        $this->assertSame(
+            'EUR',
+            $this->parser()->parse("BAR\nIVA 21%\nTOTAL 26,00 €")?->currency,
+            'The euro sign on the amount line is direct evidence and still wins over the ambiguous IVA line.'
+        );
+    }
+
+    public function test_a_pound_sterling_amount_is_read_as_gbp(): void
+    {
+        $result = $this->parser()->parse("COFFEE SHOP\nTOTAL £ 12,50");
+
+        $this->assertSame(1250, $result?->amount_minor);
+        $this->assertSame('GBP', $result?->currency);
+    }
+
+    public function test_the_eurozone_identifiers_of_the_catalogue_are_all_read_as_euros(): void
+    {
+        foreach (['NIF X1234567L', 'CIF B12345678', 'N.I.F. X1234567L', 'C.I.F. B12345678', 'NIPT 123456789', 'NIPC 123456789', 'SIRET 12345678900012', 'SIREN 123456789', 'RCS Paris 123456789', 'TVA FR12345678901', 'P.IVA 01234567890', 'P IVA 01234567890', 'Partita IVA 01234567890', 'Codice Fiscale RSSMRA80A01H501U', 'USt-IdNr DE123456789', 'USt DE123456789', 'MwSt 19%', 'Mehrwertsteuer 19%', 'UID ATU12345678', 'BTW NL123456789B01', 'PDV 12345678901', 'ALV 12345678', 'DPH 1234567890', 'PVM LT123456789', 'FPA 123456789'] as $identifier) {
+            $this->assertSame(
+                'EUR',
+                $this->parser()->parse("TIENDA\n{$identifier}\nTOTAL 28,84")?->currency,
+                "`{$identifier}` is a eurozone fiscal identifier, so the receipt is in euros."
+            );
+        }
+    }
+
+    public function test_the_currency_that_was_already_read_from_a_symbol_is_unchanged(): void
+    {
+        $this->assertSame('EUR', $this->parser()->parse(self::AVENUE_TEXT)?->currency);
+        $this->assertSame('EUR', $this->parser()->parse("GASOLINERA\nTOTAL EUROS 28,84")?->currency);
+        $this->assertSame('USD', $this->parser()->parse("ELECTRONICS STORE\nTOTAL US\$ 120,00")?->currency);
+        $this->assertSame('ARS', $this->parser()->parse("ALMACEN DON PEDRO\nTOTAL \$ 1.234,56")?->currency);
+    }
+
+    public function test_a_lowercase_km_unit_is_not_a_lithuanian_fiscal_identifier(): void
+    {
+        $this->assertSame(
+            'ARS',
+            $this->parser()->parse("ESTACION DE SERVICIO\nkm 45 ruta 8\nTOTAL 2.500,00")?->currency,
+            '`KM` only identifies Lithuania in upper case; in lower case it is the distance unit printed on Argentine tickets.'
+        );
+        $this->assertSame(
+            'EUR',
+            $this->parser()->parse("PARDUTUVE\nKM 123456789\nTOTAL 28,84")?->currency,
+            'The upper-case Lithuanian `KM` identifier still claims the euro.'
+        );
+    }
+
+    public function test_a_shop_named_europa_is_not_a_euro_marker(): void
+    {
+        $this->assertSame(
+            'ARS',
+            $this->parser()->parse("PANADERIA EUROPA\nTOTAL 2.500,00")?->currency,
+            'The word boundary keeps a merchant name such as EUROPA out of the EURO marker.'
+        );
+    }
+
+    public function test_the_spanish_word_factura_alone_is_not_an_argentine_identifier(): void
+    {
+        $this->assertSame(
+            'EUR',
+            $this->parser()->parse("SUPERMERCADO\nFactura\nCIF B12345678\nTOTAL 28,84")?->currency,
+            '`Factura` is printed in Spain too, so only `Factura B`/`Factura C` identify Argentina.'
+        );
+    }
+
     /**
      * Resolve the parser under test.
      */
