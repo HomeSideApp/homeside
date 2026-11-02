@@ -7,6 +7,7 @@ use App\Data\Economy\ReceiptTextData;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Imagick;
+use Smalot\PdfParser\Parser;
 use Symfony\Component\Process\Process;
 use Throwable;
 
@@ -42,11 +43,41 @@ use Throwable;
  * so a variant with empty output is discarded instead of winning, and the number of
  * Tesseract invocations is capped (see MAX_CANDIDATES and the time budget) because a hung
  * or slow variant must not delay the import.
+ *
+ * PDF tickets are recognised too, because the upload accepts them and they used to reach
+ * this layer with no offline chance at all. A PDF is not one document but two kinds, and the
+ * text layer decides which one it is: measured on a generated receipt, `PdfParser` read a
+ * digital PDF exactly (`BAR PRUEBA TOTAL TTC 28,84 IVA 21% 5,00`) where OCR on the same page
+ * misread the total, and a scanned PDF with no text layer yielded zero characters. Text and
+ * rasterisation are therefore a cascade, never alternatives:
+ *
+ *   1. A PDF is first read through its text layer, once. A candidate with real content is
+ *      put in front of every OCR variant, because the caller keeps the first candidate the
+ *      parser can read and the text layer is exact.
+ *   2. The page is then rasterised once with Imagick (which delegates the rendering to the
+ *      already-installed Ghostscript) and walks exactly the same variant matrix as an
+ *      uploaded image — there is no second OCR path.
+ *
+ * The cascade only degrades in one direction: a document whose text layer is unreadable or
+ * absent is recognised from the raster, and a document that cannot be rasterised (no
+ * Ghostscript, an Imagick built without PDF support, a corrupt file) is still readable when
+ * its text layer has content. A text layer without a payable amount never stops the OCR
+ * variants from being tried — it only fails to be the first parseable candidate.
+ *
+ * Two details decide whether the raster path works at all:
+ *
+ *   - Resolution. The page is rendered at 300 DPI, and the resolution must be set *before*
+ *     the file is read: a PDF page has no pixel size of its own, so ImageMagick's default of
+ *     72 DPI renders a receipt line far too small to read. Measured on the generated fixture,
+ *     `TOTAL TTC 28,84` was read exactly at 300 DPI and misread as `TOTAL TI 28,54` at 72 DPI.
+ *   - Pages. Only page 0 is requested, because a ticket is a single page and a 50-page upload
+ *     must not cost 50 recognitions. ImageMagick forwards the page selection to Ghostscript,
+ *     so the remaining pages are never rendered either.
  */
 final class TesseractReceiptTextExtractor implements ReceiptTextExtractor
 {
     /**
-     * MIME types this version can rasterise. PDF documents are deferred to a later phase.
+     * MIME types of the images this version can recognise directly.
      *
      * @var list<string>
      */
@@ -58,6 +89,34 @@ final class TesseractReceiptTextExtractor implements ReceiptTextExtractor
         'image/tiff',
         'image/webp',
     ];
+
+    /**
+     * MIME type of the documents that are rasterised before recognition.
+     */
+    private const PDF_MIME_TYPE = 'application/pdf';
+
+    /**
+     * Document kinds this layer understands.
+     */
+    private const KIND_IMAGE = 'image';
+
+    private const KIND_PDF = 'pdf';
+
+    /**
+     * Resolution used to rasterise a PDF page, in DPI.
+     *
+     * 300 DPI is the smallest value that reliably reads receipt-sized type: at ImageMagick's
+     * default of 72 DPI the measured fixture was illegible, and the accuracy gains above
+     * 300 DPI do not pay for the extra pixels.
+     */
+    private const DEFAULT_PDF_RESOLUTION_DPI = 300;
+
+    /**
+     * Range a configured PDF resolution is clamped to, in DPI.
+     */
+    private const MIN_PDF_RESOLUTION_DPI = 72;
+
+    private const MAX_PDF_RESOLUTION_DPI = 600;
 
     /**
      * Factor applied by the preprocessed variants to a source image that is too narrow.
@@ -111,22 +170,27 @@ final class TesseractReceiptTextExtractor implements ReceiptTextExtractor
             return [];
         }
 
-        $binary = $this->resolveBinary();
+        $kind = $this->detectDocumentKind($absolutePath);
 
-        if ($binary === null || ! class_exists(Imagick::class)) {
+        if ($kind === null) {
             return [];
         }
 
-        if (! $this->isSupportedImage($absolutePath)) {
-            return [];
+        // A digital PDF carries its own text, so it is read before anything is rasterised
+        // and parsed exactly once per document — never once per OCR variant.
+        $textLayer = $kind === self::KIND_PDF ? $this->textLayerCandidate($absolutePath) : null;
+
+        $binary = $this->resolveBinary();
+
+        if ($binary === null || ! class_exists(Imagick::class)) {
+            // Neither the raster nor the OCR can happen, but a digital PDF still has text.
+            return $textLayer === null ? [] : [$textLayer];
         }
 
         $psm = (int) config('economy.ocr.psm', 6);
         $timeout = (int) config('economy.ocr.timeout_seconds', 20);
         $minConfidence = (float) config('economy.ocr.min_confidence', 0);
         $budget = (float) config('economy.ocr.total_timeout_seconds', self::DEFAULT_TOTAL_BUDGET_SECONDS);
-        $scale = $this->upscaleFactor($absolutePath);
-        $matrix = $this->matrix($scale);
 
         /** @var list<string> $temporaries */
         $temporaries = [];
@@ -140,6 +204,21 @@ final class TesseractReceiptTextExtractor implements ReceiptTextExtractor
         $startedAt = microtime(true);
 
         try {
+            // A PDF is rasterised once, up front, and from then on it is just a page image:
+            // the same languages and the same preprocessing chains below apply unchanged.
+            $sourcePath = $kind === self::KIND_PDF
+                ? $this->rasterizePdf($absolutePath, $temporaries)
+                : $absolutePath;
+
+            if ($sourcePath === null) {
+                // No Ghostscript (or no PDF support, or a corrupt file): OCR cannot run, but a
+                // digital PDF must remain readable from its text layer alone.
+                return $textLayer === null ? [] : [$textLayer];
+            }
+
+            $scale = $this->upscaleFactor($sourcePath);
+            $matrix = $this->matrix($scale);
+
             foreach ($matrix as $order => $step) {
                 if ($budget > 0 && microtime(true) - $startedAt >= $budget) {
                     // A slow ticket must not hold the import: keep the candidates already
@@ -153,7 +232,7 @@ final class TesseractReceiptTextExtractor implements ReceiptTextExtractor
                 }
 
                 try {
-                    $path = $prepared[$step['name']] ??= $this->prepareVariant($absolutePath, $step['chain'], $scale, $temporaries);
+                    $path = $prepared[$step['name']] ??= $this->prepareVariant($sourcePath, $step['chain'], $scale, $temporaries);
                 } catch (Throwable) {
                     continue;
                 }
@@ -199,7 +278,73 @@ final class TesseractReceiptTextExtractor implements ReceiptTextExtractor
         usort($ranked, fn (array $left, array $right): int => $right['score'] <=> $left['score']
             ?: $left['order'] <=> $right['order']);
 
-        return array_map(static fn (array $entry): ReceiptTextData => $entry['data'], $ranked);
+        /** @var list<ReceiptTextData> $candidates */
+        $candidates = array_map(static fn (array $entry): ReceiptTextData => $entry['data'], $ranked);
+
+        if ($textLayer !== null) {
+            // Always first, and not part of the score ranking: the caller keeps the first
+            // candidate the parser can read, and the text layer is the exact reading. An OCR
+            // variant that merely looks like a total line must never outrank it, and a text
+            // layer without an amount simply lets the parser move on to the OCR variants.
+            array_unshift($candidates, $textLayer);
+        }
+
+        return $candidates;
+    }
+
+    /**
+     * Read the embedded text layer of a PDF, when the document has one.
+     *
+     * A digital PDF states its own text, so this reading is exact where OCR on the same page
+     * introduces errors: measured on the generated receipt fixture, the text layer returned
+     * `TOTAL TTC 28,84` verbatim, while every OCR variant of the rasterised page had to be
+     * tried to find it. A scanned PDF has no text layer at all and yields zero characters,
+     * which is why this can never replace the raster path — the two are a cascade.
+     *
+     * Both the library and the parse are optional at runtime. The dependency is required by
+     * this application, but the offline layer must keep working when it is absent, so the
+     * missing class and a parser that throws on a malformed document are the same outcome as
+     * an empty text layer: null, and the raster path answers instead.
+     *
+     * Only the first page is read, mirroring the raster path: a ticket is one page, and a
+     * long upload must not turn into a long extraction.
+     *
+     * @param  string  $path  Absolute path of the PDF document.
+     * @return ReceiptTextData|null The text layer as a candidate, or null when there is no usable text layer.
+     */
+    private function textLayerCandidate(string $path): ?ReceiptTextData
+    {
+        if (! (bool) config('economy.ocr.pdf.text_layer', true)) {
+            return null;
+        }
+
+        if (! class_exists(Parser::class)) {
+            // The library is optional at runtime: without it the layer degrades to the raster
+            // path it had before text layers were read, instead of breaking the import.
+            return null;
+        }
+
+        try {
+            $text = trim((new Parser)->parseFile($path)->getText(1));
+        } catch (Throwable $exception) {
+            // No paths and no user data in the log line: only the failure class.
+            Log::warning('Receipt text layer could not be read', ['reason' => $exception::class]);
+
+            return null;
+        }
+
+        if (preg_match('/\S/u', $text) !== 1) {
+            // A scanned document, or a page whose text is only whitespace: nothing to gain.
+            return null;
+        }
+
+        return new ReceiptTextData(
+            text: $text,
+            engine: 'pdfparser',
+            variant: 'text_layer',
+            confidence: null,
+            language: null,
+        );
     }
 
     /**
@@ -338,9 +483,94 @@ final class TesseractReceiptTextExtractor implements ReceiptTextExtractor
     }
 
     /**
+     * Rasterise the first page of a PDF into a temporary PNG image.
+     *
+     * The result is a normal page image, so the caller feeds it into the same variant matrix
+     * as an uploaded image. Rasterising happens once per document, before the matrix, because
+     * Ghostscript is far more expensive than a PNG read.
+     *
+     * Every reason the rasterisation cannot happen — no Ghostscript, an Imagick built without
+     * PDF support, a corrupt file, a document with no pages — is the same outcome for the
+     * caller: null, so the import falls back to the AI path instead of failing.
+     *
+     * @param  string  $path  Absolute path of the PDF document.
+     * @param  list<string>  $temporaries  Accumulator of files that must be removed afterwards.
+     * @return string|null The absolute path of the rendered page, or null when it cannot be rendered.
+     */
+    private function rasterizePdf(string $path, array &$temporaries): ?string
+    {
+        if ($this->resolveExecutable((string) config('economy.ocr.pdf.ghostscript_binary', 'gs')) === null) {
+            Log::warning('Receipt OCR cannot rasterise the PDF: Ghostscript is not installed');
+
+            return null;
+        }
+
+        $resolution = $this->pdfResolution();
+        $image = new Imagick;
+
+        if ($image->queryFormats('PDF') === []) {
+            Log::warning('Receipt OCR cannot rasterise the PDF: Imagick has no PDF support');
+
+            return null;
+        }
+
+        try {
+            // The resolution must be set BEFORE the file is read: a PDF page has no pixels of
+            // its own, so ImageMagick renders it at the resolution known when it reads it, and
+            // its default of 72 DPI makes receipt type too small to recognise.
+            $image->setResolution($resolution, $resolution);
+
+            // Only the first page: a ticket is one page, and a long PDF must not be recognised
+            // page by page. ImageMagick forwards the scene selection to Ghostscript as the
+            // first/last page pair, so the other pages are never even rendered.
+            $image->readImage($path.'[0]');
+            $image->setIteratorIndex(0);
+
+            if ($image->getNumberImages() < 1) {
+                return null;
+            }
+
+            // A rendered text page needs no colour: greyscale keeps the raster small, and the
+            // preprocessing chains below convert to greyscale anyway.
+            $image->setImageColorspace(Imagick::COLORSPACE_GRAY);
+            $image->setImageFormat('png');
+
+            $temporary = $this->temporaryPath();
+            $temporaries[] = $temporary;
+            $image->writeImage($temporary);
+
+            return $temporary;
+        } catch (Throwable $exception) {
+            // No paths and no user data in the log line: only the failure class. A corrupt
+            // upload must never turn into a failed import.
+            Log::warning('Receipt OCR could not rasterise the PDF', ['reason' => $exception::class]);
+
+            return null;
+        } finally {
+            $image->clear();
+        }
+    }
+
+    /**
+     * Resolution used to render a PDF page, clamped to a sane range.
+     *
+     * 72 DPI is the value that breaks recognition, so it is the floor rather than a value we
+     * would ever choose; above 600 DPI the extra pixels only cost time.
+     */
+    private function pdfResolution(): int
+    {
+        $configured = (int) config('economy.ocr.pdf.dpi', self::DEFAULT_PDF_RESOLUTION_DPI);
+
+        return max(self::MIN_PDF_RESOLUTION_DPI, min(self::MAX_PDF_RESOLUTION_DPI, $configured));
+    }
+
+    /**
      * Build one preprocessing variant on disk, or reuse the source for the raw variant.
      *
-     * @param  string  $sourcePath  Absolute path of the source image.
+     * The source is an uploaded image or the page a PDF was rasterised into: by the time this
+     * runs the two are indistinguishable, which is what keeps a single OCR path.
+     *
+     * @param  string  $sourcePath  Absolute path of the source image or rasterised page.
      * @param  string|null  $preprocessing  The preprocessing chain to apply, or null for the raw image.
      * @param  int  $scale  The upscale factor for the preprocessed chains.
      * @param  list<string>  $temporaries  Accumulator of files that must be removed afterwards.
@@ -554,6 +784,17 @@ final class TesseractReceiptTextExtractor implements ReceiptTextExtractor
     {
         $configured = trim((string) config('economy.ocr.binary', 'tesseract'));
 
+        return $configured === '' ? null : $this->resolveExecutable($configured);
+    }
+
+    /**
+     * Resolve an external executable, either as an absolute path or through PATH.
+     *
+     * @param  string  $configured  A bare command name or an absolute path.
+     * @return string|null The executable path, or null when it cannot be found.
+     */
+    private function resolveExecutable(string $configured): ?string
+    {
         if ($configured === '') {
             return null;
         }
@@ -614,26 +855,99 @@ final class TesseractReceiptTextExtractor implements ReceiptTextExtractor
     }
 
     /**
-     * Decide whether the file is an image this version can recognise.
+     * Decide which kind of document the file is, from its content rather than its name.
      *
-     * The check is content-based, so a PDF upload (still accepted by the import) degrades
-     * to an empty result here instead of being handed to Tesseract.
+     * The MIME type is sniffed, so a PDF stored under any name is still recognised as a PDF.
+     * The extension only ever corroborates the sniffed type — it can never grant support on
+     * its own, because a `.pdf` name over JPEG bytes is a JPEG, not a document to rasterise.
+     *
+     * @param  string  $path  Absolute path of the candidate file.
+     * @return string|null `pdf`, `image`, or null when this layer cannot read the file.
+     */
+    private function detectDocumentKind(string $path): ?string
+    {
+        if (! is_file($path)) {
+            return null;
+        }
+
+        $mime = $this->detectMimeType($path);
+
+        if ($mime === self::PDF_MIME_TYPE) {
+            return self::KIND_PDF;
+        }
+
+        if (in_array($mime, self::SUPPORTED_MIME_TYPES, true)) {
+            return self::KIND_IMAGE;
+        }
+
+        // Last resort for a PDF the sniffer could not name (a missing fileinfo extension,
+        // for example): the signature proves the content and the extension corroborates it.
+        if ($this->hasPdfSignature($path) && $this->hasExtension($path, 'pdf')) {
+            return self::KIND_PDF;
+        }
+
+        return null;
+    }
+
+    /**
+     * Sniff the MIME type of a file, preferring the content over the file name.
+     *
+     * @param  string  $path  Absolute path of the candidate file.
+     * @return string|null The lowercase MIME type, or null when it cannot be determined.
+     */
+    private function detectMimeType(string $path): ?string
+    {
+        $sniffed = @mime_content_type($path);
+        $sniffed = is_string($sniffed) && $sniffed !== '' ? mb_strtolower($sniffed) : null;
+
+        if ($sniffed !== null && $sniffed !== 'application/octet-stream') {
+            return $sniffed;
+        }
+
+        // `getimagesize()` is the strongest signal for the image formats this layer reads,
+        // and it is what recognised them before PDFs were supported.
+        $info = @getimagesize($path);
+
+        if (is_array($info)) {
+            $reported = mb_strtolower((string) ($info['mime'] ?? ''));
+
+            if ($reported !== '') {
+                return $reported;
+            }
+        }
+
+        return $sniffed;
+    }
+
+    /**
+     * Decide whether the file starts with the PDF signature.
      *
      * @param  string  $path  Absolute path of the candidate file.
      */
-    private function isSupportedImage(string $path): bool
+    private function hasPdfSignature(string $path): bool
     {
-        if (! is_file($path)) {
+        $handle = @fopen($path, 'rb');
+
+        if ($handle === false) {
             return false;
         }
 
-        $info = @getimagesize($path);
-
-        if ($info === false) {
-            return false;
+        try {
+            return fread($handle, 5) === '%PDF-';
+        } finally {
+            fclose($handle);
         }
+    }
 
-        return in_array(strtolower((string) ($info['mime'] ?? '')), self::SUPPORTED_MIME_TYPES, true);
+    /**
+     * Decide whether the file carries the given extension, ignoring case.
+     *
+     * @param  string  $path  Absolute path of the candidate file.
+     * @param  string  $extension  The extension to compare against, without the dot.
+     */
+    private function hasExtension(string $path, string $extension): bool
+    {
+        return mb_strtolower(pathinfo($path, PATHINFO_EXTENSION)) === $extension;
     }
 
     /**

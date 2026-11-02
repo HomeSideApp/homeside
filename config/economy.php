@@ -24,6 +24,10 @@
 | and `total_timeout_seconds` caps the wall clock, so a slow or hung variant is dropped
 | instead of holding the import.
 |
+| PDF tickets cost a little more: the first page is rendered with Ghostscript through
+| Imagick at 300 DPI (~0.5 s), and the resulting page image then walks the same six-run
+| matrix (~3-6 s measured on a receipt-sized page). Only the first page is rendered.
+|
 */
 
 return [
@@ -104,6 +108,44 @@ return [
             'raw' => (bool) env('ECONOMY_OCR_VARIANT_RAW', true),
             'grayscale' => (bool) env('ECONOMY_OCR_VARIANT_GRAYSCALE', true),
             'adaptive' => (bool) env('ECONOMY_OCR_VARIANT_ADAPTIVE', true),
+        ],
+
+        /*
+        | PDF tickets. The upload accepts PDFs and they used to reach the AI path with no
+        | offline chance at all. A PDF is read as a cascade, because the two readings measure
+        | very differently: a digital PDF states its own text (measured: `PdfParser` returned
+        | `BAR PRUEBA TOTAL TTC 28,84 IVA 21% 5,00` exactly, where OCR of the same page
+        | misread the amount), and a scanned PDF has no text at all and needs the raster.
+        */
+        'pdf' => [
+
+            /*
+            | Read the embedded text layer with `smalot/pdfparser` before rasterising. The
+            | resulting candidate is placed in front of every OCR variant, because it is an
+            | exact reading and the caller keeps the first candidate the parser can turn
+            | into an amount. A text layer without an amount does not short-circuit the
+            | cascade: the OCR variants still run. Disable it to force the raster path, and
+            | note that the layer degrades to that same path on its own when the library is
+            | not installed.
+            */
+            'text_layer' => (bool) env('ECONOMY_OCR_PDF_TEXT_LAYER', true),
+
+            /*
+            | Resolution, in DPI, used to render the page. It is set before the file is
+            | read because the default of 72 DPI produces digits that cannot be recognised;
+            | the value is clamped to the 72-600 range. Cost grows with the square of the
+            | resolution: a receipt page takes ~0.5 s to render and ~0.7 s per OCR run at
+            | 300 DPI.
+            */
+            'dpi' => (int) env('ECONOMY_OCR_PDF_DPI', 300),
+
+            /*
+            | Ghostscript binary: Imagick's PDF coder delegates the rendering to it, so a
+            | missing Ghostscript means PDFs degrade to the AI path instead of throwing. A
+            | bare name is resolved through PATH; an absolute path is used as-is.
+            */
+            'ghostscript_binary' => (string) env('ECONOMY_OCR_GHOSTSCRIPT_BINARY', 'gs'),
+
         ],
 
     ],

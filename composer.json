@@ -37,7 +37,8 @@
         "laravel/tinker": "^3.0",
         "laravel/wayfinder": "^0.1.14",
         "mstilkerich/carddavclient": "dev-feat/discovery-options",
-        "pragmarx/google2fa": "^9.0"
+        "pragmarx/google2fa": "^9.0",
+        "smalot/pdfparser": "^2.13"
     },
     "require-dev": {
         "fakerphp/faker": "^1.24",
