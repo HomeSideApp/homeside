@@ -36,6 +36,7 @@
         "laravel/socialite": "^5.31",
         "laravel/tinker": "^3.0",
         "laravel/wayfinder": "^0.1.14",
+        "league/flysystem-aws-s3-v3": "^3.0",
         "mstilkerich/carddavclient": "dev-feat/discovery-options",
         "pragmarx/google2fa": "^9.0",
         "smalot/pdfparser": "^2.13"
