@@ -67,7 +67,7 @@ final class AdminUserController extends Controller
     public function update(SaveAdminUserApiRequest $request, User $user): JsonResponse
     {
         $validated = $request->validated();
-        $updates = collect($validated)->only(['name', 'email', 'locale', 'can_create_households'])->all();
+        $updates = collect($validated)->only(['name', 'email', 'locale', 'can_create_households_override'])->all();
         $emailChanged = isset($validated['email']) && $validated['email'] !== $user->email;
         $user->fill($updates);
         if ($emailChanged) {
@@ -99,7 +99,7 @@ final class AdminUserController extends Controller
             'name' => $user->name,
             'email' => $user->email,
             'locale' => $user->locale,
-            'can_create_households' => $user->can_create_households,
+            'can_create_households_override' => $user->can_create_households_override,
             'roles' => $user->roles->pluck('slug')->values(),
             'approval_status' => $user->approval_status,
             'google_connected' => $user->googleIdentity !== null,

@@ -28,7 +28,7 @@ return [
     ],
     'verify_email' => [
         'subject' => 'Activa tu cuenta en :app',
-        'line' => 'Tu cuenta ha sido creada. Pulsa el enlace para establecer tu contraseña y activar tu cuenta.',
+        'line' => 'Tu cuenta ha sido creada. Confirmá esta dirección de correo para terminar de configurarla.',
         'action' => 'Verificar email',
     ],
     'reset_password' => [
@@ -43,5 +43,16 @@ return [
         'instructions' => 'Pulsa el botón para configurar un código OTP nuevo. El enlace caduca en 30 minutos.',
         'current_code' => 'Tu OTP actual seguirá funcionando hasta que configures uno nuevo.',
         'action' => 'Restablecer OTP',
+    ],
+    'enrolment_link' => [
+        'subject' => 'Termina de configurar tu cuenta en :app',
+        'line' => 'Tu cuenta en :app todavía necesita una aplicación de autenticación de dos factores para poder iniciar sesión.',
+        'instructions' => 'Pulsa el botón para configurarla.',
+        'valid_hour' => 'Este enlace es válido durante una hora.',
+        'valid_hours' => 'Este enlace es válido durante :hours horas.',
+        'valid_minute' => 'Este enlace es válido durante un minuto.',
+        'valid_minutes' => 'Este enlace es válido durante :minutes minutos.',
+        'action' => 'Terminar de configurar la autenticación de dos factores',
+        'not_you' => 'Si no has creado esta cuenta, puedes ignorar este correo y no cambiará nada.',
     ],
 ];

@@ -56,6 +56,7 @@ export default {
             google: 'Continue with Google',
             forgotOtp: 'Forgot your OTP?',
             forgotPassword: 'Forgot your password?',
+            noEnrolmentLink: 'No enrolment link?',
         },
         confirm: {
             title: 'Confirm password',
@@ -73,6 +74,20 @@ export default {
             title: 'Reset OTP',
             description: 'Enter your email to receive an OTP reset link',
             submit: 'Send OTP reset link',
+        },
+        resendEnrolment: {
+            expiredTitle: 'This enrolment link expired',
+            expiredDescription:
+                'Your registration is not finished yet. Request a new link to set up your authenticator app.',
+            expiredBody:
+                'The link you opened is no longer valid because too much time passed. Request a new one and it will arrive by email.',
+            requestTitle: 'Request an enrolment link',
+            requestDescription:
+                'Enter your email and, if your account still needs two-factor authentication, we will send you a new link.',
+            resend: 'Resend link',
+            submit: 'Send me a link',
+            return: 'Or, return to',
+            login: 'log in',
         },
         resetPassword: {
             title: 'Reset password',
@@ -119,8 +134,13 @@ export default {
             dashboard: 'Go to dashboard',
         },
         register: {
-            title: 'Registration disabled',
-            description: 'Account creation is handled by an administrator',
+            title: 'Create account',
+            description: 'Register a new account',
+            name: 'Name',
+            submit: 'Create account',
+            approvalNotice:
+                'New accounts need an administrator to approve them before you can sign in.',
+            google: 'Sign up with Google',
             message:
                 'Account registration is currently disabled. Contact an administrator to create an account.',
         },
@@ -806,6 +826,14 @@ export default {
             fixedAmountPlaceholder: '0.00',
             splitPercentageTotal: 'Percentage total: {current}% / 100%',
             splitFixedTotal: 'Allocated: {current} {currency} of {total}',
+            externalParticipantsTitle: 'Other participants',
+            addExternalParticipant: 'Add person',
+            addAnonymousShare: 'Unnamed share',
+            externalParticipantPlaceholder: 'Name of the person',
+            anonymousShareCount: 'People',
+            anonymousShareOne: '1 person',
+            anonymousShareMany: '{count} people',
+            removeParticipant: 'Remove participant',
             linkedContact: 'Linked contact',
             linkedContactPlaceholder: 'Search contact...',
             percentage: 'Percentage',
@@ -975,6 +1003,166 @@ export default {
         globalAi: 'Global AI',
         aiUsage: 'AI Usage',
         translations: 'Translations',
+        saas: 'Plans & Billing',
+        saasAdmin: 'SaaS Admin',
+        registrationSettings: 'Registration',
+        registrations: 'Registration & Access',
+    },
+    saas: {
+        plans: {
+            title: 'Plans & Billing',
+            description: 'Choose the plan that fits your home.',
+            checkoutHint:
+                'Online checkout is not enabled yet — upgrading is unavailable for now.',
+            currentPlan: 'Current plan',
+            defaultPlan: 'Default',
+            freePrice: 'Free',
+            yourPlan: 'Your plan',
+            upgradeTo: 'Upgrade to {plan}',
+            descriptions: {
+                free: 'The essentials to get started.',
+                plus: 'For homes that cook together.',
+                pro: 'Full power with AI helpers.',
+                max: 'Everything, without limits.',
+            },
+        },
+        billing: {
+            title: 'Billing',
+            description: 'Your plan, usage and promotion codes.',
+            entitlementTitle: 'Your entitlement',
+            planLine: 'Plan {plan} (v{version})',
+            expiresAt: 'expires {date}',
+            viewPlans: 'View plans',
+            checkoutHint:
+                'Online checkout is not enabled yet — plan changes are unavailable for now.',
+            usageTitle: 'Usage this period',
+            usageDescription: 'Metered usage against your plan quotas.',
+            usedOf: '{used} of {cap}',
+            redeemTitle: 'Redeem a promotion code',
+            redeemDescription:
+                'Got a code? Redeem it here to unlock extra benefits.',
+            redeemCode: 'Promotion code',
+            redeemPlaceholder: 'e.g. WELCOME2026',
+            redeemSubmit: 'Redeem',
+        },
+        origins: {
+            granted: 'Granted',
+            subscribed: 'Subscribed',
+            trial: 'Trial',
+            free: 'Free',
+        },
+        features: {
+            lists: 'Shopping lists',
+            economy: 'Economy',
+            recipes: 'Recipes',
+            ai_image_recognition: 'AI image recognition',
+            ai_assistant: 'AI assistant',
+        },
+        quotas: {
+            households_own: 'Own households',
+            storage_mb: 'Storage (MB)',
+            ai_image_monthly: 'AI image recognitions / month',
+            ai_assistant_monthly: 'AI assistant messages / month',
+            unlimited: 'Unlimited',
+            none: 'Not included',
+        },
+        admin: {
+            overview: {
+                title: 'SaaS Billing Overview',
+                listTitle: 'Users and entitlements',
+                description:
+                    "Read-only view of each user's effective plan, origin, expiry and usage.",
+                searchPlaceholder: 'Search by email...',
+                search: 'Search',
+                email: 'Email',
+                plan: 'Plan',
+                origin: 'Origin',
+                expiry: 'Expiry',
+                usage: 'Usage',
+                noExpiry: 'No expiry',
+                noUsage: 'No usage recorded',
+            },
+            plans: {
+                title: 'SaaS Plans',
+                create: 'New plan',
+                key: 'Key',
+                name: 'Name',
+                visibility: 'Visibility',
+                sortOrder: 'Sort order',
+                save: 'Save',
+                publishedVersion: 'Published version',
+                none: 'none',
+                archived: 'Archived',
+                publish: 'Publish draft',
+                archive: 'Archive',
+                draftEditor:
+                    'Draft version editor (published versions are immutable)',
+                features: 'Features',
+                quotas: 'Quotas',
+                addRow: 'Add row',
+                featureKey: 'feature key',
+                featureValue: 'true/false',
+                quotaKey: 'quota key',
+                quotaValue: 'number or empty (unlimited)',
+                quotaHint:
+                    'Quotas are per metric; leave the value empty for unlimited.',
+                saveDraft: 'Save draft',
+                prices: 'Prices (draft version only)',
+                currency: 'Currency',
+                interval: 'Interval',
+                amountCents: 'Amount (cents)',
+                active: 'Active',
+                savePrice: 'Save price',
+            },
+            grants: {
+                title: 'SaaS Grants',
+                assignTitle: 'Assign a grant',
+                assignDescription:
+                    "Grants a published plan version to a user by email. Assigning replaces the user's previous active grant.",
+                email: 'User email',
+                planVersion: 'Plan version (published)',
+                selectVersion: 'Select version',
+                expiresAt: 'Expires at',
+                reason: 'Reason',
+                assign: 'Assign',
+                historyTitle: 'Grant history',
+                historyFor: 'Grant history for {email}',
+                historyDescription:
+                    'Includes revoked rows and who issued each change.',
+                searchPlaceholder: 'Filter by email...',
+                search: 'Search',
+                plan: 'Plan',
+                status: 'Status',
+                actor: 'Actor',
+                active: 'Active',
+                revoked: 'Revoked',
+                revoke: 'Revoke',
+                revokeTitle: 'Revoke grant',
+                revokeDescription:
+                    'The user drops to the free plan immediately. Reason: {email}',
+            },
+            promotions: {
+                title: 'SaaS Promotions',
+                create: 'New promotion',
+                edit: 'Edit promotion',
+                key: 'Key',
+                code: 'Code',
+                planVersion: 'Plan version (published)',
+                active: 'Active',
+                startsAt: 'Starts at',
+                endsAt: 'Ends at',
+                window: 'Window',
+                benefitDays: 'Benefit days',
+                maxRedemptions: 'Max redemptions',
+                perUserLimit: 'Per-user limit',
+                limits: 'Limits',
+                redemptions: 'Redemptions',
+                save: 'Save',
+                listTitle: 'Promotions',
+                activate: 'Activate',
+                deactivate: 'Deactivate',
+            },
+        },
     },
     dashboard: {
         greeting: 'Hello, {name}',
@@ -1130,6 +1318,139 @@ export default {
             searchIcons: 'Search icon...',
             generatedIcon: 'Generated icon {number}',
         },
+        registrations: {
+            settings: {
+                title: 'Registration policy',
+                description:
+                    'Who may start a registration on this installation, per channel.',
+                save: 'Save',
+                policyNote:
+                    'These are installation-wide registration policies. They decide whether an identity may start a registration; they do not replace roles and they never grant household capacity.',
+                values: {
+                    disabled: 'Disabled',
+                    approval_required: 'Approval required',
+                    open: 'Open (no approval)',
+                    existing_only: 'Existing identities only',
+                    enabled: 'Enabled',
+                    allowed: 'Allowed',
+                    denied: 'Denied',
+                },
+                groups: {
+                    registration: {
+                        title: 'Registration channels',
+                        description:
+                            'Whether a new identity may sign up, and whether an administrator must approve it.',
+                    },
+                    invitations: {
+                        title: 'Invitations',
+                        description:
+                            'Whether the invitation flows may start a registration.',
+                    },
+                    household: {
+                        title: 'Household creation',
+                        description:
+                            'Whether members of this self-hosted installation may create households of their own.',
+                    },
+                },
+                fields: {
+                    web: {
+                        label: 'Password (web) registration',
+                        note: 'The sign-up form on this site. Disabled by default because it is the easiest channel to abuse.',
+                    },
+                    api: {
+                        label: 'API registration',
+                        note: 'The public POST /api/v1/auth/register endpoint. Disabled by default; it is reachable without a browser.',
+                    },
+                    google: {
+                        label: 'Google registration',
+                        note: 'Sign-in with a Google account. "Existing identities only" links known accounts without admitting new ones.',
+                    },
+                    household_invitation: {
+                        label: 'Household invitations',
+                        note: 'The reusable /invite/{token} link. Disabling it refuses the link without deleting it, so it can be re-enabled later.',
+                    },
+                    admin_invitation: {
+                        label: 'Admin invitations',
+                        note: 'The invitation sent when an administrator creates an account. Disabling it refuses the invitation without deleting the account.',
+                    },
+                    household_creation: {
+                        label: 'Self-hosted household creation',
+                        note: 'The installation default. Denied refuses creation even when the per-user override is null; allowed still delegates to the override and any entitlement.',
+                    },
+                },
+                warning: {
+                    title: 'A channel is reachable without approval',
+                    description:
+                        'These channels are currently open: {channels}. Anyone reaching them can register without an administrator approving.',
+                    channel:
+                        'Open: anyone reaching this channel registers without approval.',
+                },
+            },
+            panel: {
+                title: 'Registration & Access',
+                description:
+                    'Approve or reject registrations, review rejections and release identity blocks.',
+                yes: 'Verified',
+                no: 'Unverified',
+                unknown: 'Unknown',
+                conflict: {
+                    title: 'The action could not be applied',
+                },
+                filters: {
+                    status: 'Status',
+                    channel: 'Channel',
+                    allChannels: 'All channels',
+                },
+                tabs: {
+                    pending: 'Pending',
+                    rejected: 'Rejected',
+                    blocked: 'Blocked',
+                },
+                columns: {
+                    name: 'Name',
+                    email: 'Email',
+                    channel: 'Channel',
+                    registered: 'Registered',
+                    emailVerified: 'Email',
+                    rejectedBy: 'Rejected by',
+                    rejectedAt: 'Rejected at',
+                    reason: 'Reason',
+                    source: 'Source',
+                    createdBy: 'Created by',
+                    createdAt: 'Created at',
+                    actions: 'Actions',
+                },
+                pending: {
+                    title: 'Registrations awaiting approval',
+                    description:
+                        'Approve to grant access, or reject to deny it and block the identity.',
+                    approve: 'Approve',
+                    reject: 'Reject',
+                    empty: 'No registrations are waiting for approval.',
+                },
+                rejected: {
+                    title: 'Rejected registrations',
+                    description:
+                        'Releasing a rejection lifts the block and leaves the account pending; it does not approve it.',
+                    release: 'Release',
+                    empty: 'No rejected registrations.',
+                },
+                blocked: {
+                    title: 'Blocked identities',
+                    description:
+                        'Active identity blocks. Releasing one allows a fresh registration subject to the current policy.',
+                    release: 'Release',
+                    empty: 'No active identity blocks.',
+                },
+                rejectDialog: {
+                    title: 'Reject registration',
+                    description:
+                        'Reject {name}? This sets the account as rejected and blocks the email from registering again.',
+                    reason: 'Reason',
+                    confirm: 'Reject and block',
+                },
+            },
+        },
         roles: {
             indexTitle: 'Role Management',
             create: 'New role',
@@ -1140,6 +1461,20 @@ export default {
         users: {
             indexTitle: 'User Management',
             create: 'New user',
+            suspend: 'Suspend',
+            unsuspend: 'Unsuspend',
+            block: 'Block',
+            unblock: 'Unblock',
+            blockTitle: 'Block user?',
+            blockDescription:
+                'Block {name}? The account loses access and the email cannot register again until the block is released.',
+            blockReason: 'Reason',
+            deleteAlsoBlock: 'Also block this email from registering again',
+            status: {
+                active: 'Active',
+                suspended: 'Suspended',
+                blocked: 'Blocked',
+            },
             deleteTitle: 'Delete user?',
             deleteDescription:
                 'Are you sure you want to delete {name}? This action cannot be undone.',

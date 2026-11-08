@@ -62,7 +62,11 @@ defineProps<{
                     placeholder="email@example.com"
                     @blur="validate"
                 />
-                <InputError :message="errors.email" />
+                <InputError
+                    :message="errors.email"
+                    role="alert"
+                    data-test="login-error"
+                />
             </div>
 
             <div class="grid gap-2">
@@ -112,6 +116,17 @@ defineProps<{
 
             <TextLink :href="email.url()" :tabindex="6">
                 {{ t('auth.login.forgotPassword') }}
+            </TextLink>
+        </div>
+
+        <div class="text-center text-sm">
+            <TextLink
+                href="/auth/enrolment/resend"
+                class="text-muted-foreground underline"
+                :tabindex="7"
+                data-test="login-resend-enrolment"
+            >
+                {{ t('auth.login.noEnrolmentLink') }}
             </TextLink>
         </div>
     </Form>

@@ -18,7 +18,7 @@ class UpdateUserRequest extends FormRequest
         if ($actor === null) {
             return false;
         }
-        if ($this->hasAny(['role', 'roles', 'can_create_households'])) {
+        if ($this->hasAny(['role', 'roles', 'can_create_households_override'])) {
             return app(PlatformAccess::class)->canManage($actor);
         }
 

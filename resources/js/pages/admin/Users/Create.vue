@@ -25,7 +25,9 @@ defineOptions({
 const { t } = useI18n();
 const { can } = useAuthorization();
 const selectedRoles = ref<string[]>(['user']);
-const canCreateHouseholds = ref(true);
+// Empty string means null on the wire (delegate to Policy + entitlement);
+// '0' is the explicit prohibition. There is no 'true' state by design.
+const canCreateHouseholdsOverride = ref('');
 function toggleRole(slug: string, checked: unknown): void {
     selectedRoles.value = checked
         ? [...selectedRoles.value, slug]
@@ -90,16 +92,19 @@ function toggleRole(slug: string, checked: unknown): void {
                     />
                 </template>
                 <InputError :message="errors.roles" />
-                <Label class="flex items-center gap-2"
-                    ><Checkbox v-model="canCreateHouseholds" />{{
-                        t('households.access.canCreateHouseholds')
-                    }}</Label
+                <Label for="can_create_households_override">{{
+                    t('households.access.canCreateHouseholds')
+                }}</Label>
+                <select
+                    id="can_create_households_override"
+                    v-model="canCreateHouseholdsOverride"
+                    name="can_create_households_override"
+                    class="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm shadow-xs"
                 >
-                <input
-                    type="hidden"
-                    name="can_create_households"
-                    :value="canCreateHouseholds ? '1' : '0'"
-                />
+                    <option value="">Delegar al plan</option>
+                    <option value="0">Prohibido</option>
+                </select>
+                <InputError :message="errors.can_create_households_override" />
             </div>
 
             <Button :disabled="processing || hasErrors">Crear</Button>

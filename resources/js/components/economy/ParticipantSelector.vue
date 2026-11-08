@@ -1,9 +1,18 @@
 <script setup lang="ts">
+import { Plus, Trash2 } from '@lucide/vue';
 import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { FieldError, FieldLegend, FieldSet } from '@/components/ui/field';
+import {
+    Field,
+    FieldError,
+    FieldLabel,
+    FieldLegend,
+    FieldSeparator,
+    FieldSet,
+} from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import {
     Select,
@@ -119,6 +128,97 @@ function updatePercentage(memberId: string, value: string | number): void {
         participant.percentage = value === '' ? null : Number(value);
         props.validate?.('participants');
     }
+}
+
+/**
+ * A row is anonymous when it has neither a household membership nor a name. Named external rows
+ * keep this flag false even while their name input is still empty.
+ */
+function isAnonymousParticipant(participant: EconomyParticipant): boolean {
+    return (
+        participant.household_member_id === null &&
+        (participant.display_name === null ||
+            participant.display_name === undefined)
+    );
+}
+
+/** Rows that belong to neither the household member list nor the single unnamed share. */
+const nonMemberParticipants = computed(() =>
+    participants.value.filter(
+        (participant) => participant.household_member_id === null,
+    ),
+);
+
+/**
+ * The single unnamed portion of the split, which carries `share_count` instead of an identity.
+ */
+const anonymousParticipants = computed(() =>
+    participants.value.filter(isAnonymousParticipant),
+);
+
+function addExternalParticipant(): void {
+    participants.value.push({
+        household_member_id: null,
+        contact_id: null,
+        display_name: '',
+        share_count: 1,
+        split_type: splitType.value,
+        amount: '',
+        percentage: null,
+    });
+    props.validate?.('participants');
+}
+
+function addAnonymousShare(): void {
+    participants.value.push({
+        household_member_id: null,
+        contact_id: null,
+        display_name: null,
+        share_count: 1,
+        split_type: splitType.value,
+        amount: '',
+        percentage: null,
+    });
+    props.validate?.('participants');
+}
+
+function removeParticipant(participant: EconomyParticipant): void {
+    participants.value = participants.value.filter(
+        (item) => item !== participant,
+    );
+    props.validate?.('participants');
+}
+
+function updateDisplayName(
+    participant: EconomyParticipant,
+    value: string | number,
+): void {
+    participant.display_name = String(value);
+    props.validate?.('participants');
+}
+
+function updateShareCount(
+    participant: EconomyParticipant,
+    value: string | number,
+): void {
+    participant.share_count = value === '' ? 1 : Number(value);
+    props.validate?.('participants');
+}
+
+function updateAmount(
+    participant: EconomyParticipant,
+    value: string | number,
+): void {
+    participant.amount = String(value);
+    props.validate?.('participants');
+}
+
+function updateParticipantPercentage(
+    participant: EconomyParticipant,
+    value: string | number,
+): void {
+    participant.percentage = value === '' ? null : Number(value);
+    props.validate?.('participants');
 }
 </script>
 
@@ -247,6 +347,146 @@ function updatePercentage(memberId: string, value: string | number): void {
                     >
                 </div>
             </div>
+        </div>
+        <FieldSeparator class="mt-1">{{
+            t('economy.ui.externalParticipantsTitle')
+        }}</FieldSeparator>
+        <div class="flex flex-col gap-3">
+            <div
+                v-for="(participant, index) in nonMemberParticipants"
+                :key="`participant-${index}`"
+                class="flex flex-wrap items-end gap-2 rounded-lg border p-3"
+            >
+                <Field
+                    v-if="isAnonymousParticipant(participant)"
+                    class="w-24 shrink-0"
+                >
+                    <FieldLabel :for="`participant-share-count-${index}`">{{
+                        t('economy.ui.anonymousShareCount')
+                    }}</FieldLabel>
+                    <Input
+                        :id="`participant-share-count-${index}`"
+                        :model-value="participant.share_count ?? 1"
+                        type="number"
+                        min="1"
+                        max="20"
+                        step="1"
+                        :aria-invalid="Boolean(props.error)"
+                        @update:model-value="
+                            updateShareCount(participant, $event)
+                        "
+                        @blur="props.validate?.('participants')"
+                    />
+                </Field>
+                <Field v-else class="min-w-0 flex-1">
+                    <FieldLabel :for="`participant-name-${index}`">{{
+                        t('economy.ui.name')
+                    }}</FieldLabel>
+                    <Input
+                        :id="`participant-name-${index}`"
+                        :model-value="participant.display_name ?? ''"
+                        :placeholder="
+                            t('economy.ui.externalParticipantPlaceholder')
+                        "
+                        :aria-invalid="Boolean(props.error)"
+                        @update:model-value="
+                            updateDisplayName(participant, $event)
+                        "
+                        @blur="props.validate?.('participants')"
+                    />
+                </Field>
+                <Field v-if="splitType === 'fixed'" class="w-32 shrink-0">
+                    <FieldLabel :for="`participant-amount-${index}`">{{
+                        t('economy.ui.fixedAmount')
+                    }}</FieldLabel>
+                    <div class="relative">
+                        <Input
+                            :id="`participant-amount-${index}`"
+                            :model-value="participant.amount"
+                            class="pr-10 text-right"
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            :placeholder="
+                                t('economy.ui.fixedAmountPlaceholder')
+                            "
+                            :aria-invalid="Boolean(props.error)"
+                            @update:model-value="
+                                updateAmount(participant, $event)
+                            "
+                            @blur="props.validate?.('participants')"
+                        />
+                        <span
+                            v-if="props.currency"
+                            class="pointer-events-none absolute inset-y-0 right-2 flex items-center text-xs text-muted-foreground"
+                            aria-hidden="true"
+                            >{{ props.currency }}</span
+                        >
+                    </div>
+                </Field>
+                <Field
+                    v-else-if="splitType === 'percentage'"
+                    class="w-28 shrink-0"
+                >
+                    <FieldLabel :for="`participant-percentage-${index}`">{{
+                        t('economy.ui.percentage')
+                    }}</FieldLabel>
+                    <div class="relative">
+                        <Input
+                            :id="`participant-percentage-${index}`"
+                            :model-value="participant.percentage ?? ''"
+                            class="pr-6 text-right"
+                            type="number"
+                            min="0"
+                            max="100"
+                            placeholder="0"
+                            :aria-invalid="Boolean(props.error)"
+                            @update:model-value="
+                                updateParticipantPercentage(participant, $event)
+                            "
+                            @blur="props.validate?.('participants')"
+                        />
+                        <span
+                            class="pointer-events-none absolute inset-y-0 right-2 flex items-center text-xs text-muted-foreground"
+                            aria-hidden="true"
+                            >%</span
+                        >
+                    </div>
+                </Field>
+                <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    @click="removeParticipant(participant)"
+                >
+                    <Trash2 data-icon="inline-start" /><span class="sr-only">{{
+                        t('economy.ui.removeParticipant')
+                    }}</span>
+                </Button>
+            </div>
+        </div>
+        <div class="flex flex-wrap gap-2">
+            <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                @click="addExternalParticipant"
+            >
+                <Plus data-icon="inline-start" />{{
+                    t('economy.ui.addExternalParticipant')
+                }}
+            </Button>
+            <Button
+                v-if="anonymousParticipants.length === 0"
+                type="button"
+                variant="outline"
+                size="sm"
+                @click="addAnonymousShare"
+            >
+                <Plus data-icon="inline-start" />{{
+                    t('economy.ui.addAnonymousShare')
+                }}
+            </Button>
         </div>
         <p
             v-if="splitType === 'percentage' && participants.length > 0"

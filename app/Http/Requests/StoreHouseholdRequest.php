@@ -3,15 +3,25 @@
 namespace App\Http\Requests;
 
 use App\Enums\HouseholdModule;
+use App\Models\Household;
 use Illuminate\Foundation\Http\FormRequest;
 
 class StoreHouseholdRequest extends FormRequest
 {
+    /**
+     * Authorize through the HouseholdPolicy `create` ability, the same
+     * STRUCTURAL gate the action enforces for non-HTTP callers.
+     *
+     * Deliberately structural only: a structural denial is a 403, while a
+     * quota refusal must fall through to `CreateHousehold`'s in-transaction
+     * capacity assertion so the client receives the documented 402. Folding the
+     * capacity read in here would answer 403 for an exhausted plan.
+     */
     public function authorize(): bool
     {
         $user = $this->user();
 
-        return $user !== null && $user->households_enabled && $user->can_create_households;
+        return $user !== null && $user->can('create', Household::class);
     }
 
     /**

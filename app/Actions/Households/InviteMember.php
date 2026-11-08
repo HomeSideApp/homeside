@@ -67,7 +67,7 @@ final class InviteMember
                 'name' => $data->email,
                 'email' => $data->email,
                 'password' => Hash::make(Str::random(16)),
-                'can_create_households' => false,
+                'can_create_households_override' => false,
             ]);
             $newUser->assignRole('user');
 

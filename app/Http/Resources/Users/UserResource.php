@@ -5,6 +5,7 @@ namespace App\Http\Resources\Users;
 use App\Models\User;
 use App\Support\ApiOperationPermissions;
 use App\Support\HouseholdAccess;
+use App\Support\PlatformAccess;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 /** @mixin User */
@@ -27,7 +28,11 @@ final class UserResource extends JsonResource
             'google_connected' => $this->googleIdentity()->exists(),
             'active_household_id' => $this->active_household_id,
             'households_enabled' => $this->households_enabled,
-            'can_create_households' => $this->can_create_households,
+            'can_create_households_override' => $this->can_create_households_override,
+            // Presentation read: structure AND current capacity, so the client
+            // hides the create control for a user at their cap. The forced
+            // request still answers 402, never 403.
+            'can_create_households' => app(PlatformAccess::class)->mayCreateHouseholdNow($this->resource),
             'operation_authorization' => [
                 'household_operations_require_capabilities' => true,
                 'households' => app(HouseholdAccess::class)->memberships($this->resource)->mapWithKeys(fn ($member): array => [$member->household_id => [

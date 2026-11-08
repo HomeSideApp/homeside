@@ -67,6 +67,12 @@ final class ConfirmEconomicImport
             if ($data->has('place')) {
                 $payload['place'] = $data->place;
             }
+            if ($data->has('notes')) {
+                $payload['notes'] = $data->notes;
+            }
+            if ($data->has('contact_id')) {
+                $payload['contact_id'] = $data->contact_id;
+            }
             if ($data->has('occurred_at')) {
                 $payload['occurred_at'] = $data->occurred_at?->toISOString();
             }

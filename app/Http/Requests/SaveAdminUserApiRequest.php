@@ -16,7 +16,7 @@ class SaveAdminUserApiRequest extends FormRequest
         if ($actor === null) {
             return false;
         }
-        if ($this->route('user') === null || $this->hasAny(['role', 'roles', 'can_create_households'])) {
+        if ($this->route('user') === null || $this->hasAny(['role', 'roles', 'can_create_households_override'])) {
             return app(PlatformAccess::class)->canManage($actor);
         }
 
@@ -35,7 +35,10 @@ class SaveAdminUserApiRequest extends FormRequest
             'email' => [$presence, 'email', 'max:255', Rule::unique('users', 'email')->ignore($user?->id)],
             'locale' => [$presence, Rule::enum(AppLocale::class)],
             'role' => ['sometimes', 'string', 'exists:roles,slug'],
-            'can_create_households' => ['sometimes', 'boolean'],
+            // Tri-state: null delegates to Policy + entitlement, false is an
+            // explicit prohibition. `true` is deliberately NOT a valid state,
+            // so it must be rejected here rather than silently stored.
+            'can_create_households_override' => ['sometimes', 'nullable', 'boolean', Rule::in(['0', ''])],
             'roles' => [$user === null ? 'required_without:role' : 'sometimes', 'array', 'min:1'],
             'roles.*' => ['string', 'distinct', 'exists:roles,slug'],
         ];

@@ -1,0 +1,357 @@
+name: CI
+
+# Mandatory gates for the registration, authentication and approval work.
+#
+# The PHP suite and the CRITICAL browser scenarios run on every pull request,
+# because a change that silently reopens a registration or bootstrap bypass must
+# never reach review. The full matrix (Firefox, the SaaS install, concurrency and
+# the long E2E set) is scheduled rather than per-push, so contributors get fast
+# signal without losing the deep coverage.
+#
+# UNVERIFIED: this workflow has not been executed on a runner. It is written from
+# the commands that were verified locally. Treat the first run as the real test.
+#
+# NO SIBLING CHECKOUT REQUIRED: `homeside/saas` is an optional Composer
+# suggestion, not a requirement (composer.json), so `composer install` succeeds
+# on a fresh clone with no `../saas` checkout. The commercial browser scenarios
+# (E2E-08, 10, 11, 12, 13) and the commercial PHP profile detect the absent
+# module and SKIP with their stated reason instead of failing, so the OSS gates
+# below stay green and honest on a plain checkout.
+#
+# COMMERCIAL COVERAGE IS OPT-IN AND CANNOT RUN HERE YET: the module is a private
+# first-party package published only through a `path` repository, so a
+# GitHub-hosted runner has no way to fetch it. The `commercial` job below is
+# clearly marked, runs only on workflow_dispatch, and fails fast with an
+# actionable message when the module is absent. Enable it only from an
+# environment that can provide the sibling checkout (see README.md and
+# `make install-saas`); publishing the module to a remote is the real fix.
+#
+# Assets: there is no `public/build` in the repository (it is gitignored), and
+# the Inertia pages render `@vite`. The PHP job builds the frontend before the
+# test suite, and the browser jobs build it before starting the server, so a
+# fresh checkout has a manifest.
+
+on:
+  pull_request:
+  push:
+    branches: [main, master]
+  schedule:
+    - cron: '0 3 * * *'
+  workflow_dispatch:
+    inputs:
+      commercial:
+        description: 'Also run the commercial (homeside/saas) jobs; requires the sibling module checkout.'
+        type: boolean
+        default: false
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  APP_ENV: testing
+  APP_DEBUG: 'false'
+  DB_CONNECTION: mysql
+  DB_HOST: 127.0.0.1
+  DB_PORT: '3306'
+  DB_DATABASE: testing
+  DB_USERNAME: root
+  DB_PASSWORD: root
+  CACHE_STORE: array
+  SESSION_DRIVER: array
+  QUEUE_CONNECTION: sync
+  MAIL_MAILER: smtp
+  MAIL_HOST: 127.0.0.1
+  MAIL_PORT: '1025'
+  # The Playwright fixtures read Mailpit over its HTTP API. The app talks SMTP to
+  # 127.0.0.1:1025; the fixtures need 8025 on the same host (the default
+  # `http://mailpit:8025` only resolves inside the Sail network).
+  E2E_MAILPIT_URL: http://127.0.0.1:8025
+  REGISTRATION_BLOCK_KEY: ci-only-registration-block-key-not-a-deployment-secret
+
+jobs:
+  php:
+    name: PHP tests, formatting and static analysis
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: testing
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot"
+          --health-interval=5s --health-timeout=5s --health-retries=20
+      redis:
+        image: redis:alpine
+        ports: ['6379:6379']
+        options: >-
+          --health-cmd="redis-cli ping" --health-interval=5s --health-retries=20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+          extensions: mbstring, pdo_mysql, bcmath, gd, intl, zip, pcntl
+          coverage: none
+      - uses: actions/cache@v4
+        with:
+          path: vendor
+          key: composer-${{ hashFiles('composer.lock') }}
+      - run: composer install --no-interaction --prefer-dist --no-progress
+      - run: cp .env.example .env && php artisan key:generate
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      # No `public/build` in a fresh checkout and the suite renders @vite.
+      - run: npm ci
+      - run: npm run build
+      - run: php artisan migrate --force
+      - name: PHP test suite
+        run: php artisan test --compact
+      - name: Formatting (Pint)
+        run: vendor/bin/pint --test
+        continue-on-error: true # pre-existing finding in app/Actions/Households/UpdateHouseholdSettings.php; remove once `pint --test` is clean
+      - name: Static analysis
+        run: vendor/bin/phpstan analyse --memory-limit=1G
+        continue-on-error: true # 458 pre-existing findings; tighten once the baseline is clean
+
+  frontend:
+    name: Frontend build and typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # `npm run build` runs the Wayfinder Vite plugin, which shells out to
+      # `php artisan wayfinder:generate`, so this job needs PHP and the
+      # Composer dependencies too.
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+          extensions: mbstring, pdo_mysql, bcmath, gd, intl, zip, pcntl
+          coverage: none
+      - run: composer install --no-interaction --prefer-dist --no-progress
+      - run: cp .env.example .env && php artisan key:generate
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - name: Typecheck
+        run: npm run types:check
+        continue-on-error: true # 26 pre-existing vue-tsc errors outside this work
+
+  e2e-critical:
+    name: Critical browser scenarios (Chromium)
+    runs-on: ubuntu-latest
+    needs: [php, frontend]
+    env:
+      APP_ENV: e2e
+      DB_DATABASE: testing_e2e
+      SESSION_DRIVER: file
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: testing_e2e
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot"
+          --health-interval=5s --health-timeout=5s --health-retries=20
+      redis:
+        image: redis:alpine
+        ports: ['6379:6379']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+          extensions: mbstring, pdo_mysql, bcmath, gd, intl, zip, pcntl
+          coverage: none
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      # Mailpit captures the real messages the flows depend on. It is the same
+      # image the local stack uses, so the assertions and the environment match.
+      - name: Start Mailpit
+        run: |
+          docker run -d --name mailpit -p 1025:1025 -p 8025:8025 axllent/mailpit:latest
+      - run: composer install --no-interaction --prefer-dist --no-progress
+      - run: cp .env.example .env && php artisan key:generate
+      - run: npm ci
+      # The isolated server serves the real Inertia pages, so it needs the
+      # manifest a fresh checkout does not have.
+      - run: npm run build
+      - run: npx playwright install --with-deps chromium
+      - name: Seed the isolated E2E database
+        run: php artisan e2e:seed
+      # The commercial @critical scenarios (E2E-11, E2E-13) need the optional
+      # homeside/saas module and skip themselves here; the OSS criticals run.
+      - name: Critical browser scenarios
+        run: npx playwright test --project=chromium --grep @critical
+      - name: Upload report and traces
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          # Artifacts contain cookies and one-time auth URLs. Retention is short
+          # and access is limited to the repository.
+          retention-days: 7
+          if-no-files-found: ignore
+          path: |
+            tests/e2e/.artifacts/html-report/
+            tests/e2e/.artifacts/test-results/
+            tests/e2e/.artifacts/junit.xml
+
+  e2e-full:
+    name: Full browser matrix (scheduled)
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    env:
+      APP_ENV: e2e
+      DB_DATABASE: testing_e2e
+      SESSION_DRIVER: file
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: testing_e2e
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot"
+          --health-interval=5s --health-timeout=5s --health-retries=20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+          extensions: mbstring, pdo_mysql, bcmath, gd, intl, zip, pcntl
+          coverage: none
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Start Mailpit
+        run: docker run -d --name mailpit -p 1025:1025 -p 8025:8025 axllent/mailpit:latest
+      - run: composer install --no-interaction --prefer-dist --no-progress
+      - run: cp .env.example .env && php artisan key:generate
+      - run: npm ci
+      - run: npm run build
+      # Both configured projects run here: Chromium and Firefox.
+      - run: npx playwright install --with-deps chromium firefox
+      - name: Seed the isolated E2E database
+        run: php artisan e2e:seed
+      # The commercial scenarios skip themselves without the optional module;
+      # the opt-in `commercial` job exercises them.
+      - run: npx playwright test
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report-full
+          retention-days: 7
+          if-no-files-found: ignore
+          path: |
+            tests/e2e/.artifacts/html-report/
+            tests/e2e/.artifacts/test-results/
+            tests/e2e/.artifacts/junit.xml
+
+  # Commercial coverage. OPT-IN and clearly marked: it needs the sibling
+  # `homeside/saas` checkout, which a GitHub-hosted runner cannot fetch because
+  # the module has no Composer remote. The guard step fails fast with an
+  # actionable message instead of a cryptic Composer or autoload error. Enable
+  # it with `workflow_dispatch` only from an environment that can provide the
+  # module, and treat publishing the module to a remote as the real fix.
+  commercial:
+    name: Commercial module (requires homeside/saas) — not for a fresh clone
+    if: github.event_name == 'workflow_dispatch' && inputs.commercial
+    runs-on: ubuntu-latest
+    env:
+      APP_ENV: testing
+      APP_DEBUG: 'false'
+      DB_CONNECTION: mysql
+      DB_HOST: 127.0.0.1
+      DB_PORT: '3306'
+      DB_DATABASE: testing
+      DB_USERNAME: root
+      DB_PASSWORD: root
+      CACHE_STORE: array
+      SESSION_DRIVER: array
+      QUEUE_CONNECTION: sync
+      MAIL_MAILER: array
+      REGISTRATION_BLOCK_KEY: ci-only-registration-block-key-not-a-deployment-secret
+      HOMESIDE_TEST_PROFILE: saas
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: testing
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot"
+          --health-interval=5s --health-timeout=5s --health-retries=20
+      redis:
+        image: redis:alpine
+        ports: ['6379:6379']
+    steps:
+      - uses: actions/checkout@v4
+      - name: Require the optional homeside/saas module
+        run: |
+          test -d ../saas || {
+            echo "::error::This job needs the optional homeside/saas module at ../saas."
+            echo "::error::The module is a private first-party package with no Composer remote, so GitHub-hosted CI cannot fetch it."
+            echo "::error::Either publish homeside/saas to a remote and check it out at ../saas, or run the commercial scenarios locally with 'make install-saas' (see README.md). The OSS jobs (php, frontend, e2e-critical, e2e-full) do not need this job."
+            exit 1
+          }
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+          extensions: mbstring, pdo_mysql, bcmath, gd, intl, zip, pcntl
+          coverage: none
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Start Mailpit
+        run: |
+          docker run -d --name mailpit -p 1025:1025 -p 8025:8025 axllent/mailpit:latest
+      - name: Install the module from the sibling checkout
+        run: composer require 'homeside/saas:*' --no-interaction --prefer-dist --no-progress
+      - run: cp .env.example .env && php artisan key:generate
+      - run: npm ci
+      - run: npm run build
+      - run: php artisan migrate --force
+      - name: Commercial PHP profile
+        run: php artisan test --compact
+      - run: npx playwright install --with-deps chromium
+      - name: Seed the isolated E2E database
+        run: php artisan e2e:seed
+        env:
+          APP_ENV: e2e
+          DB_DATABASE: testing_e2e
+      - name: Commercial browser scenarios (Chromium)
+        run: npx playwright test --project=chromium
+        env:
+          APP_ENV: e2e
+          DB_DATABASE: testing_e2e
+          SESSION_DRIVER: file
+          MAIL_MAILER: smtp
+          MAIL_HOST: 127.0.0.1
+          MAIL_PORT: '1025'
+          E2E_MAILPIT_URL: http://127.0.0.1:8025
+      - name: Upload report and traces
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-commercial
+          retention-days: 7
+          if-no-files-found: ignore
+          path: |
+            tests/e2e/.artifacts/html-report/
+            tests/e2e/.artifacts/test-results/
+            tests/e2e/.artifacts/junit.xml

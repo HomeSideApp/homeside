@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Enums\AccountStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StoreUserRequest;
 use App\Http\Requests\Admin\UpdateUserRequest;
@@ -51,6 +52,9 @@ class AdminUserController extends Controller
                 'email' => $user->email,
                 'roles' => $user->roles,
                 'approval_status' => $user->approval_status,
+                'account_status' => $user->account_status instanceof AccountStatus
+                    ? $user->account_status->value
+                    : (string) $user->account_status,
                 'external_providers' => $user->googleIdentity !== null ? ['google'] : [],
                 'google_connected' => $user->googleIdentity !== null,
                 'created_at' => $user->created_at,

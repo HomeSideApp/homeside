@@ -105,10 +105,10 @@ class HouseholdModuleServiceTest extends TestCase
 
     public function test_is_module_enabled_returns_false_when_disabled(): void
     {
-        $this->household->modules()->create([
-            'module' => HouseholdModule::ShoppingLists->value,
-            'enabled' => false,
-        ]);
+        $this->household->modules()->updateOrCreate(
+            ['module' => HouseholdModule::ShoppingLists->value],
+            ['enabled' => false],
+        );
 
         $this->assertFalse(HouseholdModuleService::isModuleEnabled(
             $this->household,
@@ -118,10 +118,10 @@ class HouseholdModuleServiceTest extends TestCase
 
     public function test_is_module_enabled_returns_true_when_enabled(): void
     {
-        $this->household->modules()->create([
-            'module' => HouseholdModule::ShoppingLists->value,
-            'enabled' => true,
-        ]);
+        $this->household->modules()->updateOrCreate(
+            ['module' => HouseholdModule::ShoppingLists->value],
+            ['enabled' => true],
+        );
 
         $this->assertTrue(HouseholdModuleService::isModuleEnabled(
             $this->household,
@@ -152,10 +152,10 @@ class HouseholdModuleServiceTest extends TestCase
 
     public function test_get_features_status_with_shopping_lists_disabled(): void
     {
-        $this->household->modules()->create([
-            'module' => HouseholdModule::ShoppingLists->value,
-            'enabled' => false,
-        ]);
+        $this->household->modules()->updateOrCreate(
+            ['module' => HouseholdModule::ShoppingLists->value],
+            ['enabled' => false],
+        );
 
         // Reload modules
         $this->household->load('modules');

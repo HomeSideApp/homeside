@@ -147,7 +147,7 @@ class AnalyzeEconomicDocumentJobTest extends TestCase
 
         $import = EconomicImport::factory()->status(EconomicImportStatus::Failed)->create();
 
-        (new RetryEconomicImport)->execute($import->fresh());
+        app(RetryEconomicImport::class)->execute($import->fresh());
 
         Queue::assertPushed(AnalyzeEconomicDocumentJob::class);
     }

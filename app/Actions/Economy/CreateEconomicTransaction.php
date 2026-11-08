@@ -71,9 +71,28 @@ final class CreateEconomicTransaction
             $memberIds = $household->members()->pluck('id')->all();
 
             foreach ($data->participants as $participantData) {
-                if (! in_array($participantData->household_member_id, $memberIds, true)) {
+                if ($participantData->household_member_id !== null && $participantData->household_member_id !== '') {
+                    if (! in_array($participantData->household_member_id, $memberIds, true)) {
+                        throw ValidationException::withMessages([
+                            'participants' => __('app.errors.participant_outside_household'),
+                        ]);
+                    }
+
+                    continue;
+                }
+
+                if ($participantData->contact_id === null) {
+                    continue;
+                }
+
+                $contactIsVisible = Contact::query()
+                    ->visibleTo($user)
+                    ->whereKey($participantData->contact_id)
+                    ->exists();
+
+                if (! $contactIsVisible) {
                     throw ValidationException::withMessages([
-                        'participants' => __('app.errors.participant_outside_household'),
+                        'participants' => __('app.errors.contact_not_available'),
                     ]);
                 }
             }

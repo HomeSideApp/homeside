@@ -2,6 +2,7 @@
 
 namespace App\Services\Economy;
 
+use App\Contracts\ReceiptTextExtractor;
 use App\Data\Economy\ReceiptAnalysisResultData;
 use App\Exceptions\IncompleteAnalysisException;
 use HomeSide\AiAgents\AiAgentManager;
@@ -34,11 +35,45 @@ class TicketAnalyzer
      * Create a new ticket analyzer service instance.
      *
      * @param  AiAgentManager  $manager  The manager used to execute the configured economy agent.
+     * @param  ReceiptTextExtractor  $textExtractor  The offline text reader used before the metered AI path.
+     * @param  ReceiptTextParser  $textParser  The parser that turns offline text into structured data.
      * @return void This constructor does not return a value.
      */
     public function __construct(
         private readonly AiAgentManager $manager,
+        private readonly ReceiptTextExtractor $textExtractor,
+        private readonly ReceiptTextParser $textParser,
     ) {}
+
+    /**
+     * Analyze a receipt offline, without AI and without metering.
+     *
+     * This is the free first pass of the import: the rendered document is read with the
+     * offline OCR layer and parsed into the same structured data the AI path returns. The
+     * analyzer never meters here and never knows about credits; the caller decides whether
+     * an unreadable ticket is worth a metered AI attempt.
+     *
+     * No single recognition setup wins on real tickets, so the extractor reports several
+     * language and preprocessing variants and only ranks them by a cheap score. The final
+     * decision is taken here: the candidates are parsed in order and the first one the
+     * parser can turn into a receipt with an amount wins. That is what stops a longer but
+     * misread variant from beating a shorter one that carries the real total.
+     *
+     * @param  string  $absolutePath  Absolute path of the derived document image.
+     * @return ReceiptAnalysisResultData|null The structured data, or null when the offline layer cannot read a total.
+     */
+    public function analyzeDeterministically(string $absolutePath): ?ReceiptAnalysisResultData
+    {
+        foreach ($this->textExtractor->candidates($absolutePath) as $candidate) {
+            $result = $this->textParser->parse($candidate->text);
+
+            if ($result !== null) {
+                return $result;
+            }
+        }
+
+        return null;
+    }
 
     /**
      * Analyze a receipt through the AI execution layer and return structured economic data.

@@ -4,6 +4,7 @@ namespace App\Http\Requests;
 
 use App\Models\EconomicImport;
 use App\Models\Household;
+use App\Support\HouseholdAccess;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
@@ -84,7 +85,29 @@ class ConfirmEconomicImportRequest extends FormRequest
             if ($this->input('scope') === 'shared' && $this->resolveImport()->household_id === null) {
                 $validator->errors()->add('scope', __('app.validation.private_cannot_share'));
             }
+
+            $participants = $this->input('participants');
+
+            if (is_array($participants) && $this->countAnonymousParticipants($participants) > 1) {
+                $validator->errors()->add(
+                    'participants',
+                    __('app.validation.participants_single_anonymous'),
+                );
+            }
         }];
+    }
+
+    /**
+     * Count participants without member identity and without a visible name.
+     *
+     * @param  array<int|string, mixed>  $participants  The submitted participant rows.
+     * @return int The number of anonymous portions in the split.
+     */
+    private function countAnonymousParticipants(array $participants): int
+    {
+        return count(array_filter($participants, fn (mixed $participant): bool => is_array($participant)
+            && blank($participant['household_member_id'] ?? null)
+            && blank($participant['display_name'] ?? null)));
     }
 
     /**
@@ -103,8 +126,14 @@ class ConfirmEconomicImportRequest extends FormRequest
             'amount' => ['sometimes', 'numeric', 'min:0.01'],
             'currency' => ['sometimes', 'string', 'regex:/^[A-Za-z0-9]{2,10}$/'],
             'account_id' => ['sometimes', 'nullable', 'uuid', Rule::exists('economic_accounts', 'id')->where('user_id', $this->user()?->id)],
+            'contact_id' => ['nullable', 'uuid', Rule::exists('contacts', 'id')->where(
+                fn ($query) => $query
+                    ->where('user_id', $this->user()?->id)
+                    ->orWhereIn('household_id', $this->user() !== null ? app(HouseholdAccess::class)->householdIds($this->user(), 'contacts') : [])
+            )],
             'place' => ['nullable', 'string', 'max:255'],
             'occurred_at' => ['nullable', 'date'],
+            'notes' => ['nullable', 'string', 'max:1000'],
             'items' => ['nullable', 'array'],
             'items.*.name' => ['required_with:items', 'string'],
             'items.*.quantity' => ['required_with:items', 'integer', 'min:1'],
@@ -123,7 +152,16 @@ class ConfirmEconomicImportRequest extends FormRequest
                 'array',
                 'min:1',
             ],
-            'participants.*.household_member_id' => ['required_with:participants', 'string', 'distinct', Rule::exists('household_members', 'id')->where('household_id', $householdId)],
+            'participants.*.household_member_id' => ['nullable', 'string', 'distinct', Rule::exists('household_members', 'id')->where('household_id', $householdId)],
+            'participants.*.contact_id' => ['nullable', 'uuid', Rule::exists('contacts', 'id')->where(
+                fn ($query) => $query
+                    ->where('user_id', $this->user()?->id)
+                    ->orWhereIn('household_id', $this->user() !== null ? app(HouseholdAccess::class)->householdIds($this->user(), 'contacts') : [])
+            )],
+            // A row without member identity and without a name is the single anonymous portion,
+            // so the name cannot be required outright: the after() hook rejects a second one.
+            'participants.*.display_name' => ['nullable', 'string', 'max:120', 'distinct:ignore_case'],
+            'participants.*.share_count' => ['nullable', 'integer', 'min:1', 'max:20'],
             'participants.*.split_type' => ['required_with:participants', 'string', 'in:equal,fixed,percentage'],
             'participants.*.amount' => ['required_if:participants.*.split_type,fixed', 'nullable', 'numeric', 'min:0'],
             'participants.*.percentage' => ['required_if:participants.*.split_type,percentage', 'nullable', 'numeric', 'min:0', 'max:100'],

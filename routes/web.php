@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\RegistrationChannel;
 use App\Http\Controllers\Admin\AdminAiProviderController;
 use App\Http\Controllers\Admin\AdminCategoryController;
 use App\Http\Controllers\Admin\AdminPersonalProductController;
@@ -8,11 +9,12 @@ use App\Http\Controllers\Admin\AdminRoleController;
 use App\Http\Controllers\Admin\AdminTranslationController;
 use App\Http\Controllers\Admin\AdminUserController;
 use App\Http\Controllers\Admin\GoogleApprovalController;
+use App\Http\Controllers\Admin\RegistrationController;
+use App\Http\Controllers\Admin\RegistrationSettingsController;
 use App\Http\Controllers\HouseholdMemberPermissionController;
 use App\Http\Controllers\HouseholdOwnershipController;
 use App\Http\Controllers\InvitationController;
 use App\Http\Controllers\InviteLinkController;
-use App\Http\Controllers\OtpSetupController;
 use App\Http\Controllers\ProductSearchController;
 use App\Http\Controllers\Web\AiProviderController;
 use App\Http\Controllers\Web\AiUsageController;
@@ -48,6 +50,7 @@ use App\Http\Controllers\Web\RecipeExportController;
 use App\Http\Controllers\Web\RecipeImportController;
 use App\Http\Controllers\Web\RecipeShoppingListController;
 use App\Http\Controllers\Web\ShoppingListController;
+use App\Http\Middleware\EnsureRegistrationInvitationsEnabled;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -58,10 +61,12 @@ Route::get('/', function () {
 })->name('home');
 
 // === Enlaces de invitación públicos (registro vía enlace) ===
-Route::get('invite/{token}', [InviteLinkController::class, 'show'])->name('invite-links.show');
-Route::post('invite/{token}', [InviteLinkController::class, 'store'])->middleware('throttle:10,1')->name('invite-links.store');
+Route::middleware(EnsureRegistrationInvitationsEnabled::class.':'.RegistrationChannel::HouseholdInvitation->value)->group(function (): void {
+    Route::get('invite/{token}', [InviteLinkController::class, 'show'])->name('invite-links.show');
+    Route::post('invite/{token}', [InviteLinkController::class, 'store'])->middleware('throttle:registration')->name('invite-links.store');
+});
 
-Route::middleware(['auth', 'verified'])->group(function () {
+Route::middleware(['auth', 'verified', 'account.active'])->group(function () {
 
     Route::prefix('contacts')->name('contacts.')->group(function () {
         Route::get('/', [ContactController::class, 'index'])->middleware('permission:contacts.view')->name('index');
@@ -135,6 +140,60 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('users/{user}/reject', [GoogleApprovalController::class, 'reject'])->middleware('permission:admin.users.update')->name('users.reject');
     });
 
+    // Admin: Políticas de registro (no necesita household)
+    Route::prefix('admin')->name('admin.')->group(function () {
+        Route::get('registrations/settings', [RegistrationSettingsController::class, 'edit'])
+            ->middleware(['permission:admin.registrations.manage-settings', 'can:registration-settings.view'])
+            ->name('registrations.settings');
+        Route::put('registrations/settings', [RegistrationSettingsController::class, 'update'])
+            ->middleware(['permission:admin.registrations.manage-settings', 'can:registration-settings.update'])
+            ->name('registrations.settings.update');
+    });
+
+    // Admin: Registro y acceso (aprobación, rechazo y ciclo de vida de cuentas).
+    // Every mutation is protected by BOTH the permission middleware and the
+    // policy: the middleware stops a caller missing the permission, the policy
+    // adds the domain rules (last-administrator safeguard, effective access).
+    Route::prefix('admin')->name('admin.')->group(function (): void {
+        Route::get('registrations', [RegistrationController::class, 'index'])
+            ->middleware(['permission:admin.registrations.view', 'can:registrations.view'])
+            ->name('registrations.index');
+        Route::post('registrations/{user}/approve', [RegistrationController::class, 'approve'])
+            ->middleware(['permission:admin.registrations.approve', 'can:registrations.approve,user'])
+            ->name('registrations.approve');
+        Route::post('registrations/{user}/reject', [RegistrationController::class, 'reject'])
+            ->middleware(['permission:admin.registrations.reject', 'can:registrations.reject,user'])
+            ->name('registrations.reject');
+        Route::post('registrations/{user}/release-rejection', [RegistrationController::class, 'releaseRejection'])
+            ->middleware(['permission:admin.registrations.release-rejection', 'can:registrations.release-rejection,user'])
+            ->name('registrations.release-rejection');
+        Route::post('registration-blocks/{block}/release', [RegistrationController::class, 'releaseBlock'])
+            ->middleware(['permission:admin.registration-blocks.release', 'can:registration-blocks.release,block'])
+            ->name('registration-blocks.release');
+
+        Route::post('users/{user}/suspend', [RegistrationController::class, 'suspend'])
+            ->middleware(['permission:admin.users.suspend', 'can:suspend,user'])
+            ->name('users.suspend');
+        Route::post('users/{user}/unsuspend', [RegistrationController::class, 'unsuspend'])
+            ->middleware(['permission:admin.users.suspend', 'can:unsuspend,user'])
+            ->name('users.unsuspend');
+        Route::post('users/{user}/block', [RegistrationController::class, 'block'])
+            ->middleware(['permission:admin.users.block', 'can:block,user'])
+            ->name('users.block');
+        Route::post('users/{user}/unblock', [RegistrationController::class, 'unblock'])
+            ->middleware(['permission:admin.users.unblock', 'can:unblock,user'])
+            ->name('users.unblock');
+
+        // Deleting alone and deleting with a block are different authorities;
+        // the flag cannot be used to bypass the stronger one.
+        Route::delete('users/{user}/delete', [RegistrationController::class, 'destroy'])
+            ->middleware(['permission:admin.users.delete', 'can:delete,user'])
+            ->name('users.delete');
+        Route::delete('users/{user}/delete-and-block', [RegistrationController::class, 'destroy'])
+            ->middleware(['permission:admin.users.delete-and-block', 'can:delete-and-block,user'])
+            ->name('users.delete-and-block');
+    });
+
     // Admin: Roles (no necesitan household)
     Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('roles', [AdminRoleController::class, 'index'])->middleware('permission:admin.roles')->name('roles');
@@ -202,7 +261,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     });
 
     // === Cookbook personal (fuera de household context) ===
-    Route::prefix('recipes')->name('recipes.')->group(function () {
+    Route::prefix('recipes')->name('recipes.')->middleware('entitlement:recipes')->group(function () {
         Route::get('/', [RecipeController::class, 'index'])->name('index');
         Route::get('create', [RecipeController::class, 'create'])->name('create');
         Route::post('/', [RecipeController::class, 'store'])->name('store');
@@ -360,7 +419,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
             });
 
             // Recetas compartidas (requiere módulo recipes activo)
-            Route::middleware('module:recipes')->group(function () {
+            Route::middleware(['module:recipes', 'entitlement:recipes'])->group(function () {
                 Route::get('recipes', [HouseholdRecipeController::class, 'index'])->middleware('permission:recipes.index')->name('recipes.index');
                 Route::post('recipes/{recipe}/share', [HouseholdRecipeController::class, 'share'])->middleware('permission:recipes.share')->name('recipes.share');
                 Route::delete('recipes/{recipe}/share', [HouseholdRecipeController::class, 'unshare'])->middleware('permission:recipes.unshare')->name('recipes.unshare');
@@ -432,9 +491,7 @@ require __DIR__.'/settings.php';
 require __DIR__.'/auth.php';
 
 // Invitación (sin auth, con URL firmada)
-Route::get('invitation/{user}', [InvitationController::class, 'show'])->middleware(['signed'])->name('invitation.show');
-Route::post('invitation', [InvitationController::class, 'store'])->middleware(['signed'])->name('invitation.store');
-
-// OTP Setup (con URL firmada, sin auth - parte del flujo de onboarding)
-Route::get('otp/setup/{user}', [OtpSetupController::class, 'show'])->middleware(['signed'])->name('otp.setup');
-Route::post('otp/confirm/{user}', [OtpSetupController::class, 'confirm'])->middleware(['signed', 'throttle:otp'])->name('otp.confirm');
+Route::middleware([EnsureRegistrationInvitationsEnabled::class.':'.RegistrationChannel::AdminInvitation->value, 'signed'])->group(function (): void {
+    Route::get('invitation/{user}', [InvitationController::class, 'show'])->name('invitation.show');
+    Route::post('invitation', [InvitationController::class, 'store'])->middleware('throttle:registration')->name('invitation.store');
+});

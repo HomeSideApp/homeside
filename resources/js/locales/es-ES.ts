@@ -57,6 +57,7 @@ export default {
             google: 'Continuar con Google',
             forgotOtp: '¿Has olvidado tu OTP?',
             forgotPassword: '¿Has olvidado tu contraseña?',
+            noEnrolmentLink: '¿No tienes enlace de inscripción?',
         },
         confirm: {
             title: 'Confirmar contraseña',
@@ -76,6 +77,20 @@ export default {
             description:
                 'Introduce tu correo para recibir un enlace de restablecimiento del OTP',
             submit: 'Enviar enlace de restablecimiento del OTP',
+        },
+        resendEnrolment: {
+            expiredTitle: 'Este enlace de inscripción ha caducado',
+            expiredDescription:
+                'Tu registro aún no ha terminado. Solicita un enlace nuevo para configurar tu aplicación de autenticación.',
+            expiredBody:
+                'El enlace que has abierto ya no es válido porque ha pasado demasiado tiempo. Solicita uno nuevo y lo recibirás por correo.',
+            requestTitle: 'Solicitar un enlace de inscripción',
+            requestDescription:
+                'Introduce tu correo y, si tu cuenta aún necesita la verificación en dos pasos, te enviaremos un enlace nuevo.',
+            resend: 'Reenviar enlace',
+            submit: 'Enviarme un enlace',
+            return: 'O vuelve a',
+            login: 'iniciar sesión',
         },
         resetPassword: {
             title: 'Restablecer contraseña',
@@ -123,8 +138,13 @@ export default {
             dashboard: 'Ir al panel principal',
         },
         register: {
-            title: 'Registro deshabilitado',
-            description: 'La creación de cuentas la gestiona un administrador',
+            title: 'Crear cuenta',
+            description: 'Registra una cuenta nueva',
+            name: 'Nombre',
+            submit: 'Crear cuenta',
+            approvalNotice:
+                'Las cuentas nuevas necesitan la aprobación de un administrador antes de poder iniciar sesión.',
+            google: 'Registrarse con Google',
             message:
                 'El registro de cuentas está deshabilitado. Contacta con un administrador para crear una cuenta.',
         },
@@ -823,6 +843,14 @@ export default {
             fixedAmountPlaceholder: '0,00',
             splitPercentageTotal: 'Suma de porcentajes: {current}% / 100%',
             splitFixedTotal: 'Repartido: {current} {currency} de {total}',
+            externalParticipantsTitle: 'Otros participantes',
+            addExternalParticipant: 'Añadir persona',
+            addAnonymousShare: 'Parte sin nombre',
+            externalParticipantPlaceholder: 'Nombre de la persona',
+            anonymousShareCount: 'Personas',
+            anonymousShareOne: '1 persona',
+            anonymousShareMany: '{count} personas',
+            removeParticipant: 'Eliminar participante',
             linkedContact: 'Contacto vinculado',
             linkedContactPlaceholder: 'Buscar contacto...',
             percentage: 'Porcentaje',
@@ -994,6 +1022,166 @@ export default {
         globalAi: 'IA Global',
         aiUsage: 'Uso IA',
         translations: 'Traducciones',
+        saas: 'Planes y facturación',
+        saasAdmin: 'Admin SaaS',
+        registrationSettings: 'Registro',
+        registrations: 'Registro y acceso',
+    },
+    saas: {
+        plans: {
+            title: 'Planes y facturación',
+            description: 'Elige el plan que mejor encaje con tu hogar.',
+            checkoutHint:
+                'El pago en línea aún no está disponible: por ahora no se puede mejorar de plan.',
+            currentPlan: 'Plan actual',
+            defaultPlan: 'Predeterminado',
+            freePrice: 'Gratis',
+            yourPlan: 'Tu plan',
+            upgradeTo: 'Mejorar a {plan}',
+            descriptions: {
+                free: 'Lo esencial para empezar.',
+                plus: 'Para hogares que cocinan juntos.',
+                pro: 'Potencia completa con asistentes de IA.',
+                max: 'Todo, sin límites.',
+            },
+        },
+        billing: {
+            title: 'Facturación',
+            description: 'Tu plan, tu uso y tus códigos de promoción.',
+            entitlementTitle: 'Tu plan contratado',
+            planLine: 'Plan {plan} (v{version})',
+            expiresAt: 'caduca el {date}',
+            viewPlans: 'Ver planes',
+            checkoutHint:
+                'El pago en línea aún no está disponible: los cambios de plan están desactivados por ahora.',
+            usageTitle: 'Uso de este periodo',
+            usageDescription: 'Consumo medido contra los límites de tu plan.',
+            usedOf: '{used} de {cap}',
+            redeemTitle: 'Canjear un código de promoción',
+            redeemDescription:
+                '¿Tienes un código? Canjéalo aquí para obtener ventajas extra.',
+            redeemCode: 'Código de promoción',
+            redeemPlaceholder: 'p. ej. WELCOME2026',
+            redeemSubmit: 'Canjear',
+        },
+        origins: {
+            granted: 'Concedido',
+            subscribed: 'Suscrito',
+            trial: 'Prueba',
+            free: 'Gratis',
+        },
+        features: {
+            lists: 'Listas de compra',
+            economy: 'Economía',
+            recipes: 'Recetas',
+            ai_image_recognition: 'Reconocimiento de imágenes con IA',
+            ai_assistant: 'Asistente de IA',
+        },
+        quotas: {
+            households_own: 'Hogares propios',
+            storage_mb: 'Almacenamiento (MB)',
+            ai_image_monthly: 'Reconocimientos de imagen IA / mes',
+            ai_assistant_monthly: 'Mensajes del asistente IA / mes',
+            unlimited: 'Sin límite',
+            none: 'No incluido',
+        },
+        admin: {
+            overview: {
+                title: 'Facturación SaaS',
+                listTitle: 'Usuarios y beneficios',
+                description:
+                    'Vista de solo lectura del plan efectivo, origen, caducidad y uso de cada usuario.',
+                searchPlaceholder: 'Buscar por email...',
+                search: 'Buscar',
+                email: 'Email',
+                plan: 'Plan',
+                origin: 'Origen',
+                expiry: 'Caducidad',
+                usage: 'Uso',
+                noExpiry: 'Sin caducidad',
+                noUsage: 'Sin uso registrado',
+            },
+            plans: {
+                title: 'Planes SaaS',
+                create: 'Nuevo plan',
+                key: 'Clave',
+                name: 'Nombre',
+                visibility: 'Visibilidad',
+                sortOrder: 'Orden',
+                save: 'Guardar',
+                publishedVersion: 'Versión publicada',
+                none: 'ninguna',
+                archived: 'Archivado',
+                publish: 'Publicar borrador',
+                archive: 'Archivar',
+                draftEditor:
+                    'Editor de borrador (las versiones publicadas son inmutables)',
+                features: 'Funciones',
+                quotas: 'Cuotas',
+                addRow: 'Añadir fila',
+                featureKey: 'clave de función',
+                featureValue: 'true/false',
+                quotaKey: 'clave de cuota',
+                quotaValue: 'número o vacío (sin límite)',
+                quotaHint:
+                    'Las cuotas son por métrica; deja el valor vacío para ilimitado.',
+                saveDraft: 'Guardar borrador',
+                prices: 'Precios (solo borrador)',
+                currency: 'Moneda',
+                interval: 'Intervalo',
+                amountCents: 'Importe (centavos)',
+                active: 'Activo',
+                savePrice: 'Guardar precio',
+            },
+            grants: {
+                title: 'Beneficios SaaS',
+                assignTitle: 'Asignar un beneficio',
+                assignDescription:
+                    'Otorga una versión publicada de un plan a un usuario por email. Al asignar se reemplaza el beneficio activo anterior.',
+                email: 'Email del usuario',
+                planVersion: 'Versión del plan (publicada)',
+                selectVersion: 'Elegir versión',
+                expiresAt: 'Caduca el',
+                reason: 'Motivo',
+                assign: 'Asignar',
+                historyTitle: 'Historial de beneficios',
+                historyFor: 'Historial de beneficios de {email}',
+                historyDescription:
+                    'Incluye filas revocadas y quién realizó cada cambio.',
+                searchPlaceholder: 'Filtrar por email...',
+                search: 'Buscar',
+                plan: 'Plan',
+                status: 'Estado',
+                actor: 'Autor',
+                active: 'Activo',
+                revoked: 'Revocado',
+                revoke: 'Revocar',
+                revokeTitle: 'Revocar beneficio',
+                revokeDescription:
+                    'El usuario pasa al plan gratuito inmediatamente. Motivo: {email}',
+            },
+            promotions: {
+                title: 'Promociones SaaS',
+                create: 'Nueva promoción',
+                edit: 'Editar promoción',
+                key: 'Clave',
+                code: 'Código',
+                planVersion: 'Versión del plan (publicada)',
+                active: 'Activo',
+                startsAt: 'Comienza el',
+                endsAt: 'Termina el',
+                window: 'Ventana',
+                benefitDays: 'Días de beneficio',
+                maxRedemptions: 'Canjes máximos',
+                perUserLimit: 'Límite por usuario',
+                limits: 'Límites',
+                redemptions: 'Canjes',
+                save: 'Guardar',
+                listTitle: 'Promociones',
+                activate: 'Activar',
+                deactivate: 'Desactivar',
+            },
+        },
     },
     dashboard: {
         greeting: 'Hola, {name}',
@@ -1148,6 +1336,139 @@ export default {
             searchIcons: 'Buscar icono...',
             generatedIcon: 'Icono generado {number}',
         },
+        registrations: {
+            settings: {
+                title: 'Política de registro',
+                description:
+                    'Quién puede iniciar un registro en esta instalación, por canal.',
+                save: 'Guardar',
+                policyNote:
+                    'Estas son políticas de registro de toda la instalación. Deciden si una identidad puede iniciar un registro; no sustituyen a los roles y nunca otorgan capacidad de hogar.',
+                values: {
+                    disabled: 'Deshabilitado',
+                    approval_required: 'Requiere aprobación',
+                    open: 'Abierto (sin aprobación)',
+                    existing_only: 'Solo identidades existentes',
+                    enabled: 'Habilitado',
+                    allowed: 'Permitido',
+                    denied: 'Denegado',
+                },
+                groups: {
+                    registration: {
+                        title: 'Canales de registro',
+                        description:
+                            'Si una identidad nueva puede registrarse y si un administrador debe aprobarlo.',
+                    },
+                    invitations: {
+                        title: 'Invitaciones',
+                        description:
+                            'Si los flujos de invitación pueden iniciar un registro.',
+                    },
+                    household: {
+                        title: 'Creación de hogares',
+                        description:
+                            'Si los miembros de esta instalación autoalojada pueden crear sus propios hogares.',
+                    },
+                },
+                fields: {
+                    web: {
+                        label: 'Registro con contraseña (web)',
+                        note: 'El formulario de registro de este sitio. Deshabilitado por defecto porque es el canal más fácil de abusar.',
+                    },
+                    api: {
+                        label: 'Registro por API',
+                        note: 'El endpoint público POST /api/v1/auth/register. Deshabilitado por defecto; es accesible sin navegador.',
+                    },
+                    google: {
+                        label: 'Registro con Google',
+                        note: 'Inicio de sesión con una cuenta de Google. "Solo identidades existentes" vincula cuentas conocidas sin admitir nuevas.',
+                    },
+                    household_invitation: {
+                        label: 'Invitaciones de hogar',
+                        note: 'El enlace reutilizable /invite/{token}. Deshabilitarlo rechaza el enlace sin borrarlo, por lo que puede reactivarse después.',
+                    },
+                    admin_invitation: {
+                        label: 'Invitaciones de administrador',
+                        note: 'La invitación que se envía cuando un administrador crea una cuenta. Deshabilitarla rechaza la invitación sin borrar la cuenta.',
+                    },
+                    household_creation: {
+                        label: 'Creación de hogares autoalojada',
+                        note: 'El valor por defecto de la instalación. Denegado rechaza la creación aunque la anulación por usuario sea nula; permitido sigue delegando en la anulación y en cualquier derecho.',
+                    },
+                },
+                warning: {
+                    title: 'Hay un canal accesible sin aprobación',
+                    description:
+                        'Estos canales están abiertos: {channels}. Cualquiera que llegue a ellos puede registrarse sin aprobación de un administrador.',
+                    channel:
+                        'Abierto: cualquiera que llegue a este canal se registra sin aprobación.',
+                },
+            },
+            panel: {
+                title: 'Registro y acceso',
+                description:
+                    'Aprueba o rechaza registros, revisa rechazos y libera bloqueos de identidad.',
+                yes: 'Verificado',
+                no: 'Sin verificar',
+                unknown: 'Desconocido',
+                conflict: {
+                    title: 'No se pudo aplicar la acción',
+                },
+                filters: {
+                    status: 'Estado',
+                    channel: 'Canal',
+                    allChannels: 'Todos los canales',
+                },
+                tabs: {
+                    pending: 'Pendientes',
+                    rejected: 'Rechazados',
+                    blocked: 'Bloqueados',
+                },
+                columns: {
+                    name: 'Nombre',
+                    email: 'Email',
+                    channel: 'Canal',
+                    registered: 'Registro',
+                    emailVerified: 'Email',
+                    rejectedBy: 'Rechazado por',
+                    rejectedAt: 'Rechazado el',
+                    reason: 'Motivo',
+                    source: 'Origen',
+                    createdBy: 'Creado por',
+                    createdAt: 'Creado el',
+                    actions: 'Acciones',
+                },
+                pending: {
+                    title: 'Registros pendientes de aprobación',
+                    description:
+                        'Aprueba para conceder acceso, o rechaza para denegarlo y bloquear la identidad.',
+                    approve: 'Aprobar',
+                    reject: 'Rechazar',
+                    empty: 'No hay registros esperando aprobación.',
+                },
+                rejected: {
+                    title: 'Registros rechazados',
+                    description:
+                        'Liberar un rechazo levanta el bloqueo y deja la cuenta pendiente; no la aprueba.',
+                    release: 'Liberar',
+                    empty: 'No hay registros rechazados.',
+                },
+                blocked: {
+                    title: 'Identidades bloqueadas',
+                    description:
+                        'Bloqueos de identidad activos. Liberar uno permite un nuevo registro según la política vigente.',
+                    release: 'Liberar',
+                    empty: 'No hay bloqueos de identidad activos.',
+                },
+                rejectDialog: {
+                    title: 'Rechazar registro',
+                    description:
+                        '¿Rechazar a {name}? La cuenta quedará rechazada y el email no podrá volver a registrarse.',
+                    reason: 'Motivo',
+                    confirm: 'Rechazar y bloquear',
+                },
+            },
+        },
         roles: {
             indexTitle: 'Gestión de Roles',
             create: 'Nuevo rol',
@@ -1158,6 +1479,21 @@ export default {
         users: {
             indexTitle: 'Gestión de Usuarios',
             create: 'Nuevo usuario',
+            suspend: 'Suspender',
+            unsuspend: 'Reactivar',
+            block: 'Bloquear',
+            unblock: 'Desbloquear',
+            blockTitle: '¿Bloquear usuario?',
+            blockDescription:
+                '¿Bloquear a {name}? La cuenta pierde el acceso y el email no podrá registrarse de nuevo hasta que se libere el bloqueo.',
+            blockReason: 'Motivo',
+            deleteAlsoBlock:
+                'Bloquear también este email para que no pueda registrarse de nuevo',
+            status: {
+                active: 'Activa',
+                suspended: 'Suspendida',
+                blocked: 'Bloqueada',
+            },
             deleteTitle: '¿Eliminar usuario?',
             deleteDescription:
                 '¿Estás seguro de que quieres eliminar a {name}? Esta acción no se puede deshacer.',

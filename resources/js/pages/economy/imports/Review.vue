@@ -3,6 +3,7 @@ import { Head, Link, router, setLayoutProps, useForm } from '@inertiajs/vue3';
 import { Sliders } from '@lucide/vue';
 import { computed, ref, watch, watchEffect } from 'vue';
 import { useI18n } from 'vue-i18n';
+import ContactPicker from '@/components/contacts/ContactPicker.vue';
 import EditableExtractedData from '@/components/economy/EditableExtractedData.vue';
 import ImageProcessingDialog from '@/components/economy/ImageProcessingDialog.vue';
 import ImportStatusPoller from '@/components/economy/ImportStatusPoller.vue';
@@ -10,6 +11,7 @@ import ParticipantSelector from '@/components/economy/ParticipantSelector.vue';
 import ReceiptViewer from '@/components/economy/ReceiptViewer.vue';
 import type { ImageProcessingPayload } from '@/components/economy/types';
 import type {
+    EconomicAccount,
     EconomyDocument,
     EconomyItem,
     EconomyMember,
@@ -21,7 +23,22 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+    Field,
+    FieldDescription,
+    FieldError,
+    FieldLabel,
+} from '@/components/ui/field';
+import {
+    Select,
+    SelectContent,
+    SelectGroup,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import { Spinner } from '@/components/ui/spinner';
+import { Textarea } from '@/components/ui/textarea';
 import { index as privateEconomyIndex } from '@/routes/economy/me';
 import { file as privateDocumentFile } from '@/routes/economy/me/documents';
 import {
@@ -74,10 +91,15 @@ interface ImportData {
 }
 
 const { t } = useI18n();
+/**
+ * Reka UI forbids an empty `SelectItem` value, so "no account" travels as a sentinel.
+ */
+const NO_ACCOUNT = '__none__';
 const props = defineProps<{
     household: { id: string; name: string } | null;
     importData: ImportData;
     members: EconomyMember[];
+    accounts: EconomicAccount[];
 }>();
 const extracted = props.importData.extracted ?? {};
 const confirmUrl = props.household
@@ -89,11 +111,14 @@ const confirmUrl = props.household
 const form = useForm('post', confirmUrl, {
     type: 'expense' as 'expense' | 'income',
     scope: 'personal' as 'personal' | 'shared',
+    account_id: '',
     title: extracted.title ?? '',
     amount: extracted.amount ?? '',
     currency: extracted.currency ?? 'EUR',
     place: extracted.place ?? '',
     occurred_at: extracted.occurred_at?.slice(0, 10) ?? '',
+    notes: '',
+    contact_id: null as string | null,
     items: (extracted.items ?? []).map((item) => ({
         ...item,
         quantity: item.quantity ?? 1,
@@ -106,6 +131,15 @@ const form = useForm('post', confirmUrl, {
         amount: tax.amount ?? tax.tax_amount ?? '',
     })),
     participants: [] as EconomyParticipant[],
+});
+/**
+ * The form keeps no account as an empty string, so an untouched import never submits one.
+ */
+const accountSelectValue = computed<string>({
+    get: () => form.account_id || NO_ACCOUNT,
+    set: (value) => {
+        form.account_id = value === NO_ACCOUNT ? '' : value;
+    },
 });
 let hasHydratedExtractedData = Boolean(props.importData.extracted);
 
@@ -322,7 +356,68 @@ watchEffect(() => {
                         :validate="validateField"
                         @update:model-value="
                             Object.assign(form, $event)
-                        " /><ParticipantSelector
+                        " /><Field
+                        ><FieldLabel for="notes">{{
+                            t('economy.ui.notes')
+                        }}</FieldLabel
+                        ><Textarea
+                            id="notes"
+                            v-model="form.notes"
+                            @blur="form.validate('notes')"
+                            @input="form.validate('notes')"
+                    /></Field>
+                    <div
+                        v-if="!household || form.scope === 'personal'"
+                        class="max-w-80"
+                    >
+                        <ContactPicker
+                            v-model="form.contact_id"
+                            :label="t('economy.ui.linkedContact')"
+                            :placeholder="
+                                t('economy.ui.linkedContactPlaceholder')
+                            "
+                            :scope="household?.id ?? null"
+                            :error="form.errors.contact_id"
+                        />
+                    </div>
+                    <Field
+                        v-if="accounts.length"
+                        :data-invalid="Boolean(form.errors.account_id)"
+                        ><FieldLabel for="account_id">{{
+                            t('economy.account.label')
+                        }}</FieldLabel
+                        ><Select
+                            v-model="accountSelectValue"
+                            @update:model-value="validateField('account_id')"
+                        >
+                            <SelectTrigger id="account_id">
+                                <SelectValue
+                                    :placeholder="t('economy.account.none')"
+                                />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectGroup>
+                                    <SelectItem :value="NO_ACCOUNT">{{
+                                        t('economy.account.none')
+                                    }}</SelectItem>
+                                    <SelectItem
+                                        v-for="account in accounts"
+                                        :key="account.id"
+                                        :value="account.id"
+                                    >
+                                        {{ account.name }}
+                                        ({{ account.currency }})
+                                    </SelectItem>
+                                </SelectGroup>
+                            </SelectContent>
+                        </Select>
+                        <FieldDescription>{{
+                            t('economy.account.help')
+                        }}</FieldDescription
+                        ><FieldError v-if="form.errors.account_id">{{
+                            form.errors.account_id
+                        }}</FieldError></Field
+                    ><ParticipantSelector
                         v-if="household && form.scope === 'shared'"
                         v-model="form.participants"
                         :members="members"

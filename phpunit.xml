@@ -5,6 +5,18 @@
          colors="true"
 >
     <testsuites>
+        <testsuite name="Unit">
+            <directory>tests/Unit</directory>
+            <!--
+                tests/Unit/Ai is stale: it references App\Ai\Contracts\*, App\Ai\Context\*
+                and App\Ai\Execution\*, which no longer exist (the contracts live in
+                HomeSide\AiAgents\Contracts\* now). Those files never ran because the Unit
+                suite was not registered anywhere, so the breakage only surfaced when the
+                suite was added. Excluded rather than deleted: they are not ours to remove,
+                but a directory that aborts the whole suite cannot stay loadable.
+            -->
+            <exclude>tests/Unit/Ai</exclude>
+        </testsuite>
         <testsuite name="Feature">
             <directory>tests/Feature</directory>
         </testsuite>
@@ -28,5 +40,24 @@
         <env name="PULSE_ENABLED" value="false"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="NIGHTWATCH_ENABLED" value="false"/>
+        <env name="SAAS_ENABLED" value="false"/>
+        <!--
+            The registration suite profile (section 13 of the registration spec).
+            Read by tests/TestCase.php:
+              ambient    (default) keep the container bindings (the historical
+                         `artisan test` behaviour). Safe whether or not the
+                         commercial package is installed, because tests that
+                         assert a concrete implementation bind it explicitly.
+              selfhosted force the Community self-hosted registration defaults
+                         and gate, so the OSS suite keeps self-hosted semantics
+                         even when the commercial package is installed.
+              saas       force the commercial registration defaults and gate when
+                         the package is installed (`make test-saas`).
+            An externally supplied value wins: PHPUnit does not overwrite an
+            environment variable that is already set (the Makefile targets pass
+            it with `docker compose exec -e` because Sail forwards only agent
+            variables).
+        -->
+        <env name="HOMESIDE_TEST_PROFILE" value="ambient"/>
     </php>
 </phpunit>

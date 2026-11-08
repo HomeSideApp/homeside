@@ -391,13 +391,38 @@ class ContactModuleTest extends TestCase
 
         $this->mockAddressbooks();
         Queue::fake([SyncContactSourceJob::class]);
-        $this->postJson('/api/v1/contact-sources', [
+
+        // The probe username contains '@' and '.', characters that cannot occur
+        // inside a generated UUID (hexadecimal plus dashes only). The previous
+        // probe, 'ada', is entirely hexadecimal, so it matched whenever a random
+        // UUID happened to contain that run (observed as "...-7120-adae-..."):
+        // the test was detecting coincidence, not a leak.
+        $username = 'probe-user@invalid.test';
+        $password = 'very-secret-password';
+
+        $response = $this->postJson('/api/v1/contact-sources', [
             'name' => 'Private CardDAV',
             'server_url' => 'https://93.184.216.34/dav',
-            'username' => 'ada',
-            'app_password' => 'very-secret-password',
+            'username' => $username,
+            'app_password' => $password,
             'selected_collections' => ['https://93.184.216.34/dav/people'],
-        ])->assertSuccessful()->assertDontSee('very-secret-password')->assertDontSee('ada');
+        ])
+            ->assertSuccessful()
+            ->assertDontSee($password)
+            ->assertDontSee($username);
+
+        // A substring scan over a body full of random UUIDs is the wrong tool
+        // for this property. Assert the SHAPE of the serialized resource: the
+        // credential bag must never be serialized, and provider_configuration
+        // must carry only its two public keys.
+        $data = $response->json('data');
+        $this->assertIsArray($data);
+        $this->assertArrayNotHasKey('encrypted_credentials', $data);
+        $this->assertArrayNotHasKey('credentials', $data);
+
+        $configuration = $data['provider_configuration'];
+        $this->assertIsArray($configuration);
+        $this->assertEqualsCanonicalizing(['server_url', 'favorite_label'], array_keys($configuration));
 
         $this->assertDatabaseCount('contact_sources', 1);
         Queue::assertPushed(SyncContactSourceJob::class, 1);

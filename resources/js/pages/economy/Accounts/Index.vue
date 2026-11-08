@@ -90,6 +90,16 @@ const search = ref(props.filters.search ?? '');
 const currency = ref(props.filters.currency ?? '');
 const paymentMethodId = ref(props.filters.payment_method_id ?? '');
 const includeArchived = ref(props.filters.include_archived === '1');
+/**
+ * Reka UI forbids an empty `SelectItem` value, so "all payment methods" travels as a sentinel.
+ */
+const NO_PAYMENT_METHOD = '__none__';
+const paymentMethodSelectValue = computed<string>({
+    get: () => paymentMethodId.value || NO_PAYMENT_METHOD,
+    set: (value) => {
+        paymentMethodId.value = value === NO_PAYMENT_METHOD ? '' : value;
+    },
+});
 
 const hasActiveFilters = computed(
     () =>
@@ -247,7 +257,7 @@ function toggleArchive(account: EconomicAccount): void {
                             t('economy.account.paymentMethod')
                         }}</FieldLabel>
                         <Select
-                            v-model="paymentMethodId"
+                            v-model="paymentMethodSelectValue"
                             @update:model-value="applyFilters"
                         >
                             <SelectTrigger id="accounts-method">
@@ -255,7 +265,7 @@ function toggleArchive(account: EconomicAccount): void {
                             </SelectTrigger>
                             <SelectContent>
                                 <SelectGroup>
-                                    <SelectItem value="">
+                                    <SelectItem :value="NO_PAYMENT_METHOD">
                                         {{ t('economy.ui.all') }}
                                     </SelectItem>
                                     <SelectItem

@@ -36,8 +36,10 @@
         "laravel/socialite": "^5.31",
         "laravel/tinker": "^3.0",
         "laravel/wayfinder": "^0.1.14",
+        "league/flysystem-aws-s3-v3": "^3.0",
         "mstilkerich/carddavclient": "dev-feat/discovery-options",
-        "pragmarx/google2fa": "^9.0"
+        "pragmarx/google2fa": "^9.0",
+        "smalot/pdfparser": "^2.13"
     },
     "require-dev": {
         "fakerphp/faker": "^1.24",
@@ -52,6 +54,9 @@
         "mrpunyapal/laravel-auditor": "^0.1.2",
         "nunomaduro/collision": "^8.9.3",
         "phpunit/phpunit": "^12.5.23"
+    },
+    "suggest": {
+        "homeside/saas": "Optional first-party commercial module (plans, entitlements, the SaaS registration gate). Only this installation can decide to add it; run `make install-saas` to install it from the sibling ../saas checkout. HomeSide runs fully without it."
     },
     "autoload": {
         "psr-4": {
@@ -148,5 +153,11 @@
         "name": "laravel-ai-agents",
         "type": "git",
         "url": "https://github.com/HomeSideApp/laravel-ai-agents.git"
+    },{
+        "type": "path",
+        "url": "../saas",
+        "options": {
+            "symlink": true
+        }
     }]
 }

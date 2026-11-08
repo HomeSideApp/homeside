@@ -2,11 +2,13 @@
 
 namespace App\Http\Controllers\Auth;
 
+use App\Actions\Auth\ResolveGoogleIdentity;
+use App\Data\Auth\RegistrationOutcomeData;
+use App\Enums\RegistrationDecision;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\ConfirmGoogleOtpSetupRequest;
 use App\Http\Requests\GoogleLoginCallbackRequest;
 use App\Http\Requests\ShowGoogleOtpSetupRequest;
-use App\Services\Auth\GoogleIdentityService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
@@ -21,11 +23,11 @@ class GoogleAuthController extends Controller
         return Socialite::driver('google')->redirect();
     }
 
-    public function callback(GoogleLoginCallbackRequest $request, GoogleIdentityService $identities): RedirectResponse
+    public function callback(GoogleLoginCallbackRequest $request, ResolveGoogleIdentity $identities): RedirectResponse
     {
         try {
             $google = Socialite::driver('google')->user();
-            $result = $identities->resolve(
+            $outcome = $identities->resolve(
                 (string) $google->getId(),
                 (string) $google->getEmail(),
                 (string) $google->getName(),
@@ -37,16 +39,21 @@ class GoogleAuthController extends Controller
             return to_route('login')->withErrors(['google' => 'No se pudo comprobar la cuenta Google.']);
         }
 
-        if ($result['status'] === 'link_required') {
+        if ($outcome->decision === RegistrationDecision::LinkRequired) {
             return to_route('login')->withErrors(['google' => 'Ya existe una cuenta con este correo. Entra con tu contraseña y vincula Google en tu perfil.']);
         }
-        if ($result['status'] === 'pending' || $result['status'] === 'rejected') {
-            return to_route('login')->with('status', $result['status'] === 'pending'
-                ? 'Tu cuenta se ha creado correctamente y está pendiente de aprobación por un administrador.'
-                : 'Tu solicitud de acceso ha sido rechazada.');
+
+        if ($outcome->decision === RegistrationDecision::Denied) {
+            return $outcome->reason === 'approval_rejected'
+                ? to_route('login')->with('status', 'Tu solicitud de acceso ha sido rechazada.')
+                : to_route('login')->withErrors(['google' => 'Tu cuenta no puede acceder.']);
         }
 
-        $user = $result['user'];
+        if ($outcome->nextStep === RegistrationOutcomeData::NEXT_AWAIT_APPROVAL) {
+            return to_route('login')->with('status', 'Tu cuenta se ha creado correctamente y está pendiente de aprobación por un administrador.');
+        }
+
+        $user = $outcome->user;
         if (! $request->canLogin($user)) {
             return to_route('login')->withErrors(['google' => 'Tu cuenta no tiene un rol asignado.']);
         }

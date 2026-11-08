@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Enums\AccountStatus;
 use App\Models\Permission;
 use App\Models\Role;
 use App\Models\User;
@@ -58,6 +59,39 @@ class UserFactory extends Factory
             'two_factor_secret' => encrypt('secret'),
             'two_factor_recovery_codes' => encrypt(json_encode(['recovery-code-1'])),
             'two_factor_confirmed_at' => now(),
+        ]);
+    }
+
+    /**
+     * Indicate that the user is explicitly forbidden from creating households.
+     *
+     * The tri-state default is `null` (delegate to Policy + entitlement); this
+     * state pins the explicit `false` prohibition.
+     */
+    public function withoutHouseholdCreation(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'can_create_households_override' => false,
+        ]);
+    }
+
+    /**
+     * Indicate that the account is suspended.
+     */
+    public function suspended(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'account_status' => AccountStatus::Suspended,
+        ]);
+    }
+
+    /**
+     * Indicate that the account is blocked.
+     */
+    public function blocked(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'account_status' => AccountStatus::Blocked,
         ]);
     }
 

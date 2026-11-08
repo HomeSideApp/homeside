@@ -2,8 +2,16 @@
 
 namespace App\Providers;
 
+use App\Contracts\AuthenticationBootstrapRepository;
 use App\Contracts\CryptoPriceFetcher;
+use App\Contracts\EntitlementGate;
+use App\Contracts\ReceiptTextExtractor;
+use App\Contracts\RegistrationBlockRepository;
+use App\Contracts\RegistrationGate;
+use App\Contracts\RegistrationPolicyDefaults;
 use App\Enums\AppLocale;
+use App\Enums\ApprovalStatus;
+use App\Enums\RegistrationAuditAction;
 use App\Http\Middleware\SecureHttpMiddleware;
 use App\Http\Requests\StoreRecipeApiRequest;
 use App\Http\Resources\Assistant\AiProposalResource;
@@ -12,15 +20,27 @@ use App\Listeners\JobProcessedListener;
 use App\Listeners\JobProcessingListener;
 use App\Models\Category;
 use App\Models\Product;
+use App\Models\RegistrationAudit;
 use App\Models\Store;
 use App\Models\Tag;
+use App\Models\User;
+use App\Notifications\RegistrationRequested;
 use App\Observers\CategoryObserver;
 use App\Observers\ProductObserver;
 use App\Observers\StoreObserver;
 use App\Policies\AiConversationPolicy;
 use App\Policies\AiProviderPolicy;
+use App\Policies\RegistrationApprovalPolicy;
+use App\Policies\RegistrationSettingsPolicy;
+use App\Services\Auth\SelfHostedRegistrationGate;
+use App\Services\Auth\SelfHostedRegistrationPolicyDefaults;
 use App\Services\Economy\CoinGeckoPriceFetcher;
+use App\Services\Economy\TesseractReceiptTextExtractor;
+use App\Support\Auth\AuthenticationBootstrapRepository as EloquentAuthenticationBootstrapRepository;
+use App\Support\Auth\GoogleDriverRegistrar;
+use App\Support\NullEntitlementGate;
 use App\Support\OpenApi\DiscriminatedOneOfType;
+use App\Support\Registration\RegistrationBlockRepository as EloquentRegistrationBlockRepository;
 use Carbon\CarbonImmutable;
 use Dedoc\Scramble\Scramble;
 use Dedoc\Scramble\Support\Generator\OpenApi;
@@ -58,7 +78,11 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->configureEntitlements();
+        $this->configureRegistrationDefaults();
+        $this->configureRegistration();
+        $this->configureRegistrationBlocks();
+        $this->configureAuthenticationBootstraps();
     }
 
     /**
@@ -74,8 +98,26 @@ class AppServiceProvider extends ServiceProvider
         $this->configureMorphMap();
         $this->configureOpenApi();
         $this->configureAiPolicies();
+        $this->configureRegistrationPolicies();
+        $this->configureRegistrationNotifications();
         $this->configureCryptoPrices();
+        $this->configureReceiptTextExtraction();
         $this->configureJobMonitoring();
+        $this->configureGoogleProvider();
+    }
+
+    /**
+     * Point Socialite's Google driver at the E2E simulator, inside E2E only.
+     *
+     * The registrar is fail-closed: outside the E2E environment it registers
+     * nothing, so a production install keeps the framework's real Google
+     * driver even if the simulator flag is set. Only the three provider
+     * endpoints move; state validation, the redirect-URI check and the code
+     * exchange stay in Socialite's real code paths.
+     */
+    protected function configureGoogleProvider(): void
+    {
+        app(GoogleDriverRegistrar::class)->register();
     }
 
     /**
@@ -101,6 +143,153 @@ class AppServiceProvider extends ServiceProvider
     protected function configureCryptoPrices(): void
     {
         $this->app->bind(CryptoPriceFetcher::class, CoinGeckoPriceFetcher::class);
+    }
+
+    /**
+     * Bind the offline receipt text reader behind its contract.
+     *
+     * The analysis job reads a ticket offline before spending a metered AI recognition,
+     * so the offline engine is swappable: tests fake this port, and a deploy whose image has
+     * no Tesseract binary gets an extractor that returns null, which sends every import down
+     * the AI path exactly as before.
+     */
+    protected function configureReceiptTextExtraction(): void
+    {
+        $this->app->bind(ReceiptTextExtractor::class, TesseractReceiptTextExtractor::class);
+    }
+
+    /**
+     * Bind the entitlement gate behind its app-owned port.
+     *
+     * Community owns the contract and its null fallback: a self-hosted install has nothing to
+     * meter, so every check passes. Using `bindIf` instead of `bind` makes the registration
+     * order-independent. Package-discovered providers register before the app's own providers, so
+     * when a commercial package is installed its `bind` runs first and this `bindIf` yields; if the
+     * order were ever reversed, this `bindIf` would register the null gate and the package's `bind`
+     * would overwrite it. Either way the package wins, which is why Community never needs to know
+     * whether that package exists.
+     */
+    protected function configureEntitlements(): void
+    {
+        $this->app->bindIf(EntitlementGate::class, NullEntitlementGate::class);
+    }
+
+    /**
+     * Bind the fallback registration policy behind its app-owned port.
+     *
+     * Community owns the contract and its self-hosted defaults: a fresh install
+     * starts closed so nobody can register over the network until the operator
+     * asks for it. Using `bindIf` (NOT `bind`) keeps the provider registration
+     * order-independent. Package-discovered providers register BEFORE the
+     * application's own providers, so when a commercial package installs its
+     * own defaults its `bind` runs first and this `bindIf` yields; if the order
+     * were ever reversed, this `bindIf` would register the self-hosted defaults
+     * and the package's later `bind` would still overwrite them. Either way the
+     * package wins, so Community never needs to know whether that package
+     * exists. Do not "fix" this to a plain `bind`: that would run last and
+     * silently overwrite the commercial defaults.
+     *
+     * The binding is deliberately not shared, matching RegistrationSettings:
+     * every fresh resolution must observe the current binding.
+     */
+    protected function configureRegistrationDefaults(): void
+    {
+        $this->app->bindIf(RegistrationPolicyDefaults::class, SelfHostedRegistrationPolicyDefaults::class);
+    }
+
+    /**
+     * Bind the registration gate behind its app-owned port.
+     *
+     * Community owns the contract and its self-hosted implementation: the gate
+     * only reads the local per-channel policy. Using `bindIf` keeps the
+     * registration order-independent, so a commercial package can override the
+     * binding without Community referencing it. The SaaS package will supply its
+     * own gate in a later phase.
+     */
+    protected function configureRegistration(): void
+    {
+        $this->app->bindIf(RegistrationGate::class, SelfHostedRegistrationGate::class);
+    }
+
+    /**
+     * Bind the persistent registration block repository behind its contract.
+     */
+    protected function configureRegistrationBlocks(): void
+    {
+        $this->app->bind(RegistrationBlockRepository::class, EloquentRegistrationBlockRepository::class);
+    }
+
+    /**
+     * Bind the single-use authentication bootstrap repository behind its contract.
+     *
+     * The token is stored only as a keyed digest and consumed with a conditional
+     * update, so the transport depends on the contract while the database is
+     * the arbiter of single use.
+     */
+    protected function configureAuthenticationBootstraps(): void
+    {
+        $this->app->bind(AuthenticationBootstrapRepository::class, EloquentAuthenticationBootstrapRepository::class);
+    }
+
+    /**
+     * Register the named abilities backed by RegistrationApprovalPolicy.
+     *
+     * The user model already owns UserPolicy, so the registration-approval
+     * abilities are exposed as named gates instead of a second model policy.
+     */
+    protected function configureRegistrationPolicies(): void
+    {
+        Gate::define('registrations.view', fn (User $actor, ?User $target = null): bool => app(RegistrationApprovalPolicy::class)->view($actor, $target));
+        Gate::define('registrations.approve', fn (User $actor, User $target): bool => app(RegistrationApprovalPolicy::class)->approve($actor, $target));
+        Gate::define('registrations.reject', fn (User $actor, User $target): bool => app(RegistrationApprovalPolicy::class)->reject($actor, $target));
+        Gate::define('registrations.release-rejection', fn (User $actor, User $target): bool => app(RegistrationApprovalPolicy::class)->releaseRejection($actor, $target));
+        Gate::define('registrations.manage-settings', fn (User $actor, ?User $target = null): bool => app(RegistrationApprovalPolicy::class)->manageSettings($actor, $target));
+        Gate::define('registration-settings.view', fn (User $actor): bool => app(RegistrationSettingsPolicy::class)->view($actor));
+        Gate::define('registration-settings.update', fn (User $actor): bool => app(RegistrationSettingsPolicy::class)->update($actor));
+        Gate::define('registration-blocks.release', fn (User $actor): bool => $actor->canAccessApplication()
+            && $actor->getPermissionRouteNames()->contains('admin.registration-blocks.release'));
+    }
+
+    /**
+     * Notify the administrators who can approve when a registration waits.
+     *
+     * The registration use case is deliberately unaware of notifications, so
+     * the trigger is the audit entry it already writes. Dispatching after commit
+     * means a mail failure can never roll the registration back, and the
+     * notification can be retried without repeating the decision. No new audit
+     * entry and no HTTP call is involved.
+     */
+    protected function configureRegistrationNotifications(): void
+    {
+        RegistrationAudit::created(function (RegistrationAudit $audit): void {
+            if ($audit->action !== RegistrationAuditAction::RegistrationCreated) {
+                return;
+            }
+
+            if ($audit->new_status !== ApprovalStatus::Pending->value) {
+                return;
+            }
+
+            $applicantId = $audit->user_id;
+
+            if ($applicantId === null) {
+                return;
+            }
+
+            DB::afterCommit(function () use ($applicantId): void {
+                $applicant = User::query()->find($applicantId);
+
+                if ($applicant === null) {
+                    return;
+                }
+
+                try {
+                    RegistrationRequested::sendToAdministrators($applicant);
+                } catch (\Throwable $exception) {
+                    report($exception);
+                }
+            });
+        });
     }
 
     /**
@@ -174,6 +363,50 @@ class AppServiceProvider extends ServiceProvider
             $identity = Str::lower(trim((string) $request->input('email', $request->user()?->email)));
 
             return Limit::perMinute(5)->by(Str::transliterate($identity).'|'.$request->ip());
+        });
+
+        // Registration is limited twice: once per source IP, so one host cannot
+        // mass-create accounts, and once per normalised identifier, so one
+        // address cannot be hammered. Both are configurable; the defaults are
+        // deliberately conservative.
+        RateLimiter::for('registration', function (Request $request) {
+            $identity = Str::lower(trim((string) $request->input('email')));
+            $perIp = (int) config('registration.rate_limits.per_ip', 10);
+            $perIdentifier = (int) config('registration.rate_limits.per_identifier', 5);
+
+            return [
+                Limit::perMinute($perIp)->by('registration-ip:'.$request->ip()),
+                Limit::perMinute($perIdentifier)->by('registration-identity:'.Str::transliterate($identity).'|'.$request->ip()),
+            ];
+        });
+
+        // Resending the link for an expired enrolment token. The token is the
+        // credential, so the per-token axis is keyed by a DIGEST of it: the
+        // rate-limit store must never hold something that can be redeemed.
+        RateLimiter::for('enrolment-resend', function (Request $request) {
+            $token = (string) $request->route('token');
+            $perIp = (int) config('registration.rate_limits.enrolment_resend_per_ip', 5);
+            $perToken = (int) config('registration.rate_limits.enrolment_resend_per_token', 3);
+
+            return [
+                Limit::perMinute($perIp)->by('enrolment-resend-ip:'.$request->ip()),
+                Limit::perMinute($perToken)->by('enrolment-resend-token:'.hash('sha256', $token)),
+            ];
+        });
+
+        // The unauthenticated "I do not have a link" form sends mail, so it is
+        // limited per source IP and per normalised address. The address axis is
+        // NOT keyed by IP on purpose: a distributed set of hosts must not be
+        // able to flood one mailbox.
+        RateLimiter::for('enrolment-link', function (Request $request) {
+            $identity = Str::lower(trim((string) $request->input('email')));
+            $perIp = (int) config('registration.rate_limits.enrolment_link_per_ip', 5);
+            $perIdentifier = (int) config('registration.rate_limits.enrolment_link_per_identifier', 3);
+
+            return [
+                Limit::perMinute($perIp)->by('enrolment-link-ip:'.$request->ip()),
+                Limit::perMinute($perIdentifier)->by('enrolment-link-identity:'.Str::transliterate($identity)),
+            ];
         });
     }
 

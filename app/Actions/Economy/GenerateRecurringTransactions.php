@@ -163,6 +163,9 @@ final class GenerateRecurringTransactions
         ])->all());
         $occurrence->participants()->createMany($source->participants->map(fn ($participant): array => [
             'household_member_id' => $participant->household_member_id,
+            'contact_id' => $participant->contact_id,
+            'display_name' => $participant->display_name,
+            'share_count' => $participant->share_count,
             'split_type' => $participant->split_type,
             'amount_minor' => $participant->amount_minor,
             'percentage' => $participant->percentage,

@@ -2,10 +2,12 @@
 
 namespace App\Actions\Economy;
 
+use App\Contracts\EntitlementGate;
 use App\Data\Economy\ImageProcessingData;
 use App\Enums\EconomicImportStatus;
 use App\Jobs\AnalyzeEconomicDocumentJob;
 use App\Models\EconomicImport;
+use App\Models\User;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 use Intervention\Image\Drivers\Gd\Driver as GdDriver;
@@ -17,6 +19,10 @@ use Intervention\Image\ImageManager;
  */
 final class ReprocessEconomicImport
 {
+    public function __construct(
+        private readonly EntitlementGate $entitlements,
+    ) {}
+
     /**
      * Rebuild the AI version of the import document and queue a new analysis.
      *
@@ -115,7 +121,19 @@ final class ReprocessEconomicImport
             'finished_at' => null,
         ]);
 
-        AnalyzeEconomicDocumentJob::dispatch($import->id);
+        // A reprocess is a fresh analysis attempt: it meters a new credit
+        // (inert while SaaS disabled). AI consumption belongs to the user
+        // initiating the operation, falling back to the import creator when
+        // the action runs outside an authenticated session. When no user is
+        // resolvable at all, skip metering entirely and let the job run with
+        // a null operationId as designed — never reserve against a null user.
+        $actor = auth()->user() ?? $import->creator;
+
+        $operationId = $actor instanceof User
+            ? $this->entitlements->reserveTicketRecognition($actor, $import->id)
+            : null;
+
+        AnalyzeEconomicDocumentJob::dispatch($import->id, $operationId);
 
         return $import->refresh();
     }

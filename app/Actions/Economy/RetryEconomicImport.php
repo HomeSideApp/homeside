@@ -2,9 +2,11 @@
 
 namespace App\Actions\Economy;
 
+use App\Contracts\EntitlementGate;
 use App\Enums\EconomicImportStatus;
 use App\Jobs\AnalyzeEconomicDocumentJob;
 use App\Models\EconomicImport;
+use App\Models\User;
 
 /**
  * Resets a failed import back to pending and dispatches the analysis job
@@ -12,6 +14,10 @@ use App\Models\EconomicImport;
  */
 final class RetryEconomicImport
 {
+    public function __construct(
+        private readonly EntitlementGate $entitlements,
+    ) {}
+
     /**
      * Reset a failed economic import and enqueue another analysis attempt.
      *
@@ -30,7 +36,19 @@ final class RetryEconomicImport
             'error_message' => null,
         ]);
 
-        AnalyzeEconomicDocumentJob::dispatch($import->id);
+        // A manual retry is a fresh analysis attempt: it meters a new credit
+        // (inert while SaaS disabled). AI consumption belongs to the user
+        // initiating the operation, falling back to the import creator when
+        // the action runs outside an authenticated session. When no user is
+        // resolvable at all, skip metering entirely and let the job run with
+        // a null operationId as designed — never reserve against a null user.
+        $actor = auth()->user() ?? $import->creator;
+
+        $operationId = $actor instanceof User
+            ? $this->entitlements->reserveTicketRecognition($actor, $import->id)
+            : null;
+
+        AnalyzeEconomicDocumentJob::dispatch($import->id, $operationId);
 
         return $import->fresh();
     }

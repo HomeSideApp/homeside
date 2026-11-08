@@ -24,7 +24,8 @@ trait UserValidationRules
             'role' => ['required_without:roles', 'exists:roles,slug'],
             'roles' => ['sometimes', 'array', 'min:1'],
             'roles.*' => ['string', 'distinct', 'exists:roles,slug'],
-            'can_create_households' => ['sometimes', 'boolean'],
+            // Tri-state: null delegates, false forbids; `true` is not a valid state.
+            'can_create_households_override' => ['sometimes', 'nullable', 'boolean', Rule::in(['0', ''])],
         ];
     }
 
@@ -40,7 +41,8 @@ trait UserValidationRules
             'role' => ['sometimes', 'exists:roles,slug'],
             'roles' => ['sometimes', 'array', 'min:1'],
             'roles.*' => ['string', 'distinct', 'exists:roles,slug'],
-            'can_create_households' => ['sometimes', 'boolean'],
+            // Tri-state: null delegates, false forbids; `true` is not a valid state.
+            'can_create_households_override' => ['sometimes', 'nullable', 'boolean', Rule::in(['0', ''])],
         ];
     }
 }

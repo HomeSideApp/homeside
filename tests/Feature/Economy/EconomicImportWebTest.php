@@ -2,15 +2,20 @@
 
 namespace Tests\Feature\Economy;
 
+use App\Enums\EconomicImportStatus;
 use App\Jobs\AnalyzeEconomicDocumentJob;
+use App\Models\Contact;
+use App\Models\EconomicAccount;
 use App\Models\EconomicDocument;
 use App\Models\EconomicImport;
+use App\Models\EconomicTransaction;
 use App\Models\Household;
 use App\Models\HouseholdMember;
 use App\Models\User;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -228,6 +233,262 @@ final class EconomicImportWebTest extends TestCase
         $this->assertDatabaseCount('economic_documents', 0);
         $this->assertDatabaseCount('economic_imports', 0);
         Queue::assertNotPushed(AnalyzeEconomicDocumentJob::class);
+    }
+
+    /**
+     * Verify that the review page only receives the authenticated user's active accounts.
+     *
+     * @return void This test method does not return a value.
+     */
+    public function test_review_page_only_exposes_the_authenticated_users_active_accounts(): void
+    {
+        $user = $this->authenticateUser();
+        $document = EconomicDocument::factory()->private()->uploadedBy($user)->create();
+        $import = EconomicImport::factory()->private()->createdBy($user)->create([
+            'document_id' => $document->id,
+        ]);
+        $account = EconomicAccount::factory()->forUser($user)->create(['name' => 'Everyday wallet']);
+        EconomicAccount::factory()->forUser($user)->create([
+            'name' => 'Archived wallet',
+            'archived_at' => now(),
+        ]);
+        $foreignAccount = EconomicAccount::factory()->create(['name' => 'Foreign wallet']);
+
+        $response = $this->actingAs($user)->get(route('economy.me.imports.show', $import));
+
+        $response->assertOk()->assertInertia(fn (Assert $page): Assert => $page
+            ->component('economy/imports/Review')
+            ->where('accounts', fn (Collection $accounts): bool => $accounts->pluck('id')->all() === [$account->id])
+            ->where('accounts.0.name', 'Everyday wallet')
+        );
+
+        $this->assertNotSame($user->id, $foreignAccount->user_id);
+    }
+
+    /**
+     * Verify that confirming an import persists the selected account on the created transaction.
+     *
+     * @return void This test method does not return a value.
+     */
+    public function test_confirming_private_import_persists_the_selected_account(): void
+    {
+        $user = $this->authenticateUser();
+        $document = EconomicDocument::factory()->private()->uploadedBy($user)->create();
+        $import = EconomicImport::factory()->private()->createdBy($user)->extracted([
+            'title' => 'Groceries',
+            'amount' => '12.10',
+            'currency' => 'EUR',
+        ])->create(['document_id' => $document->id]);
+        $account = EconomicAccount::factory()->forUser($user)->create();
+
+        $response = $this->actingAs($user)->post(route('economy.me.imports.confirm', $import), [
+            'account_id' => $account->id,
+        ]);
+
+        $response->assertRedirect();
+        $response->assertSessionHasNoErrors();
+
+        $transaction = EconomicTransaction::query()->sole();
+
+        $this->assertSame($account->id, $transaction->account_id);
+        $this->assertSame(EconomicImportStatus::Confirmed, $import->fresh()->status);
+    }
+
+    /**
+     * Verify that confirming an import rejects an account owned by another user.
+     *
+     * @return void This test method does not return a value.
+     */
+    public function test_confirming_private_import_rejects_an_account_of_another_user(): void
+    {
+        $user = $this->authenticateUser();
+        $document = EconomicDocument::factory()->private()->uploadedBy($user)->create();
+        $import = EconomicImport::factory()->private()->createdBy($user)->extracted([
+            'title' => 'Groceries',
+            'amount' => '12.10',
+            'currency' => 'EUR',
+        ])->create(['document_id' => $document->id]);
+        $foreignAccount = EconomicAccount::factory()->create();
+
+        $response = $this->actingAs($user)->post(route('economy.me.imports.confirm', $import), [
+            'account_id' => $foreignAccount->id,
+        ]);
+
+        $response->assertSessionHasErrors('account_id');
+        $this->assertDatabaseCount('economic_transactions', 0);
+        $this->assertSame(EconomicImportStatus::ReadyForReview, $import->fresh()->status);
+    }
+
+    /**
+     * Verify that confirming an import persists the reviewed notes on the created transaction.
+     *
+     * @return void This test method does not return a value.
+     */
+    public function test_confirming_private_import_persists_the_reviewed_notes(): void
+    {
+        $user = $this->authenticateUser();
+        $document = EconomicDocument::factory()->private()->uploadedBy($user)->create();
+        $import = EconomicImport::factory()->private()->createdBy($user)->extracted([
+            'title' => 'Groceries',
+            'amount' => '12.10',
+            'currency' => 'EUR',
+        ])->create(['document_id' => $document->id]);
+
+        $response = $this->actingAs($user)->post(route('economy.me.imports.confirm', $import), [
+            'notes' => 'Weekly grocery run for the family',
+        ]);
+
+        $response->assertRedirect();
+        $response->assertSessionHasNoErrors();
+
+        $transaction = EconomicTransaction::query()->sole();
+
+        $this->assertSame('Weekly grocery run for the family', $transaction->notes);
+        $this->assertSame(EconomicImportStatus::Confirmed, $import->fresh()->status);
+    }
+
+    /**
+     * Verify that confirming an import rejects notes longer than the allowed length.
+     *
+     * @return void This test method does not return a value.
+     */
+    public function test_confirming_private_import_rejects_notes_longer_than_the_limit(): void
+    {
+        $user = $this->authenticateUser();
+        $document = EconomicDocument::factory()->private()->uploadedBy($user)->create();
+        $import = EconomicImport::factory()->private()->createdBy($user)->extracted([
+            'title' => 'Groceries',
+            'amount' => '12.10',
+            'currency' => 'EUR',
+        ])->create(['document_id' => $document->id]);
+
+        $response = $this->actingAs($user)->post(route('economy.me.imports.confirm', $import), [
+            'notes' => str_repeat('a', 1001),
+        ]);
+
+        $response->assertSessionHasErrors('notes');
+        $this->assertDatabaseCount('economic_transactions', 0);
+        $this->assertSame(EconomicImportStatus::ReadyForReview, $import->fresh()->status);
+    }
+
+    /**
+     * Verify that an empty reviewed notes value is normalized to null instead of an empty string.
+     *
+     * @return void This test method does not return a value.
+     */
+    public function test_confirming_private_import_with_empty_notes_persists_null(): void
+    {
+        $user = $this->authenticateUser();
+        $document = EconomicDocument::factory()->private()->uploadedBy($user)->create();
+        $import = EconomicImport::factory()->private()->createdBy($user)->extracted([
+            'title' => 'Groceries',
+            'amount' => '12.10',
+            'currency' => 'EUR',
+        ])->create(['document_id' => $document->id]);
+
+        $response = $this->actingAs($user)->post(route('economy.me.imports.confirm', $import), [
+            'notes' => '',
+        ]);
+
+        $response->assertRedirect();
+        $response->assertSessionHasNoErrors();
+
+        $transaction = EconomicTransaction::query()->sole();
+
+        $this->assertNull($transaction->notes);
+    }
+
+    /**
+     * Verify that confirming an import links a contact visible to the user to the created transaction.
+     *
+     * @return void This test method does not return a value.
+     */
+    public function test_confirming_private_import_links_a_visible_contact(): void
+    {
+        $user = $this->authenticateUser();
+        $document = EconomicDocument::factory()->private()->uploadedBy($user)->create();
+        $import = EconomicImport::factory()->private()->createdBy($user)->extracted([
+            'title' => 'Groceries',
+            'amount' => '12.10',
+            'currency' => 'EUR',
+        ])->create(['document_id' => $document->id]);
+        $contact = Contact::create([
+            'user_id' => $user->id,
+            'type' => 'person',
+            'display_name' => 'Ana',
+        ]);
+
+        $response = $this->actingAs($user)->post(route('economy.me.imports.confirm', $import), [
+            'contact_id' => $contact->id,
+        ]);
+
+        $response->assertRedirect();
+        $response->assertSessionHasNoErrors();
+
+        $transaction = EconomicTransaction::query()->sole();
+        $transaction->load('contacts');
+
+        $this->assertSame([$contact->id], $transaction->contacts->pluck('id')->all());
+        $this->assertSame('related', $transaction->contacts->first()?->pivot->role);
+        $this->assertSame(EconomicImportStatus::Confirmed, $import->fresh()->status);
+    }
+
+    /**
+     * Verify that confirming an import rejects a contact that is not visible to the user.
+     *
+     * @return void This test method does not return a value.
+     */
+    public function test_confirming_private_import_rejects_a_contact_of_another_user(): void
+    {
+        $user = $this->authenticateUser();
+        $document = EconomicDocument::factory()->private()->uploadedBy($user)->create();
+        $import = EconomicImport::factory()->private()->createdBy($user)->extracted([
+            'title' => 'Groceries',
+            'amount' => '12.10',
+            'currency' => 'EUR',
+        ])->create(['document_id' => $document->id]);
+        $foreignContact = Contact::create([
+            'user_id' => User::factory()->create()->id,
+            'type' => 'person',
+            'display_name' => 'Ajeno',
+        ]);
+
+        $response = $this->actingAs($user)->post(route('economy.me.imports.confirm', $import), [
+            'contact_id' => $foreignContact->id,
+        ]);
+
+        $response->assertSessionHasErrors('contact_id');
+        $this->assertDatabaseCount('economic_transactions', 0);
+        $this->assertDatabaseCount('economic_transaction_contacts', 0);
+        $this->assertSame(EconomicImportStatus::ReadyForReview, $import->fresh()->status);
+    }
+
+    /**
+     * Verify that confirming an import without a contact leaves the transaction unlinked.
+     *
+     * @return void This test method does not return a value.
+     */
+    public function test_confirming_private_import_without_a_contact_links_none(): void
+    {
+        $user = $this->authenticateUser();
+        $document = EconomicDocument::factory()->private()->uploadedBy($user)->create();
+        $import = EconomicImport::factory()->private()->createdBy($user)->extracted([
+            'title' => 'Groceries',
+            'amount' => '12.10',
+            'currency' => 'EUR',
+        ])->create(['document_id' => $document->id]);
+
+        $response = $this->actingAs($user)->post(route('economy.me.imports.confirm', $import));
+
+        $response->assertRedirect();
+        $response->assertSessionHasNoErrors();
+
+        $transaction = EconomicTransaction::query()->sole();
+        $transaction->load('contacts');
+
+        $this->assertCount(0, $transaction->contacts);
+        $this->assertDatabaseCount('economic_transaction_contacts', 0);
+        $this->assertSame(EconomicImportStatus::Confirmed, $import->fresh()->status);
     }
 
     /**

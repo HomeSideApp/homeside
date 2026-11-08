@@ -24,13 +24,17 @@ return new class extends Migration
             $table->foreignUuid('owner_id')->nullable()->constrained('users')->restrictOnDelete();
         });
         Schema::table('users', function (Blueprint $table): void {
-            $table->boolean('can_create_households')->default(true);
+            // NULLABLE tri-state added by the registration-normalisation work:
+            // null delegates to Policy + EntitlementGate, false is an explicit
+            // prohibition. There is deliberately no `true` state; a grant must
+            // come from the entitlement gate, never from a permissive default.
+            $table->boolean('can_create_households_override')->nullable();
         });
     }
 
     public function down(): void
     {
-        Schema::table('users', fn (Blueprint $table) => $table->dropColumn('can_create_households'));
+        Schema::table('users', fn (Blueprint $table) => $table->dropColumn('can_create_households_override'));
         Schema::table('households', function (Blueprint $table): void {
             $table->dropConstrainedForeignId('owner_id');
             $table->dropForeign(['created_by']);

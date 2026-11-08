@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Web;
 use App\Actions\Economy\ConfirmEconomicImport;
 use App\Actions\Economy\CreateEconomicImport;
 use App\Actions\Economy\DiscardEconomicImport;
+use App\Actions\Economy\ListAvailableAccounts;
 use App\Actions\Economy\ListEconomicImports;
 use App\Actions\Economy\ReprocessEconomicImport;
 use App\Actions\Economy\RetryEconomicImport;
@@ -124,11 +125,11 @@ final class EconomicImportController extends Controller
      */
     public function show(ViewEconomicImportRequest $request, ?Household $household, EconomicImport $import): Response
     {
-
         return Inertia::render('economy/imports/Review', [
             'household' => $this->resolveHousehold($request),
             'importData' => (new EconomicImportResource($import->load(['document', 'aiRun'])))->resolve($request),
             'members' => $import->household?->members->load('user') ?? [],
+            'accounts' => (new ListAvailableAccounts)->execute($this->authenticatedUser($request), $request),
         ]);
     }
 

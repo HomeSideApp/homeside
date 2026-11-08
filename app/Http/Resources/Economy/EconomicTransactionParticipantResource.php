@@ -19,6 +19,11 @@ final class EconomicTransactionParticipantResource extends JsonResource
      * `amount` is the field the web detail badges render, while `amount_minor` keeps the integer
      * value consumed by the mobile contract.
      *
+     * A participant carries one of three identities: a household member (`household_member` plus a
+     * null `display_name`), a named external person (`display_name` and an optional `contact_id`
+     * with a null `household_member`), or an anonymous portion (no name, no contact, and
+     * `share_count` heads). `share_count` is always present so clients can explain equal splits.
+     *
      * @param  Request  $request  The incoming HTTP request.
      * @return array<string, mixed> The serialized participant.
      */
@@ -30,7 +35,10 @@ final class EconomicTransactionParticipantResource extends JsonResource
             'amount' => $this->formatMinor($this->amount_minor),
             'percentage' => $this->percentage,
             'amount_minor' => $this->amount_minor,
-            'household_member' => [
+            'display_name' => $this->display_name,
+            'contact_id' => $this->contact_id,
+            'share_count' => $this->share_count,
+            'household_member' => $this->householdMember === null ? null : [
                 'id' => $this->householdMember?->id,
                 'user' => [
                     'id' => $this->householdMember?->user?->id,

@@ -28,7 +28,7 @@ return [
     ],
     'verify_email' => [
         'subject' => 'Activate your account on :app',
-        'line' => 'Your account has been created. Select the link to set your password and activate your account.',
+        'line' => 'Your account has been created. Confirm this email address to finish setting it up.',
         'action' => 'Verify email',
     ],
     'reset_password' => [
@@ -43,5 +43,16 @@ return [
         'instructions' => 'Select the button below to configure a new OTP code. The link expires in 30 minutes.',
         'current_code' => 'Your current OTP will continue to work until you configure a new one.',
         'action' => 'Reset OTP',
+    ],
+    'enrolment_link' => [
+        'subject' => 'Finish setting up your account on :app',
+        'line' => 'Your account on :app still needs a two-factor authentication app before you can sign in.',
+        'instructions' => 'Select the button below to set it up.',
+        'valid_hour' => 'This link is valid for one hour.',
+        'valid_hours' => 'This link is valid for :hours hours.',
+        'valid_minute' => 'This link is valid for one minute.',
+        'valid_minutes' => 'This link is valid for :minutes minutes.',
+        'action' => 'Finish setting up two-factor authentication',
+        'not_you' => 'If you did not create this account, you can ignore this email and nothing will change.',
     ],
 ];

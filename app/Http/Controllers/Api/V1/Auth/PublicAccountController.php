@@ -2,7 +2,13 @@
 
 namespace App\Http\Controllers\Api\V1\Auth;
 
+use App\Actions\Auth\CreateAuthenticationBootstrap;
+use App\Actions\Auth\RegisterAccount;
+use App\Data\Auth\RegisterAccountData;
 use App\Enums\AppLocale;
+use App\Enums\AuthenticationBootstrapPurpose;
+use App\Enums\RegistrationChannel;
+use App\Enums\RegistrationDecision;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\ConfirmEmailRequest;
 use App\Http\Requests\ConfirmOtpResetRequest;
@@ -12,9 +18,7 @@ use App\Http\Requests\RegisterAccountApiRequest;
 use App\Http\Requests\ResetAccountPasswordRequest;
 use App\Http\Requests\SetupOtpResetRequest;
 use App\Http\Resources\Users\UserResource;
-use App\Models\Role;
 use App\Models\User;
-use App\Notifications\MobileVerifyEmailNotification;
 use App\Notifications\ResetPasswordNotification;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Http\JsonResponse;
@@ -25,20 +29,70 @@ use PragmaRX\Google2FA\Google2FA;
 
 final class PublicAccountController extends Controller
 {
-    public function register(RegisterAccountApiRequest $request): JsonResponse
-    {
+    /**
+     * Register a new account through the shared registration use case.
+     *
+     * Contract:
+     * - `denied` (the secure API default): 403 `{code, message}` and nothing is
+     *   created or mailed.
+     * - `approval_required`: 201 with `state = approval_pending`, the user is
+     *   created as `pending`, and NO authentication token is issued.
+     * - `allowed`: 201 with the user resource.
+     *
+     * Both creating decisions also return a single-use `enrolment` bootstrap
+     * (`token` + `expires_at`) so the client can complete the two-factor step
+     * without a session. The token is the only credential handed out here; the
+     * enrolment SECRET is never delivered by this endpoint, only by the
+     * bootstrap-authenticated setup exchange. A token is never returned for an
+     * account that is not approved.
+     */
+    public function register(
+        RegisterAccountApiRequest $request,
+        RegisterAccount $accounts,
+        CreateAuthenticationBootstrap $bootstraps,
+    ): JsonResponse {
         $validated = $request->validated();
-        $user = User::create([
-            ...$validated,
-            'locale' => $validated['locale'] ?? AppLocale::default()->value,
-        ]);
-        $role = Role::query()->where('slug', 'user')->first();
-        if ($role !== null) {
-            $user->assignRole($role);
-        }
-        $user->notify(new MobileVerifyEmailNotification);
 
-        return UserResource::make($user)->response()->setStatusCode(201);
+        $outcome = $accounts->execute(new RegisterAccountData(
+            name: $validated['name'],
+            email: $validated['email'],
+            password: $validated['password'],
+            locale: $validated['locale'] ?? AppLocale::default()->value,
+            channel: RegistrationChannel::Api,
+            origin: 'api',
+        ));
+
+        if ($outcome->decision === RegistrationDecision::ExistingIdentity) {
+            return response()->json([
+                'code' => 'identity_exists',
+                'message' => 'An account already exists for this email. Authenticate to continue.',
+            ], 409);
+        }
+
+        if (! $outcome->registered() || $outcome->user === null) {
+            return response()->json([
+                'code' => $outcome->reason ?? 'registration_disabled',
+                'message' => 'Registration is not available on this channel.',
+            ], 403);
+        }
+
+        $resource = UserResource::make($outcome->user);
+
+        $additional = [
+            'state' => $outcome->decision === RegistrationDecision::ApprovalRequired
+                ? 'approval_pending'
+                : $outcome->nextStep,
+        ];
+
+        if (! $outcome->user->hasEnabledTwoFactorAuthentication()) {
+            $token = $bootstraps->execute($outcome->user, AuthenticationBootstrapPurpose::TwoFactorEnrolment);
+            $additional['enrolment'] = [
+                'token' => $token,
+                'expires_at' => now()->addMinutes(CreateAuthenticationBootstrap::TTL_MINUTES)->toISOString(),
+            ];
+        }
+
+        return $resource->additional($additional)->response()->setStatusCode(201);
     }
 
     public function forgotPassword(RecoveryEmailRequest $request): JsonResponse

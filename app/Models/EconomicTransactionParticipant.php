@@ -19,7 +19,10 @@ use Illuminate\Support\Carbon;
  *
  * @property string $id The unique identifier for the participant (UUID).
  * @property string $transaction_id The id of the economic transaction the participant belongs to.
- * @property string $household_member_id The id of the household member participating in the transaction.
+ * @property string|null $household_member_id The id of the household member participating in the transaction, or null for external identities.
+ * @property string|null $contact_id The optional address book contact linked to an external participant.
+ * @property string|null $display_name The optional name of an external participant.
+ * @property int $share_count The number of heads this participant represents in an equal split.
  * @property SplitType $split_type The type of split for the participant.
  * @property int $amount_minor The amount assigned to the participant in minor currency units.
  * @property int|null $percentage The percentage assigned to the participant, if applicable.
@@ -29,6 +32,7 @@ use Illuminate\Support\Carbon;
  * Relationships:
  * @property EconomicTransaction|null $transaction The economic transaction the participant belongs to.
  * @property HouseholdMember|null $householdMember The household member participating in the transaction.
+ * @property Contact|null $contact The contact linked to an external participant.
  *
  * @mixin Model
  */
@@ -37,8 +41,8 @@ class EconomicTransactionParticipant extends Model
     use HasFactory, HasUuids;
 
     protected $fillable = [
-        'transaction_id', 'household_member_id', 'split_type',
-        'amount_minor', 'percentage',
+        'transaction_id', 'household_member_id', 'contact_id', 'display_name',
+        'share_count', 'split_type', 'amount_minor', 'percentage',
     ];
 
     /**
@@ -52,6 +56,7 @@ class EconomicTransactionParticipant extends Model
             'split_type' => SplitType::class,
             'amount_minor' => 'integer',
             'percentage' => 'integer',
+            'share_count' => 'integer',
         ];
     }
 
@@ -65,5 +70,11 @@ class EconomicTransactionParticipant extends Model
     public function householdMember(): BelongsTo
     {
         return $this->belongsTo(HouseholdMember::class, 'household_member_id');
+    }
+
+    /** @return BelongsTo<Contact, $this> */
+    public function contact(): BelongsTo
+    {
+        return $this->belongsTo(Contact::class, 'contact_id');
     }
 }

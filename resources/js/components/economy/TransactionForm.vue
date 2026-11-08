@@ -214,7 +214,10 @@ const taxes: EconomyTax[] = (props.transaction?.taxes ?? []).map((tax) => ({
 const participants: EconomyParticipant[] = (
     props.transaction?.participants ?? []
 ).map((participant) => ({
-    household_member_id: participant.household_member.id,
+    household_member_id: participant.household_member?.id ?? null,
+    contact_id: participant.contact_id ?? null,
+    display_name: participant.display_name ?? null,
+    share_count: participant.share_count ?? 1,
     split_type: participant.split_type,
     amount: participant.amount,
     percentage: participant.percentage,
@@ -249,6 +252,19 @@ const form = useForm(isEditing ? 'put' : 'post', () => submitUrl.value, {
     items,
     taxes,
     participants,
+});
+/**
+ * Reka UI forbids an empty `SelectItem` value, so "no account" travels as a sentinel.
+ */
+const NO_ACCOUNT = '__none__';
+/**
+ * The form keeps no account as an empty string, so an untouched transaction never submits one.
+ */
+const accountSelectValue = computed<string>({
+    get: () => form.account_id || NO_ACCOUNT,
+    set: (value) => {
+        form.account_id = value === NO_ACCOUNT ? '' : value;
+    },
 });
 
 function validateField(field?: string): void {
@@ -462,7 +478,7 @@ watch(
                                 t('economy.account.label')
                             }}</FieldLabel
                             ><Select
-                                v-model="form.account_id"
+                                v-model="accountSelectValue"
                                 @update:model-value="
                                     form.validate('account_id')
                                 "
@@ -474,7 +490,7 @@ watch(
                                 </SelectTrigger>
                                 <SelectContent>
                                     <SelectGroup>
-                                        <SelectItem value="">
+                                        <SelectItem :value="NO_ACCOUNT">
                                             {{ t('economy.account.none') }}
                                         </SelectItem>
                                         <SelectItem
