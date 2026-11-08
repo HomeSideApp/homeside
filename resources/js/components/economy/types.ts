@@ -40,8 +40,18 @@ export interface EconomyTax {
     tax_amount?: string;
 }
 
+/**
+ * A single share of a shared transaction, either a household member, a named external person
+ * without a household membership, or the single unnamed portion of the split.
+ */
 export interface EconomyParticipant {
-    household_member_id: string;
+    household_member_id: string | null;
+    /** Address book contact linked to a named external participant. */
+    contact_id?: string | null;
+    /** Name of an external participant; null or missing for members and the unnamed share. */
+    display_name?: string | null;
+    /** Number of people represented by the unnamed share. */
+    share_count?: number;
     split_type: 'equal' | 'fixed' | 'percentage';
     amount: string;
     percentage: number | null;
@@ -158,7 +168,13 @@ export interface EconomyTransaction {
         split_type: 'equal' | 'fixed' | 'percentage';
         amount: string;
         percentage: number | null;
-        household_member: EconomyMember;
+        display_name?: string | null;
+        contact_id?: string | null;
+        share_count?: number;
+        /**
+         * Null for external and unnamed participants, which carry `display_name` instead.
+         */
+        household_member: EconomyMember | null;
     }>;
     source_document?: EconomyDocument | null;
 }

@@ -7,6 +7,7 @@ use App\Actions\Economy\DeleteEconomicTransaction;
 use App\Actions\Economy\GetEconomicTransaction;
 use App\Actions\Economy\GetEconomyStats;
 use App\Actions\Economy\GetPersonalTotalsStats;
+use App\Actions\Economy\ListAvailableAccounts;
 use App\Actions\Economy\ListEconomicTransactions;
 use App\Actions\Economy\UpdateEconomicTransaction;
 use App\Data\Economy\CreateEconomicTransactionData;
@@ -19,10 +20,8 @@ use App\Http\Requests\ReadEconomyRequest;
 use App\Http\Requests\StoreEconomicTransactionRequest;
 use App\Http\Requests\UpdateEconomicTransactionRequest;
 use App\Http\Requests\ViewEconomicTransactionRequest;
-use App\Http\Resources\Economy\EconomicAccountResource;
 use App\Http\Resources\Economy\EconomicTransactionResource;
 use App\Http\Resources\Households\HouseholdMemberResource;
-use App\Models\EconomicAccount;
 use App\Models\EconomicTransaction;
 use App\Models\Household;
 use App\Services\Contacts\ContactResolutionService;
@@ -264,16 +263,7 @@ final class EconomicTransactionController extends Controller
      */
     private function availableAccounts(Request $request): array
     {
-        $user = $this->authenticatedUser($request);
-
-        return EconomicAccount::query()
-            ->ownedBy($user->id)
-            ->active()
-            ->with('paymentMethods')
-            ->orderBy('name')
-            ->get()
-            ->map(fn (EconomicAccount $account): array => (new EconomicAccountResource($account))->resolve($request))
-            ->all();
+        return (new ListAvailableAccounts)->execute($this->authenticatedUser($request), $request);
     }
 
     /**

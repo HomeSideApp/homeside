@@ -168,6 +168,8 @@ return [
         'provider_exists' => 'A provider already exists for the :module module. Edit it instead.',
         'collection_name_exists' => 'A collection with that name already exists in this folder.',
         'participants_same_split_type' => 'All participants must use the same split type.',
+        'participants_single_anonymous' => 'Only one anonymous share is allowed per transaction.',
+        'participants_duplicate_identity' => 'Each participant may only appear once in the split.',
         'participant_split_total' => 'The split total must match the transaction amount.',
         'participant_percentage_total' => 'The split percentages must add up to 100.',
         'shared_requires_participant' => 'A shared transaction requires at least one participant.',

@@ -123,7 +123,29 @@ class UpdateEconomicTransactionRequest extends FormRequest
                     __('app.validation.generated_occurrence_cannot_recur'),
                 );
             }
+
+            $participants = $this->input('participants');
+
+            if (is_array($participants) && $this->countAnonymousParticipants($participants) > 1) {
+                $validator->errors()->add(
+                    'participants',
+                    __('app.validation.participants_single_anonymous'),
+                );
+            }
         }];
+    }
+
+    /**
+     * Count participants without member identity and without a visible name.
+     *
+     * @param  array<int|string, mixed>  $participants  The submitted participant rows.
+     * @return int The number of anonymous portions in the split.
+     */
+    private function countAnonymousParticipants(array $participants): int
+    {
+        return count(array_filter($participants, fn (mixed $participant): bool => is_array($participant)
+            && blank($participant['household_member_id'] ?? null)
+            && blank($participant['display_name'] ?? null)));
     }
 
     /**
@@ -168,7 +190,16 @@ class UpdateEconomicTransactionRequest extends FormRequest
             'taxes.*.taxable_base' => ['required_with:taxes', 'numeric', 'min:0'],
             'taxes.*.amount' => ['required_with:taxes', 'numeric', 'min:0'],
             'participants' => ['nullable', 'array'],
-            'participants.*.household_member_id' => ['required_with:participants', 'string', 'distinct', Rule::exists('household_members', 'id')->where('household_id', $householdId)],
+            'participants.*.household_member_id' => ['nullable', 'string', 'distinct', Rule::exists('household_members', 'id')->where('household_id', $householdId)],
+            'participants.*.contact_id' => ['nullable', 'uuid', Rule::exists('contacts', 'id')->where(
+                fn ($query) => $query
+                    ->where('user_id', $this->user()?->id)
+                    ->orWhereIn('household_id', $this->user() !== null ? app(HouseholdAccess::class)->householdIds($this->user(), 'contacts') : [])
+            )],
+            // A row without member identity and without a name is the single anonymous portion,
+            // so the name cannot be required outright: the after() hook rejects a second one.
+            'participants.*.display_name' => ['nullable', 'string', 'max:120', 'distinct:ignore_case'],
+            'participants.*.share_count' => ['nullable', 'integer', 'min:1', 'max:20'],
             'participants.*.split_type' => ['required_with:participants', 'string', 'in:equal,fixed,percentage'],
             'participants.*.amount' => ['nullable', 'numeric', 'min:0'],
             'participants.*.percentage' => ['nullable', 'numeric', 'min:0', 'max:100'],

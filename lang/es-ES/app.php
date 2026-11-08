@@ -168,6 +168,8 @@ return [
         'provider_exists' => 'Ya existe un proveedor para el módulo :module. Edítalo en su lugar.',
         'collection_name_exists' => 'Ya existe una colección con ese nombre en esta carpeta.',
         'participants_same_split_type' => 'Todos los participantes deben usar el mismo tipo de reparto.',
+        'participants_single_anonymous' => 'Solo se permite una parte anónima por transacción.',
+        'participants_duplicate_identity' => 'Cada participante puede aparecer una sola vez en el reparto.',
         'participant_split_total' => 'La suma del reparto debe coincidir con el importe de la transacción.',
         'participant_percentage_total' => 'Los porcentajes del reparto deben sumar 100.',
         'shared_requires_participant' => 'Una transacción compartida necesita al menos un participante.',

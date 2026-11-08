@@ -843,6 +843,14 @@ export default {
             fixedAmountPlaceholder: '0,00',
             splitPercentageTotal: 'Suma de porcentajes: {current}% / 100%',
             splitFixedTotal: 'Repartido: {current} {currency} de {total}',
+            externalParticipantsTitle: 'Otros participantes',
+            addExternalParticipant: 'Añadir persona',
+            addAnonymousShare: 'Parte sin nombre',
+            externalParticipantPlaceholder: 'Nombre de la persona',
+            anonymousShareCount: 'Personas',
+            anonymousShareOne: '1 persona',
+            anonymousShareMany: '{count} personas',
+            removeParticipant: 'Eliminar participante',
             linkedContact: 'Contacto vinculado',
             linkedContactPlaceholder: 'Buscar contacto...',
             percentage: 'Porcentaje',
@@ -1081,7 +1089,8 @@ export default {
             overview: {
                 title: 'Facturación SaaS',
                 listTitle: 'Usuarios y beneficios',
-                description: 'Vista de solo lectura del plan efectivo, origen, caducidad y uso de cada usuario.',
+                description:
+                    'Vista de solo lectura del plan efectivo, origen, caducidad y uso de cada usuario.',
                 searchPlaceholder: 'Buscar por email...',
                 search: 'Buscar',
                 email: 'Email',
@@ -1105,7 +1114,8 @@ export default {
                 archived: 'Archivado',
                 publish: 'Publicar borrador',
                 archive: 'Archivar',
-                draftEditor: 'Editor de borrador (las versiones publicadas son inmutables)',
+                draftEditor:
+                    'Editor de borrador (las versiones publicadas son inmutables)',
                 features: 'Funciones',
                 quotas: 'Cuotas',
                 addRow: 'Añadir fila',
@@ -1113,7 +1123,8 @@ export default {
                 featureValue: 'true/false',
                 quotaKey: 'clave de cuota',
                 quotaValue: 'número o vacío (sin límite)',
-                quotaHint: 'Las cuotas son por métrica; deja el valor vacío para ilimitado.',
+                quotaHint:
+                    'Las cuotas son por métrica; deja el valor vacío para ilimitado.',
                 saveDraft: 'Guardar borrador',
                 prices: 'Precios (solo borrador)',
                 currency: 'Moneda',
@@ -1125,7 +1136,8 @@ export default {
             grants: {
                 title: 'Beneficios SaaS',
                 assignTitle: 'Asignar un beneficio',
-                assignDescription: 'Otorga una versión publicada de un plan a un usuario por email. Al asignar se reemplaza el beneficio activo anterior.',
+                assignDescription:
+                    'Otorga una versión publicada de un plan a un usuario por email. Al asignar se reemplaza el beneficio activo anterior.',
                 email: 'Email del usuario',
                 planVersion: 'Versión del plan (publicada)',
                 selectVersion: 'Elegir versión',
@@ -1134,7 +1146,8 @@ export default {
                 assign: 'Asignar',
                 historyTitle: 'Historial de beneficios',
                 historyFor: 'Historial de beneficios de {email}',
-                historyDescription: 'Incluye filas revocadas y quién realizó cada cambio.',
+                historyDescription:
+                    'Incluye filas revocadas y quién realizó cada cambio.',
                 searchPlaceholder: 'Filtrar por email...',
                 search: 'Buscar',
                 plan: 'Plan',
@@ -1144,7 +1157,8 @@ export default {
                 revoked: 'Revocado',
                 revoke: 'Revocar',
                 revokeTitle: 'Revocar beneficio',
-                revokeDescription: 'El usuario pasa al plan gratuito inmediatamente. Motivo: {email}',
+                revokeDescription:
+                    'El usuario pasa al plan gratuito inmediatamente. Motivo: {email}',
             },
             promotions: {
                 title: 'Promociones SaaS',

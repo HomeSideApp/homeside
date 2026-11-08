@@ -6,6 +6,7 @@ use App\Data\Economy\EconomicTransactionParticipantData;
 use App\Data\Economy\UpdateEconomicTransactionData;
 use App\Enums\RecurrenceFrequency;
 use App\Enums\TransactionScope;
+use App\Models\Contact;
 use App\Models\EconomicAccount;
 use App\Models\EconomicTransaction;
 use Illuminate\Support\Carbon;
@@ -56,6 +57,9 @@ final class UpdateEconomicTransaction
                     split_type: $participant->split_type,
                     amount_minor: $participant->amount_minor,
                     percentage: $participant->percentage,
+                    contact_id: $participant->contact_id,
+                    display_name: $participant->display_name,
+                    share_count: $participant->share_count ?? 1,
                 )
             )->all();
 
@@ -66,10 +70,31 @@ final class UpdateEconomicTransaction
             }
 
             $memberIds = $transaction->household?->members()->pluck('id')->all() ?? [];
+            $viewer = auth()->user() ?? $transaction->creator;
+
             foreach ($participantData as $participant) {
-                if (! in_array($participant->household_member_id, $memberIds, true)) {
+                if ($participant->household_member_id !== null && $participant->household_member_id !== '') {
+                    if (! in_array($participant->household_member_id, $memberIds, true)) {
+                        throw ValidationException::withMessages([
+                            'participants' => __('app.validation.participants_belong_to_household'),
+                        ]);
+                    }
+
+                    continue;
+                }
+
+                if ($participant->contact_id === null || $viewer === null) {
+                    continue;
+                }
+
+                $contactIsVisible = Contact::query()
+                    ->visibleTo($viewer)
+                    ->whereKey($participant->contact_id)
+                    ->exists();
+
+                if (! $contactIsVisible) {
                     throw ValidationException::withMessages([
-                        'participants' => __('app.validation.participants_belong_to_household'),
+                        'participants' => __('app.errors.contact_not_available'),
                     ]);
                 }
             }

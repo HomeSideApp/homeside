@@ -5,6 +5,7 @@ import { useI18n } from 'vue-i18n';
 import AttachmentGallery from '@/components/economy/AttachmentGallery.vue';
 import type {
     EconomyAttachment,
+    EconomyMember,
     EconomyTransaction,
 } from '@/components/economy/types';
 import Heading from '@/components/Heading.vue';
@@ -61,6 +62,70 @@ const props = defineProps<{
     household: { id: string; name: string } | null;
     transaction: EconomyTransaction;
 }>();
+
+type TransactionParticipant = NonNullable<
+    EconomyTransaction['participants']
+>[number];
+
+/**
+ * The API serializes `household_member` as null for external and unnamed participants. The shared
+ * transaction type keeps it required because the transaction form maps member rows directly, so
+ * the detail page widens it here.
+ */
+type DetailParticipant = Omit<TransactionParticipant, 'household_member'> & {
+    household_member: EconomyMember | null;
+};
+
+const participants = computed(
+    () => (props.transaction.participants ?? []) as DetailParticipant[],
+);
+
+/**
+ * Label of a share, using the identity flavour the row carries: household member, named external
+ * person, or the unnamed portion expressed as a number of people.
+ */
+function participantName(participant: DetailParticipant): string {
+    if (participant.household_member) {
+        return participant.household_member.user.name;
+    }
+
+    if (participant.display_name) {
+        return participant.display_name;
+    }
+
+    const shareCount = participant.share_count ?? 1;
+
+    return shareCount === 1
+        ? t('economy.ui.anonymousShareOne')
+        : t('economy.ui.anonymousShareMany', { count: shareCount });
+}
+
+/**
+ * Avatar fallback letter of a share, or null when the share has no identity to show.
+ */
+function participantInitial(participant: DetailParticipant): string | null {
+    const label = participant.household_member
+        ? participant.household_member.user.name
+        : participant.display_name;
+
+    return label ? label.charAt(0).toUpperCase() : null;
+}
+
+/**
+ * Contact details shown under a household member name, resolved from the viewer's address book.
+ */
+function participantContact(participant: DetailParticipant): string | null {
+    const contact = participant.household_member?.contact;
+
+    if (!contact) {
+        return null;
+    }
+
+    const line = [contact.email, contact.phone].filter(Boolean).join(' · ');
+
+    return line === '' ? null : line;
+}
+
 const confirmDelete = ref(false);
 const canModify = computed(
     () => props.transaction.created_by.id === String(page.props.auth.user.id),
@@ -348,59 +413,48 @@ watchEffect(() => {
                             ></TableHeader
                         ><TableBody
                             ><TableRow
-                                v-for="participant in transaction.participants"
+                                v-for="participant in participants"
                                 :key="participant.id"
                                 ><TableCell
                                     ><div class="flex items-center gap-2">
-                                        <Avatar class="size-7">
+                                        <Avatar
+                                            v-if="
+                                                participantInitial(participant)
+                                            "
+                                            class="size-7"
+                                        >
                                             <AvatarImage
                                                 v-if="
                                                     participant.household_member
-                                                        .contact?.avatar_url
+                                                        ?.contact?.avatar_url
                                                 "
                                                 :src="
                                                     participant.household_member
                                                         .contact.avatar_url
                                                 "
                                                 :alt="
-                                                    participant.household_member
-                                                        .user.name
+                                                    participantName(participant)
                                                 "
                                             />
                                             <AvatarFallback>{{
-                                                participant.household_member.user.name
-                                                    .charAt(0)
-                                                    .toUpperCase()
+                                                participantInitial(participant)
                                             }}</AvatarFallback>
                                         </Avatar>
                                         <div class="flex min-w-0 flex-col">
                                             <span class="font-medium">{{
-                                                participant.household_member
-                                                    .user.name
+                                                participantName(participant)
                                             }}</span>
                                             <span
                                                 v-if="
-                                                    participant.household_member
-                                                        .contact &&
-                                                    (participant
-                                                        .household_member
-                                                        .contact.email ||
-                                                        participant
-                                                            .household_member
-                                                            .contact.phone)
+                                                    participantContact(
+                                                        participant,
+                                                    )
                                                 "
                                                 class="truncate text-xs text-muted-foreground"
                                                 >{{
-                                                    [
-                                                        participant
-                                                            .household_member
-                                                            .contact.email,
-                                                        participant
-                                                            .household_member
-                                                            .contact.phone,
-                                                    ]
-                                                        .filter(Boolean)
-                                                        .join(' · ')
+                                                    participantContact(
+                                                        participant,
+                                                    )
                                                 }}</span
                                             >
                                         </div>

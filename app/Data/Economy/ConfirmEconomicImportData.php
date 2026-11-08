@@ -24,6 +24,8 @@ final readonly class ConfirmEconomicImportData
      * @param  string|null  $currency  The reviewed ISO currency code, when supplied.
      * @param  string|null  $account_id  The reviewed private account identifier, or null when none applies.
      * @param  string|null  $place  The reviewed place, including null when explicitly cleared.
+     * @param  string|null  $notes  The reviewed free-form notes, including null when explicitly cleared.
+     * @param  string|null  $contact_id  The reviewed linked contact identifier, or null when none applies.
      * @param  Carbon|null  $occurred_at  The reviewed occurrence timestamp, including null when explicitly cleared.
      * @param  array<int, array<string, mixed>>|null  $items  The reviewed item collection, when supplied.
      * @param  array<int, array<string, mixed>>|null  $taxes  The reviewed tax collection, when supplied.
@@ -39,6 +41,8 @@ final readonly class ConfirmEconomicImportData
         public ?string $currency,
         public ?string $account_id,
         public ?string $place,
+        public ?string $notes,
+        public ?string $contact_id,
         public ?Carbon $occurred_at,
         public ?array $items,
         public ?array $taxes,
@@ -64,6 +68,8 @@ final readonly class ConfirmEconomicImportData
             currency: $data['currency'] ?? null,
             account_id: $data['account_id'] ?? null,
             place: $data['place'] ?? null,
+            notes: $data['notes'] ?? null,
+            contact_id: $data['contact_id'] ?? null,
             occurred_at: isset($data['occurred_at']) ? Carbon::parse($data['occurred_at']) : null,
             items: $data['items'] ?? null,
             taxes: $data['taxes'] ?? null,
@@ -90,6 +96,8 @@ final readonly class ConfirmEconomicImportData
             'currency' => $this->currency,
             'account_id' => $this->account_id,
             'place' => $this->place,
+            'notes' => $this->notes,
+            'contact_id' => $this->contact_id,
             'occurred_at' => $this->occurred_at?->toISOString(),
             'items' => $this->items,
             'taxes' => $this->taxes,

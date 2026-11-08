@@ -826,6 +826,14 @@ export default {
             fixedAmountPlaceholder: '0.00',
             splitPercentageTotal: 'Percentage total: {current}% / 100%',
             splitFixedTotal: 'Allocated: {current} {currency} of {total}',
+            externalParticipantsTitle: 'Other participants',
+            addExternalParticipant: 'Add person',
+            addAnonymousShare: 'Unnamed share',
+            externalParticipantPlaceholder: 'Name of the person',
+            anonymousShareCount: 'People',
+            anonymousShareOne: '1 person',
+            anonymousShareMany: '{count} people',
+            removeParticipant: 'Remove participant',
             linkedContact: 'Linked contact',
             linkedContactPlaceholder: 'Search contact...',
             percentage: 'Percentage',
@@ -1062,7 +1070,8 @@ export default {
             overview: {
                 title: 'SaaS Billing Overview',
                 listTitle: 'Users and entitlements',
-                description: 'Read-only view of each user\'s effective plan, origin, expiry and usage.',
+                description:
+                    "Read-only view of each user's effective plan, origin, expiry and usage.",
                 searchPlaceholder: 'Search by email...',
                 search: 'Search',
                 email: 'Email',
@@ -1086,7 +1095,8 @@ export default {
                 archived: 'Archived',
                 publish: 'Publish draft',
                 archive: 'Archive',
-                draftEditor: 'Draft version editor (published versions are immutable)',
+                draftEditor:
+                    'Draft version editor (published versions are immutable)',
                 features: 'Features',
                 quotas: 'Quotas',
                 addRow: 'Add row',
@@ -1094,7 +1104,8 @@ export default {
                 featureValue: 'true/false',
                 quotaKey: 'quota key',
                 quotaValue: 'number or empty (unlimited)',
-                quotaHint: 'Quotas are per metric; leave the value empty for unlimited.',
+                quotaHint:
+                    'Quotas are per metric; leave the value empty for unlimited.',
                 saveDraft: 'Save draft',
                 prices: 'Prices (draft version only)',
                 currency: 'Currency',
@@ -1106,7 +1117,8 @@ export default {
             grants: {
                 title: 'SaaS Grants',
                 assignTitle: 'Assign a grant',
-                assignDescription: 'Grants a published plan version to a user by email. Assigning replaces the user\'s previous active grant.',
+                assignDescription:
+                    "Grants a published plan version to a user by email. Assigning replaces the user's previous active grant.",
                 email: 'User email',
                 planVersion: 'Plan version (published)',
                 selectVersion: 'Select version',
@@ -1115,7 +1127,8 @@ export default {
                 assign: 'Assign',
                 historyTitle: 'Grant history',
                 historyFor: 'Grant history for {email}',
-                historyDescription: 'Includes revoked rows and who issued each change.',
+                historyDescription:
+                    'Includes revoked rows and who issued each change.',
                 searchPlaceholder: 'Filter by email...',
                 search: 'Search',
                 plan: 'Plan',
@@ -1125,7 +1138,8 @@ export default {
                 revoked: 'Revoked',
                 revoke: 'Revoke',
                 revokeTitle: 'Revoke grant',
-                revokeDescription: 'The user drops to the free plan immediately. Reason: {email}',
+                revokeDescription:
+                    'The user drops to the free plan immediately. Reason: {email}',
             },
             promotions: {
                 title: 'SaaS Promotions',

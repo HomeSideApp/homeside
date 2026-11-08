@@ -13,13 +13,15 @@ final class CalculateTransactionShares
      *
      * @param  int  $totalMinor  The transaction total expressed in minor currency units.
      * @param  EconomicTransactionParticipantData[]  $participants  The participant definitions to normalize.
-     * @return array<int, array{household_member_id: string, split_type: SplitType, amount_minor: int, percentage: int|null}> The normalized participant shares whose amounts equal the transaction total.
+     * @return array<int, array{household_member_id: string|null, contact_id: string|null, display_name: string|null, share_count: int, split_type: SplitType, amount_minor: int, percentage: int|null}> The normalized participant shares whose amounts equal the transaction total.
      */
     public function execute(int $totalMinor, array $participants): array
     {
         if ($participants === []) {
             return [];
         }
+
+        $this->assertUniqueIdentities($participants);
 
         $splitTypes = array_values(array_unique(array_map(
             fn (EconomicTransactionParticipantData $participant): string => $participant->split_type->value,
@@ -50,6 +52,9 @@ final class CalculateTransactionShares
         return array_map(
             fn (EconomicTransactionParticipantData $participant, int $amount): array => [
                 'household_member_id' => $participant->household_member_id,
+                'contact_id' => $participant->contact_id,
+                'display_name' => $participant->display_name,
+                'share_count' => $participant->share_count,
                 'split_type' => $participant->split_type,
                 'amount_minor' => $amount,
                 'percentage' => $participant->percentage,
@@ -62,25 +67,40 @@ final class CalculateTransactionShares
     /**
      * Calculate equal participant shares with deterministic remainder distribution.
      *
+     * Heads are expanded in participant order so each participant receives the sum of the
+     * heads it owns; the first remainder heads each receive one extra minor unit.
+     *
      * @param  int  $totalMinor  The transaction total expressed in minor currency units.
      * @param  EconomicTransactionParticipantData[]  $participants  The participants receiving equal shares.
-     * @return array<int, array{household_member_id: string, amount_minor: int}> The calculated amount for each participant.
+     * @return array<int, array{household_member_id: string|null, amount_minor: int}> The calculated amount for each participant.
      */
     public function calculateEqualSplit(int $totalMinor, array $participants): array
     {
-        $count = count($participants);
-        if ($count === 0) {
+        if ($participants === []) {
             return [];
         }
 
-        $baseAmount = intdiv($totalMinor, $count);
-        $remainder = $totalMinor - ($baseAmount * $count);
+        $heads = array_map(
+            fn (EconomicTransactionParticipantData $participant): int => max(1, $participant->share_count),
+            $participants,
+        );
+
+        $headCount = array_sum($heads);
+        $baseAmount = intdiv($totalMinor, $headCount);
+        $remainder = $totalMinor - ($baseAmount * $headCount);
 
         $result = [];
+        $headIndex = 0;
         foreach ($participants as $index => $participant) {
-            $amount = $baseAmount;
-            if ($index < $remainder) {
-                $amount += 1;
+            $amount = 0;
+
+            for ($owned = 0; $owned < $heads[$index]; $owned++) {
+                $amount += $baseAmount;
+                if ($headIndex < $remainder) {
+                    $amount += 1;
+                }
+
+                $headIndex++;
             }
 
             $result[] = [
@@ -90,6 +110,39 @@ final class CalculateTransactionShares
         }
 
         return $result;
+    }
+
+    /**
+     * Reject splits with more than one anonymous portion or with repeated identities.
+     *
+     * @param  EconomicTransactionParticipantData[]  $participants  The participants to inspect.
+     * @return void This method does not return a value.
+     *
+     * @throws ValidationException When a split contains several anonymous portions or duplicated identities.
+     */
+    private function assertUniqueIdentities(array $participants): void
+    {
+        $anonymousCount = count(array_filter(
+            $participants,
+            fn (EconomicTransactionParticipantData $participant): bool => $participant->isAnonymous(),
+        ));
+
+        if ($anonymousCount > 1) {
+            throw ValidationException::withMessages([
+                'participants' => __('app.validation.participants_single_anonymous'),
+            ]);
+        }
+
+        $identityKeys = array_map(
+            fn (EconomicTransactionParticipantData $participant): string => $participant->identityKey(),
+            $participants,
+        );
+
+        if (count(array_unique($identityKeys)) !== count($identityKeys)) {
+            throw ValidationException::withMessages([
+                'participants' => __('app.validation.participants_duplicate_identity'),
+            ]);
+        }
     }
 
     /**
