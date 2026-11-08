@@ -283,11 +283,15 @@ final class ReceiptTextParser
             return null;
         }
 
+        // The merchant doubles as the place: the AI prompt describes `place` as "the place or
+        // merchant", and the by-place report groups only the rows where it is set.
+        $merchant = $this->extractTitle($lines);
+
         return new ReceiptAnalysisResultData(
-            title: $this->extractTitle($lines),
+            title: $merchant,
             amount_minor: $total['amount_minor'],
             currency: $this->detectCurrency($total['lines'], $text),
-            place: null,
+            place: $merchant,
             occurred_at: $this->extractDate($text),
             items: $this->extractItems($lines, $total['amount_minor']),
             taxes: $this->extractTaxes($lines, $total['amount_minor']),

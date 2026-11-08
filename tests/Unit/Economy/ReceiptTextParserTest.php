@@ -192,6 +192,18 @@ class ReceiptTextParserTest extends TestCase
         $this->assertSame('2016-09-22', $result->occurred_at?->toDateString());
     }
 
+    public function test_the_merchant_is_also_exposed_as_the_place(): void
+    {
+        $result = $this->parser()->parse(self::AVENUE_TEXT);
+
+        $this->assertInstanceOf(ReceiptAnalysisResultData::class, $result);
+        $this->assertSame(
+            'AVENUE DES CHAMPS',
+            $result->place,
+            'The merchant is reused as the place so the by-place report is not blind to imported tickets.'
+        );
+    }
+
     public function test_it_reads_the_subtotal_and_date_from_the_gucci_ticket(): void
     {
         $result = $this->parser()->parse(self::GUCCI_TEXT);
@@ -653,7 +665,11 @@ class ReceiptTextParserTest extends TestCase
             'The only priced line is the mangled total row `yoTaL 77 135,00`, and a row that still carries a stray number is not a product row.'
         );
         $this->assertSame([], $result->taxes, 'The Avenue ticket prints no tax breakdown.');
-        $this->assertNull($result->place);
+        $this->assertSame(
+            'AVENUE DES CHAMPS',
+            $result->place,
+            'The merchant is reused as the place, so the by-place report is not blind to imported tickets.'
+        );
     }
 
     public function test_the_parsed_result_serializes_like_the_ai_payload(): void
@@ -1049,7 +1065,11 @@ class ReceiptTextParserTest extends TestCase
         $this->assertSame('2019-03-02', $result?->occurred_at?->toDateString());
         $this->assertSame('MERCADO CENTRAL', $result?->title);
         $this->assertSame('EUR', $result?->currency, 'The CIF still decides the currency.');
-        $this->assertNull($result?->place);
+        $this->assertSame(
+            'MERCADO CENTRAL',
+            $result?->place,
+            'The merchant is reused as the place, so the by-place report is not blind to imported tickets.'
+        );
     }
 
     /**
