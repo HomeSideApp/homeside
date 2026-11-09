@@ -11,6 +11,13 @@
 #
 #   make install-saas     add homeside/saas back from ../saas; it updates
 #                         composer.json's `require` and composer.lock
+#   make uninstall-saas   undo exactly that: remove the module, delete the
+#                         artifacts it published, rebuild the bundle
+#
+# Both targets leave `composer.json`/`composer.lock` dirty on purpose: the
+# committed manifests describe a Community checkout, and the commercial
+# deployment resolves the module as a real Composer dependency in its own
+# repo (HomeSideApp/homeside-saas) instead of installing it ad hoc.
 #
 # The `saas` Sail override (../saas/docker/saas-sail.yml) bind-mounts the
 # sibling checkout at the path the `../saas` Composer path repository expects
@@ -74,7 +81,7 @@ E2E_ARTIFACTS := tests/e2e/.artifacts
 PROFILE_SELFHOSTED := -e HOMESIDE_TEST_PROFILE=selfhosted
 PROFILE_SAAS := -e HOMESIDE_TEST_PROFILE=saas
 
-.PHONY: e2e-up e2e-seed e2e-reset e2e-test e2e-test-chromium e2e-test-firefox e2e-test-all e2e-test-critical e2e-report e2e-down test-selfhosted test-saas install-saas
+.PHONY: e2e-up e2e-seed e2e-reset e2e-test e2e-test-chromium e2e-test-firefox e2e-test-all e2e-test-critical e2e-report e2e-down test-selfhosted test-saas install-saas uninstall-saas
 
 # Bring up the shared stack (MySQL, Redis, Mailpit) and the application.
 e2e-up:
@@ -162,7 +169,7 @@ test-saas:
 install-saas:
 	@test -d ../saas || { \
 		echo "homeside/saas is not available: expected the sibling checkout at ../saas."; \
-		echo "The module has no Composer remote, so this is the only source."; \
+		echo "Clone it there: git clone git@github.com:HomeSideApp/saas.git ../saas"; \
 		exit 1; \
 	}
 	$(SAAS_SAIL) up -d
@@ -172,4 +179,20 @@ install-saas:
 	# the same way.
 	$(SAAS_SAIL) exec -u root laravel.test composer require 'homeside/saas:^0.1' --no-interaction
 	$(SAAS_SAIL) exec -u root laravel.test php artisan saas:install --pages
-	@echo "Installed homeside/saas and published its pages. Run 'npm run build' next."
+	@echo "Installed homeside/saas, published its Vue pages and locale fragments."
+	@echo "composer.json and composer.lock are now dirty by design; 'make uninstall-saas' reverts them."
+	@echo "Next: 'vendor/bin/sail artisan wayfinder:generate' then 'vendor/bin/sail npm run build'."
+
+# Undo `make install-saas` completely, so a Community checkout is never left
+# referencing pages, routes or config that only exist while the module does.
+uninstall-saas:
+	$(SAIL) exec -u root laravel.test composer remove homeside/saas --no-interaction
+	$(SAIL) exec -u root laravel.test rm -rf resources/js/pages/saas config/saas.php
+	$(SAIL) exec -u root laravel.test sh -c 'rm -f resources/js/locales/module-saas-*.ts'
+	# A stale package manifest deadlocks the bootstrap once the provider is gone.
+	$(SAIL) exec -u root laravel.test rm -f bootstrap/cache/packages.php
+	$(SAIL) exec -u root laravel.test php artisan package:discover
+	$(SAIL) exec -u root laravel.test php artisan wayfinder:generate
+	$(SAIL) exec -u root laravel.test npm run build
+	git checkout -- composer.json composer.lock
+	@echo "homeside/saas removed: the manifests match the committed Community state."

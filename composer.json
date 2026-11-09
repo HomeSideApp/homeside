@@ -27,7 +27,6 @@
         "dedoc/scramble": "^0.13.42",
         "google/auth": "^1.55",
         "homeside/laravel-ai-agents": "dev-develop",
-        "homeside/saas": "^0.1",
         "inertiajs/inertia-laravel": "^3.0",
         "intervention/image": "^4.2",
         "laravel/ai": "^1.0.0",
