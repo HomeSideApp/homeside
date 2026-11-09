@@ -18,13 +18,14 @@ name: CI
 # module and SKIP with their stated reason instead of failing, so the OSS gates
 # below stay green and honest on a plain checkout.
 #
-# COMMERCIAL COVERAGE IS OPT-IN AND CANNOT RUN HERE YET: the module is a private
-# first-party package published only through a `path` repository, so a
-# GitHub-hosted runner has no way to fetch it. The `commercial` job below is
-# clearly marked, runs only on workflow_dispatch, and fails fast with an
-# actionable message when the module is absent. Enable it only from an
-# environment that can provide the sibling checkout (see README.md and
-# `make install-saas`); publishing the module to a remote is the real fix.
+# COMMERCIAL COVERAGE RUNS IN ITS OWN REPO: `homeside/saas` is private and is not
+# a Composer requirement of this one, deliberately — a public repository must stay
+# deployable without credentials to a private package. The commercial deployment
+# and its commercial test gates live in HomeSideApp/homeside-saas, which resolves
+# the module as a real Composer dependency. The `commercial` job below is only a
+# convenience for a caller who already has the sibling checkout (self-hosted
+# runner or manual mirror); it never runs on a plain clone and this repo's gates
+# below are OSS-only by design (see README.md and `make install-saas`).
 #
 # Assets: there is no `public/build` in the repository (it is gitignored), and
 # the Inertia pages render `@vite`. The PHP job builds the frontend before the
@@ -304,8 +305,8 @@ jobs:
         run: |
           test -d ../saas || {
             echo "::error::This job needs the optional homeside/saas module at ../saas."
-            echo "::error::The module is a private first-party package with no Composer remote, so GitHub-hosted CI cannot fetch it."
-            echo "::error::Either publish homeside/saas to a remote and check it out at ../saas, or run the commercial scenarios locally with 'make install-saas' (see README.md). The OSS jobs (php, frontend, e2e-critical, e2e-full) do not need this job."
+            echo "::error::The module is private and is not a Composer requirement of this public repo, so a hosted runner cannot fetch it here."
+            echo "::error::Commercial coverage runs in HomeSideApp/homeside-saas. For local commercial scenarios, clone the module at ../saas and run 'make install-saas'. The OSS jobs (php, frontend, e2e-critical, e2e-full) do not need this job."
             exit 1
           }
       - uses: shivammathur/setup-php@v2
