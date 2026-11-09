@@ -78,4 +78,18 @@ class ControlledPlanFixturePortTest extends TestCase
             $fixture->stateFor($user),
         );
     }
+
+    public function test_plan_command_reports_nothing_seeded_when_no_plans_are_declared(): void
+    {
+        $this->app->instance(ControlledPlanFixture::class, new NullControlledPlanFixture);
+
+        // Let the destructive-command guard through so this test proves the
+        // Community path of the command itself, not the guard that precedes it.
+        app()['env'] = 'e2e';
+        config(['database.connections.mysql.database' => 'testing_e2e']);
+
+        $this->artisan('e2e:plan', ['action' => 'seed'])
+            ->expectsOutputToContain('nothing was seeded')
+            ->assertExitCode(0);
+    }
 }
