@@ -17,10 +17,6 @@ use App\Models\RegistrationBlock;
 use App\Models\Role;
 use App\Models\User;
 use App\Support\Registration\RegistrationIdentifier;
-use HomeSide\Saas\Actions\AssignGrant;
-use HomeSide\Saas\Models\Plan;
-use HomeSide\Saas\Models\PlanVersion;
-use HomeSide\Saas\Support\FeatureGate;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
@@ -136,37 +132,8 @@ class E2EDatabaseSeeder extends Seeder
 
     public const HOUSEHOLD_BETA = 'E2E Household Beta';
 
-    /**
-     * The CONTROLLED household-ownership capacities the capacity scenarios
-     * grant.
-     *
-     * These are deliberately NOT the package's production quantities: the E2E
-     * suite asserts against these known values only, so a change to a
-     * commercial plan can never silently change what a scenario proves.
-     *
-     * @var array<string, int>
-     */
-    public const CONTROLLED_PLAN_QUOTAS = [
-        'e2e-small' => 1,
-        'e2e-medium' => 2,
-        'e2e-large' => 3,
-    ];
-
     /** @var array<string, array<string, mixed>> */
     private array $secrets = [];
-
-    /**
-     * Whether the optional commercial `homeside/saas` module is installed.
-     *
-     * The module is a Composer suggestion (see composer.json), so an OSS
-     * checkout has no package classes at all. `class_exists` on the imported
-     * `Plan` alias returns false without error, which is how the E2E commands
-     * and the controlled-plan helpers degrade cleanly instead of failing.
-     */
-    public static function saasPackageInstalled(): bool
-    {
-        return class_exists(Plan::class);
-    }
 
     /**
      * Seed the E2E fixtures and persist the generated credentials.
@@ -715,136 +682,6 @@ class E2EDatabaseSeeder extends Seeder
             ->pluck('id');
 
         $role->permissions()->sync($permissions);
-    }
-
-    /**
-     * Create or refresh the CONTROLLED entitlement plans (caps 1, 2, 3).
-     *
-     * Unlike the package's production seeder, the E2E fixture ALWAYS rewrites
-     * its published version: the quota is the assertion target, so a stale
-     * value from an earlier run must never survive.
-     *
-     * When the optional module is absent this is a no-op: there are no
-     * commercial plans to seed, and the commercial scenarios skip themselves.
-     */
-    public function seedControlledPlans(): void
-    {
-        if (! static::saasPackageInstalled()) {
-            return;
-        }
-
-        $sortOrder = 10;
-
-        foreach (self::CONTROLLED_PLAN_QUOTAS as $key => $cap) {
-            $plan = Plan::query()->updateOrCreate(
-                ['key' => $key],
-                [
-                    'name' => strtoupper(str_replace('e2e-', '', $key)).' (E2E)',
-                    'description' => 'Controlled E2E plan with a fixed household-ownership quota.',
-                    'visibility' => 'public',
-                    'sort_order' => $sortOrder++,
-                    'is_default' => false,
-                ],
-            );
-
-            PlanVersion::query()->updateOrCreate(
-                ['plan_id' => $plan->id, 'version' => 1],
-                [
-                    'features' => [
-                        'lists' => true,
-                        'economy' => true,
-                        'recipes' => true,
-                        'ai_image_recognition' => false,
-                        'ai_assistant' => false,
-                    ],
-                    'quotas' => [
-                        'households_own' => $cap,
-                        'storage_mb' => 1024,
-                        'ai_image_monthly' => 0,
-                        'ai_assistant_monthly' => 0,
-                    ],
-                    'published_at' => now(),
-                ],
-            );
-        }
-    }
-
-    /**
-     * Assign a controlled plan to a fixture account and seed its owned state.
-     *
-     * @param  string  $email  The fixture account email.
-     * @param  string  $planKey  The controlled plan key to grant.
-     * @param  int  $own  The number of households the account already owns.
-     * @param  bool  $reset  Delete the account's owned households and active grants first.
-     *
-     * @throws RuntimeException When the fixture or plan is unknown.
-     */
-    public function grantControlledPlan(string $email, string $planKey, int $own = 0, bool $reset = false): void
-    {
-        if (! static::saasPackageInstalled()) {
-            return;
-        }
-
-        $user = User::query()->where('email', $email)->first();
-
-        if ($user === null) {
-            throw new RuntimeException("No fixture account exists for [{$email}].");
-        }
-
-        if ($reset) {
-            // Delete only what the scenario owns. The plan fixtures never own a
-            // seeded household, so this cannot touch the stable E2E households.
-            Household::query()
-                ->where('owner_id', $user->id)
-                ->get()
-                ->each(fn (Household $household) => $household->delete());
-        }
-
-        $version = PlanVersion::query()
-            ->whereHas('plan', fn ($query) => $query->where('key', $planKey))
-            ->where('version', 1)
-            ->first();
-
-        if ($version === null) {
-            throw new RuntimeException("The controlled plan [{$planKey}] is not seeded; run e2e:plan seed first.");
-        }
-
-        // The real domain action replaces any active grant and flushes the
-        // resolver memo, exactly as the admin grant flow does.
-        app(AssignGrant::class)->execute($user, $version, null, 'e2e controlled plan fixture');
-
-        for ($index = 1; $index <= max(0, $own); $index++) {
-            Household::factory()->create([
-                'name' => sprintf('E2E Plan %s owned %d', $planKey, $index),
-                'created_by' => $user->id,
-            ]);
-        }
-    }
-
-    /**
-     * Read the commercial entitlement state of an account, when the package is
-     * installed.
-     *
-     * The plan key and the `households_own` quota are the controlled values the
-     * capacity scenarios assert against, so exposing them here is how a spec
-     * proves "the account is under its limit" without reading the database.
-     * On a Community-only checkout the package is absent and both stay null.
-     *
-     * @param  User  $user  The fixture account to inspect.
-     * @return array{plan_key: string|null, households_own_cap: int|null} The entitlement state.
-     */
-    public function entitlementStateFor(User $user): array
-    {
-        if (! static::saasPackageInstalled()) {
-            return ['plan_key' => null, 'households_own_cap' => null];
-        }
-
-        $entitlement = app(FeatureGate::class)->for($user);
-
-        return [
-            'plan_key' => $entitlement->planKey,
-            'households_own_cap' => $entitlement->quota('households_own'),
-        ];
     }
 
     /**

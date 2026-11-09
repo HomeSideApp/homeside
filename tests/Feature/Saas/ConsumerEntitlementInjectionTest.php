@@ -27,8 +27,12 @@ use Tests\TestCase;
  *
  * The commercial package is a legitimate dev dependency in this repository, so
  * the decoupling invariant is enforced two ways: the consumers resolve with the
- * port injected, and a filesystem scan fails the suite if any app file starts
- * importing HomeSide\Saas again.
+ * port injected, and a filesystem scan fails the suite if any application file
+ * starts importing HomeSide\Saas again.
+ *
+ * The scan covers `app/` AND `database/`: the E2E tooling is not production
+ * code, but it is still application code, and scanning only `app/` is exactly
+ * how package imports survived in the seeders.
  */
 class ConsumerEntitlementInjectionTest extends TestCase
 {
@@ -114,13 +118,15 @@ class ConsumerEntitlementInjectionTest extends TestCase
     {
         $offenders = [];
 
-        foreach (File::allFiles(app_path()) as $file) {
-            if ($file->getExtension() !== 'php') {
-                continue;
-            }
+        foreach ([app_path(), database_path()] as $directory) {
+            foreach (File::allFiles($directory) as $file) {
+                if ($file->getExtension() !== 'php') {
+                    continue;
+                }
 
-            if (str_contains($file->getContents(), 'HomeSide\Saas')) {
-                $offenders[] = str_replace(base_path().DIRECTORY_SEPARATOR, '', $file->getPathname());
+                if (str_contains($file->getContents(), 'HomeSide\Saas')) {
+                    $offenders[] = str_replace(base_path().DIRECTORY_SEPARATOR, '', $file->getPathname());
+                }
             }
         }
 

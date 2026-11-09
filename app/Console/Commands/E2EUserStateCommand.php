@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Console\Commands\Concerns\GuardsE2EDatabase;
+use App\Contracts\ControlledPlanFixture;
 use App\Contracts\RegistrationBlockRepository;
 use App\Enums\AccountStatus;
 use App\Models\Household;
@@ -11,7 +12,6 @@ use App\Models\RegistrationAudit;
 use App\Models\RegistrationBlock;
 use App\Models\User;
 use App\Support\Registration\RegistrationIdentifier;
-use Database\Seeders\E2EDatabaseSeeder;
 use Illuminate\Console\Command;
 use Symfony\Component\Console\Command\Command as SymfonyCommand;
 
@@ -103,7 +103,7 @@ class E2EUserStateCommand extends Command
                 ->orderBy('name')
                 ->pluck('name')
                 ->all(),
-            ...app(E2EDatabaseSeeder::class)->entitlementStateFor($user),
+            ...app(ControlledPlanFixture::class)->stateFor($user),
             'household_access' => HouseholdMember::query()
                 ->where('user_id', $user->id)
                 ->with('household')

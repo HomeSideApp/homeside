@@ -3,7 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Console\Commands\Concerns\GuardsE2EDatabase;
-use Database\Seeders\E2EDatabaseSeeder;
+use App\Contracts\ControlledPlanFixture;
 use Illuminate\Console\Command;
 use InvalidArgumentException;
 
@@ -11,14 +11,15 @@ use InvalidArgumentException;
  * Seeds the CONTROLLED entitlement plans the household-capacity browser
  * scenarios depend on and assigns them to fixtures.
  *
- * The commercial package ships production plan values (free 2, plus 5, pro 10,
- * max 20). A capacity scenario must never assert against those: the fixture
- * seeds its own small/medium/large plans with KNOWN, CONTROLLED limits (1/2/3)
- * and assigns one to a fixture account. No commercial quantity is hardcoded in
- * application code; the controlled limits belong to the E2E seeder only.
+ * The commercial implementation ships production plan values (free 2, plus 5,
+ * pro 10, max 20). A capacity scenario must never assert against those: the
+ * fixture seeds its own small/medium/large plans with KNOWN, CONTROLLED limits
+ * (1/2/3) and assigns one to a fixture account.
  *
- * The command is deliberately package-agnostic: all commercial access lives in
- * {@see E2EDatabaseSeeder}, so Community code never imports a SaaS class.
+ * All commercial access lives behind the app-owned
+ * {@see ControlledPlanFixture} port. The controlled limits belong to the
+ * commercial implementation of that port, never to application code: this
+ * command only names the port.
  */
 class E2EPlanCommand extends Command
 {
@@ -36,16 +37,17 @@ class E2EPlanCommand extends Command
     /**
      * Execute the command.
      */
-    public function handle(E2EDatabaseSeeder $fixtures): int
+    public function handle(ControlledPlanFixture $fixtures): int
     {
         if (! $this->guardE2EDatabase()) {
             return self::FAILURE;
         }
 
-        // The controlled plans belong to the optional commercial module. On an
-        // OSS checkout there is nothing to seed, so report that and succeed
-        // instead of erroring; the commercial browser scenarios skip themselves.
-        if (! E2EDatabaseSeeder::saasPackageInstalled()) {
+        // An empty plan list is how the absent optional module is expressed. On
+        // a Community checkout there is nothing to seed, so report that and
+        // succeed instead of erroring; the commercial browser scenarios then
+        // skip themselves.
+        if ($fixtures->planKeys() === []) {
             $this->info('The optional homeside/saas module is not installed; the controlled E2E plans are unavailable and nothing was seeded.');
 
             return self::SUCCESS;
@@ -63,23 +65,23 @@ class E2EPlanCommand extends Command
     /**
      * Create or refresh the controlled plans.
      *
-     * @param  E2EDatabaseSeeder  $fixtures  The E2E fixture seeder.
+     * @param  ControlledPlanFixture  $fixtures  The controlled plan fixture port.
      */
-    private function seed(E2EDatabaseSeeder $fixtures): void
+    private function seed(ControlledPlanFixture $fixtures): void
     {
-        $fixtures->seedControlledPlans();
+        $fixtures->seed();
 
-        $this->info('Controlled E2E plans seeded: '.implode(', ', array_keys(E2EDatabaseSeeder::CONTROLLED_PLAN_QUOTAS)).'.');
+        $this->info('Controlled E2E plans seeded: '.implode(', ', $fixtures->planKeys()).'.');
     }
 
     /**
      * Assign a controlled plan to a fixture account and seed its owned state.
      *
-     * @param  E2EDatabaseSeeder  $fixtures  The E2E fixture seeder.
+     * @param  ControlledPlanFixture  $fixtures  The controlled plan fixture port.
      *
      * @throws InvalidArgumentException When the email or plan key is missing.
      */
-    private function grant(E2EDatabaseSeeder $fixtures): void
+    private function grant(ControlledPlanFixture $fixtures): void
     {
         $email = mb_strtolower(trim((string) $this->argument('email')));
         $planKey = (string) $this->argument('plan');
@@ -88,7 +90,7 @@ class E2EPlanCommand extends Command
             throw new InvalidArgumentException('grant requires an email and a plan key.');
         }
 
-        $fixtures->grantControlledPlan(
+        $fixtures->grant(
             $email,
             $planKey,
             max(0, (int) $this->option('own')),

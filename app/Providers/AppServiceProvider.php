@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Contracts\AuthenticationBootstrapRepository;
+use App\Contracts\ControlledPlanFixture;
 use App\Contracts\CryptoPriceFetcher;
 use App\Contracts\EntitlementGate;
 use App\Contracts\ReceiptTextExtractor;
@@ -38,6 +39,7 @@ use App\Services\Economy\CoinGeckoPriceFetcher;
 use App\Services\Economy\TesseractReceiptTextExtractor;
 use App\Support\Auth\AuthenticationBootstrapRepository as EloquentAuthenticationBootstrapRepository;
 use App\Support\Auth\GoogleDriverRegistrar;
+use App\Support\NullControlledPlanFixture;
 use App\Support\NullEntitlementGate;
 use App\Support\OpenApi\DiscriminatedOneOfType;
 use App\Support\Registration\RegistrationBlockRepository as EloquentRegistrationBlockRepository;
@@ -79,6 +81,7 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->configureEntitlements();
+        $this->configureE2EControlledPlans();
         $this->configureRegistrationDefaults();
         $this->configureRegistration();
         $this->configureRegistrationBlocks();
@@ -172,6 +175,22 @@ class AppServiceProvider extends ServiceProvider
     protected function configureEntitlements(): void
     {
         $this->app->bindIf(EntitlementGate::class, NullEntitlementGate::class);
+    }
+
+    /**
+     * Bind the E2E controlled-plan fixture behind its app-owned port.
+     *
+     * The browser suite needs controlled household-ownership plans, but only a commercial
+     * install has any: Community binds a null fixture whose empty plan list tells the commercial
+     * scenarios to skip themselves, so the E2E tooling never names a package class. `bindIf` keeps
+     * the registration order-independent in exactly the same way as the entitlement gate: the
+     * package's own `bind` registers first and this `bindIf` yields, and if the order were ever
+     * reversed this `bindIf` would register the null fixture and the package's `bind` would still
+     * overwrite it. Either way the package wins.
+     */
+    protected function configureE2EControlledPlans(): void
+    {
+        $this->app->bindIf(ControlledPlanFixture::class, NullControlledPlanFixture::class);
     }
 
     /**
