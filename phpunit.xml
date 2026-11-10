@@ -52,7 +52,8 @@
                          and gate, so the OSS suite keeps self-hosted semantics
                          even when the commercial package is installed.
               saas       force the commercial registration defaults and gate when
-                         the package is installed (`make test-saas`).
+                         the package is installed (`make test-app-saas` in the
+                         package repository).
             An externally supplied value wins: PHPUnit does not overwrite an
             environment variable that is already set (the Makefile targets pass
             it with `docker compose exec -e` because Sail forwards only agent

@@ -10,20 +10,15 @@
 # the install/uninstall targets and installs itself as a copy, so this file
 # needs no sibling mount and no Composer repository entry of its own.
 #
-# The registration suite runs in two profiles (section 13 of the registration
-# spec). Both use the same stack; the profile only changes which registration
-# defaults and gate the container binds:
+# The registration suite has one profile here (section 13 of the registration
+# spec):
 #
 #   make test-selfhosted  force the Community self-hosted defaults and gate, so
 #                         the suite proves the app works with the commercial
 #                         package NOT influencing admission.
-#   make test-saas        force the commercial defaults and gate, so the suite
-#                         proves they take over when the package is installed.
-#                         It requires the module and fails fast without it.
 #
-# Run both from this repo. The package repo has its own `test-saas` target that
-# runs the package's PHPUnit suite; this file's `test-saas` runs THIS app suite
-# in the SaaS profile, so the two names coexist and neither invokes the other.
+# Commercial coverage runs from the package repository (`make test-app-saas`
+# there); this file only drives the self-hosted profile.
 #
 # Sail forwards only a limited set of environment variables into the container,
 # so the profile is passed explicitly with `docker compose exec -e` (PHPUnit
@@ -45,9 +40,8 @@ E2E_ARTIFACTS := tests/e2e/.artifacts
 # The profile marker forwarded into the testing container. `docker compose exec
 # -e` is what carries HOMESIDE_TEST_PROFILE past Sail's restricted environment.
 PROFILE_SELFHOSTED := -e HOMESIDE_TEST_PROFILE=selfhosted
-PROFILE_SAAS := -e HOMESIDE_TEST_PROFILE=saas
 
-.PHONY: e2e-up e2e-seed e2e-reset e2e-test e2e-test-chromium e2e-test-firefox e2e-test-all e2e-test-critical e2e-report e2e-down test-selfhosted test-saas
+.PHONY: e2e-up e2e-seed e2e-reset e2e-test e2e-test-chromium e2e-test-firefox e2e-test-all e2e-test-critical e2e-report e2e-down test-selfhosted
 
 # Bring up the shared stack (MySQL, Redis, Mailpit) and the application.
 e2e-up:
@@ -79,8 +73,7 @@ e2e-test-firefox:
 e2e-test-all:
 	$(SAIL) npx playwright test
 
-# Run only the tagged critical scenarios. The commercial scenarios that need
-# the optional commercial module skip themselves with their stated reason.
+# Run only the tagged critical scenarios.
 e2e-test-critical:
 	$(SAIL) npx playwright test --project=chromium --grep @critical
 
@@ -96,18 +89,3 @@ e2e-down:
 # gate forced (the commercial package must not influence admission).
 test-selfhosted:
 	$(COMPOSE) exec -T -u sail $(PROFILE_SELFHOSTED) laravel.test php artisan test --compact
-
-# Run the app suite with the commercial registration defaults and gate forced.
-# This is the app suite, not the package suite: run `make test-saas` inside
-# /home/developer/saas for the package's own PHPUnit run.
-#
-# The module is an optional Composer suggestion now, so a package-less checkout
-# would otherwise run the OSS profile and skip the commercial coverage. Refuse
-# instead, with the exact command that fixes it.
-test-saas:
-	@test -d vendor/homeside/saas || { \
-		echo "test-saas requires the optional commercial module, which is not installed."; \
-		echo "Install it from the package repository ('make dev-install' there)."; \
-		exit 1; \
-	}
-	$(COMPOSE) exec -T -u sail $(PROFILE_SAAS) laravel.test php artisan test --compact

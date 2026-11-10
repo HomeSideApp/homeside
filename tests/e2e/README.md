@@ -6,18 +6,19 @@ nothing is mocked.
 
 ## Coverage
 
-The spec's scenarios are `E2E-01`..`E2E-29`. All 29 are covered:
+The spec's scenarios are `E2E-01`..`E2E-29`. Five of them are commercial and
+live in the `homeside/saas` package repository (see below); the rest are covered
+here:
 
-- **27 scenario IDs live in `tests/e2e/specs/`** across 25 spec files, as
-  **56 test cases** at runtime (`vendor/bin/sail npx playwright test --list`
-  prints the exact list; loops over access profiles and controlled plans expand
-  some cases).
+- **22 scenario IDs live in `tests/e2e/specs/`** across 20 spec files, as
+  **44 test cases** at runtime (`vendor/bin/sail npx playwright test --list`
+  prints the exact list; loops over access profiles expand some cases).
 - **E2E-27** is a PHP feature test with two real processes
   (`tests/Feature/E2E/RegistrationDecisionConcurrencyTest.php`). A browser
   cannot prove a database race, so it runs in the PHP suite, not in Playwright.
 - **E2E-14** has no standalone spec: `E2E-03` already exercises the scenario as
   part of its rejection flow, so no duplicate file was added.
-- **23 cases** are tagged `@critical` and run on every pull request. The rest
+- **21 cases** are tagged `@critical` and run on every pull request. The rest
   run in the full suite (both browsers).
 
 | Id | Spec / location | Cases | `@critical` |
@@ -29,12 +30,7 @@ The spec's scenarios are `E2E-01`..`E2E-29`. All 29 are covered:
 | E2E-05 Google edge cases | `specs/e2e-05-google-edge-cases.spec.ts` | 8 | no |
 | E2E-06 household invitation across all four access profiles | `specs/e2e-06-household-invitation.spec.ts` | 4 | no |
 | E2E-07 administrative invitation | `specs/e2e-07-administrative-invitation.spec.ts` | 1 | no |
-| E2E-08 household entitlement capacity | `specs/e2e-08-household-entitlements.spec.ts` | 8 | no |
 | E2E-09 TOTP bootstrap security | `specs/e2e-09-totp-bootstrap-security.spec.ts` | 13 | yes |
-| E2E-10 SaaS with open registration | `specs/e2e-10-saas-open-registration.spec.ts` | 1 | no |
-| E2E-11 SaaS in beta with approval required | `specs/e2e-11-saas-approval-required.spec.ts` | 1 | yes |
-| E2E-12 SaaS moving from open to approval | `specs/e2e-12-saas-open-to-approval.spec.ts` | 1 | no |
-| E2E-13 SaaS moving to closed | `specs/e2e-13-saas-to-closed.spec.ts` | 1 | yes |
 | E2E-14 rejection scenario covered by E2E-03 | `specs/e2e-03-administrative-rejection.spec.ts` (no standalone spec) | 0 | — |
 | E2E-15 rejection refused by the web form | `specs/e2e-15-16-18-rejection-persistence.spec.ts` | 1 | yes |
 | E2E-16 rejection refused by the public API | `specs/e2e-15-16-18-rejection-persistence.spec.ts` | 1 | yes |
@@ -51,6 +47,22 @@ The spec's scenarios are `E2E-01`..`E2E-29`. All 29 are covered:
 | E2E-27 two simultaneous decisions collapse into one | `tests/Feature/E2E/RegistrationDecisionConcurrencyTest.php` (PHP, `pcntl_fork`) | 1 (PHP) | no |
 | E2E-28 blocked identity returned by Google | `specs/e2e-28-blocked-identity-google.spec.ts` | 1 | no |
 | E2E-29 targeted invitation cannot admit a blocked identity | `specs/e2e-29-targeted-invitation-blocked.spec.ts` | 1 | no |
+
+### Commercial scenarios (E2E-08, 10, 11, 12, 13)
+
+Household entitlement capacity and the commercial registration profiles drive
+screens that only exist while the optional `homeside/saas` module is installed,
+so their specs and fixtures ship with that package, not with this repository.
+They arrive here for one run and are removed afterwards:
+
+```bash
+make test-app-e2e    # inside the package repository, with the module installed
+```
+
+The target copies the five specs into `tests/e2e/specs/` as
+`zz-commercial-*.spec.ts`, plus `fixtures/zz-commercial-saas.ts`, runs them, and
+deletes them on the way out. Nothing under `zz-commercial-` is part of this
+repository.
 
 ## How the suite runs
 
@@ -90,7 +102,7 @@ vendor/bin/sail npx playwright test --project=chromium --grep @critical
 ```
 
 Both browser projects are exercised. Chromium and Firefox each run the full
-suite (56 cases); the suite is not Chromium-only.
+suite (44 cases); the suite is not Chromium-only.
 
 ## Fresh clone: install both browsers once
 
@@ -120,24 +132,21 @@ npx playwright install --with-deps chromium firefox
 
 ## PHP deployment profiles
 
-The app suite runs in two profiles (section 13 of the registration spec). Both
-use the same stack; the profile only changes which registration defaults and
-gate the container binds:
+The app suite runs with the Community self-hosted registration defaults and gate
+forced (section 13 of the registration spec):
 
 ```bash
 make test-selfhosted   # Community default profile: 1197 passed + 2 skipped
-make test-saas         # commercial profile: 1199 passed
 ```
 
 - **`make test-selfhosted`** forces the Community self-hosted registration
   defaults and gate. It proves the app works with the commercial package **not
   influencing admission**: the package may be installed, but the self-hosted
   bindings are the ones under test.
-- **`make test-saas`** forces the commercial registration defaults and gate. It
-  proves the commercial defaults and gate take over when the package is
-  installed. This is the **app** suite in the SaaS profile; the package repo has
-  its own `test-saas` target that runs the package's PHPUnit suite, and the two
-  names coexist without invoking each other.
+
+The commercial registration profile is not a target of this repository; it runs
+from the package repository as `make test-app-saas` there, against this app's
+suite.
 
 The profile is forwarded into the container with `docker compose exec -e`
 (`HOMESIDE_TEST_PROFILE`), because Sail forwards only a limited set of
@@ -192,8 +201,8 @@ into a login redirect, which would assert the wrong thing.
 Fixtures: `admin@homeside.test`, `approver@homeside.test`,
 `member@homeside.test`, `pending@homeside.test`, `rejected@homeside.test`,
 `invited@homeside.test`, `blocked@homeside.test`, `google.pending@homeside.test`,
-`google.linked@homeside.test`, `google.unlinked@homeside.test`, plus the Google,
-capacity and identity-block fixtures the scenarios need.
+`google.linked@homeside.test`, `google.unlinked@homeside.test`, plus the Google
+and identity-block fixtures the scenarios need.
 `database/seeders/E2EDatabaseSeeder.php` is the source of truth. It reuses
 `RolesAndPermissionsSeeder` and the existing factories.
 
@@ -216,5 +225,6 @@ credential until it is consumed.
 tests/e2e/
   fixtures/   env, secrets, mail (Mailpit), totp, setup (artisan orchestration), users, global setup, test fixture
   pages/      Login, Register, SetPassword, OtpSetup, TwoFactor, ApprovalPanel, Dashboard, ...
-  specs/      every browser scenario, E2E-01..E2E-29 (E2E-14 is folded into E2E-03; E2E-27 is a PHP test)
+  specs/      every OSS browser scenario (E2E-14 is folded into E2E-03; E2E-27 is a PHP test; the
+              commercial E2E-08/10/11/12/13 arrive from the package as zz-commercial-*.spec.ts)
 ```
