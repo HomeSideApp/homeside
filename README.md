@@ -23,57 +23,45 @@ All PHP, Composer, Artisan and Node commands run through Sail. See
 ## The optional commercial module
 
 `homeside/saas` is a **first-party commercial module** (plans, billing accounts,
-entitlements, grants and the SaaS registration gate). It is declared as a
-Composer *suggestion*, not a requirement, so a fresh `composer install` succeeds
+entitlements, grants and the SaaS registration gate). It is deliberately **not** a
+Composer requirement of this repository: a fresh `composer install` succeeds
 without it and HomeSide boots with the self-hosted registration and entitlement
-bindings. Nothing in `app/`, `routes/` or `config/` references the module.
+bindings. Nothing in `app/`, `routes/` or `config/` references the module — the
+app talks to its own ports in `app/Contracts`, which is the only seam.
 
-`composer.json` keeps a `path` repository pointing at `../saas`. That entry is
-what lets a developer or operator install the module from the sibling checkout
-inside this workspace; it does **not** install anything on its own. Deleting it
-would remove the only way to add the module back.
+This repository therefore carries no reference to the module's source: no
+Composer repository, no suggestion entry, no sibling mount, no install target.
+It stays deployable with no credentials to a private package.
 
-### Install it (commercial or full-local environment)
+### Install it for local development
 
-Check out the module next to this repository (`../saas`), then run:
-
-```bash
-make install-saas
-```
-
-The target mounts the sibling checkout inside Sail and runs
+The module's own repository owns that. From a checkout of `homeside/saas` beside
+this one, run:
 
 ```bash
-vendor/bin/sail composer require 'homeside/saas:*'
+make dev-install     # installs into ../homeside as a copy and publishes its pages
+make dev-uninstall   # removes it and restores this repository's manifests
 ```
 
-which is the exact command. It adds `"homeside/saas": "*"` back to
-`composer.json`'s `require` and writes the package entry (with its `../saas`
-`dist` path) into `composer.lock`, symlinking `vendor/homeside/saas` at the
-checkout. Every other locked package is left untouched. Other machines then
-pick the module up with a plain `composer install`.
+`dev-install` injects the `path` repository into this `composer.json`, installs
+the package as a **copy** (so no symlink and no Sail override are needed here),
+publishes its Vue pages and locale fragments, and rebuilds the bundle. Both
+targets leave `composer.json`/`composer.lock` dirty on purpose; `dev-uninstall`
+restores them with `git checkout`.
 
-### Remove it again (the OSS-clean state)
-
-Move the `homeside/saas` entry from `require` back to `suggest` and run:
-
-```bash
-vendor/bin/sail composer update homeside/saas --no-install
-```
-
-That removes the single lock entry and rewrites the lock's content hash;
-`composer install` then drops it from `vendor/`.
+A commercial deployment resolves the module as a real Composer dependency from
+its own repository, so nothing about it has to live in this one.
 
 ## Testing
 
 ```bash
 make test-selfhosted   # Community defaults and gate (works without the module)
-make test-saas         # commercial defaults and gate (requires the module)
 ```
 
-`make test-saas` fails fast and tells you to run `make install-saas` when the
-module is absent, instead of silently running the OSS profile. The full PHP
-suite is `vendor/bin/sail artisan test --compact`.
+The commercial test profile (`HOMESIDE_TEST_PROFILE=saas`) and the commercial
+browser scenarios live with the module: `make test-app-saas` and
+`make test-app-e2e` in the package repository run them against this app. The
+full PHP suite is `vendor/bin/sail artisan test --compact`.
 
 The browser suite and its isolated E2E stack are documented in
 [`tests/e2e/README.md`](tests/e2e/README.md).

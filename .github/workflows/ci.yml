@@ -4,28 +4,17 @@ name: CI
 #
 # The PHP suite and the CRITICAL browser scenarios run on every pull request,
 # because a change that silently reopens a registration or bootstrap bypass must
-# never reach review. The full matrix (Firefox, the SaaS install, concurrency and
-# the long E2E set) is scheduled rather than per-push, so contributors get fast
-# signal without losing the deep coverage.
+# never reach review. The full browser matrix (Firefox and the long E2E set) is
+# scheduled rather than per-push, so contributors get fast signal without losing
+# the deep coverage.
 #
 # UNVERIFIED: this workflow has not been executed on a runner. It is written from
 # the commands that were verified locally. Treat the first run as the real test.
 #
-# NO SIBLING CHECKOUT REQUIRED: `homeside/saas` is an optional Composer
-# suggestion, not a requirement (composer.json), so `composer install` succeeds
-# on a fresh clone with no `../saas` checkout. The commercial browser scenarios
-# (E2E-08, 10, 11, 12, 13) and the commercial PHP profile detect the absent
-# module and SKIP with their stated reason instead of failing, so the OSS gates
-# below stay green and honest on a plain checkout.
-#
-# COMMERCIAL COVERAGE RUNS IN ITS OWN REPO: `homeside/saas` is private and is not
-# a Composer requirement of this one, deliberately — a public repository must stay
-# deployable without credentials to a private package. The commercial deployment
-# and its commercial test gates live in HomeSideApp/homeside-saas, which resolves
-# the module as a real Composer dependency. The `commercial` job below is only a
-# convenience for a caller who already has the sibling checkout (self-hosted
-# runner or manual mirror); it never runs on a plain clone and this repo's gates
-# below are OSS-only by design (see README.md and `make install-saas`).
+# OSS-ONLY: `homeside/saas` is an optional Composer suggestion, not a requirement
+# (composer.json), so `composer install` succeeds on a fresh clone with no sibling
+# checkout. Commercial coverage runs in the package and deployment repositories,
+# so this public workflow only gates the OSS surface.
 #
 # Assets: there is no `public/build` in the repository (it is gitignored), and
 # the Inertia pages render `@vite`. The PHP job builds the frontend before the
@@ -39,11 +28,6 @@ on:
   schedule:
     - cron: '0 3 * * *'
   workflow_dispatch:
-    inputs:
-      commercial:
-        description: 'Also run the commercial (homeside/saas) jobs; requires the sibling module checkout.'
-        type: boolean
-        default: false
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -190,8 +174,6 @@ jobs:
       - run: npx playwright install --with-deps chromium
       - name: Seed the isolated E2E database
         run: php artisan e2e:seed
-      # The commercial @critical scenarios (E2E-11, E2E-13) need the optional
-      # homeside/saas module and skip themselves here; the OSS criticals run.
       - name: Critical browser scenarios
         run: npx playwright test --project=chromium --grep @critical
       - name: Upload report and traces
@@ -247,8 +229,6 @@ jobs:
       - run: npx playwright install --with-deps chromium firefox
       - name: Seed the isolated E2E database
         run: php artisan e2e:seed
-      # The commercial scenarios skip themselves without the optional module;
-      # the opt-in `commercial` job exercises them.
       - run: npx playwright test
       - uses: actions/upload-artifact@v4
         if: always()
@@ -261,98 +241,5 @@ jobs:
             tests/e2e/.artifacts/test-results/
             tests/e2e/.artifacts/junit.xml
 
-  # Commercial coverage. OPT-IN and clearly marked: it needs the sibling
-  # `homeside/saas` checkout, which a GitHub-hosted runner cannot fetch because
-  # the module has no Composer remote. The guard step fails fast with an
-  # actionable message instead of a cryptic Composer or autoload error. Enable
-  # it with `workflow_dispatch` only from an environment that can provide the
-  # module, and treat publishing the module to a remote as the real fix.
-  commercial:
-    name: Commercial module (requires homeside/saas) — not for a fresh clone
-    if: github.event_name == 'workflow_dispatch' && inputs.commercial
-    runs-on: ubuntu-latest
-    env:
-      APP_ENV: testing
-      APP_DEBUG: 'false'
-      DB_CONNECTION: mysql
-      DB_HOST: 127.0.0.1
-      DB_PORT: '3306'
-      DB_DATABASE: testing
-      DB_USERNAME: root
-      DB_PASSWORD: root
-      CACHE_STORE: array
-      SESSION_DRIVER: array
-      QUEUE_CONNECTION: sync
-      MAIL_MAILER: array
-      REGISTRATION_BLOCK_KEY: ci-only-registration-block-key-not-a-deployment-secret
-      HOMESIDE_TEST_PROFILE: saas
-    services:
-      mysql:
-        image: mysql:8.4
-        env:
-          MYSQL_ROOT_PASSWORD: root
-          MYSQL_DATABASE: testing
-        ports: ['3306:3306']
-        options: >-
-          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot"
-          --health-interval=5s --health-timeout=5s --health-retries=20
-      redis:
-        image: redis:alpine
-        ports: ['6379:6379']
-    steps:
-      - uses: actions/checkout@v4
-      - name: Require the optional homeside/saas module
-        run: |
-          test -d ../saas || {
-            echo "::error::This job needs the optional homeside/saas module at ../saas."
-            echo "::error::The module is private and is not a Composer requirement of this public repo, so a hosted runner cannot fetch it here."
-            echo "::error::Commercial coverage runs in HomeSideApp/homeside-saas. For local commercial scenarios, clone the module at ../saas and run 'make install-saas'. The OSS jobs (php, frontend, e2e-critical, e2e-full) do not need this job."
-            exit 1
-          }
-      - uses: shivammathur/setup-php@v2
-        with:
-          php-version: '8.5'
-          extensions: mbstring, pdo_mysql, bcmath, gd, intl, zip, pcntl
-          coverage: none
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '24'
-          cache: npm
-      - name: Start Mailpit
-        run: |
-          docker run -d --name mailpit -p 1025:1025 -p 8025:8025 axllent/mailpit:latest
-      - name: Install the module from the sibling checkout
-        run: composer require 'homeside/saas:*' --no-interaction --prefer-dist --no-progress
-      - run: cp .env.example .env && php artisan key:generate
-      - run: npm ci
-      - run: npm run build
-      - run: php artisan migrate --force
-      - name: Commercial PHP profile
-        run: php artisan test --compact
-      - run: npx playwright install --with-deps chromium
-      - name: Seed the isolated E2E database
-        run: php artisan e2e:seed
-        env:
-          APP_ENV: e2e
-          DB_DATABASE: testing_e2e
-      - name: Commercial browser scenarios (Chromium)
-        run: npx playwright test --project=chromium
-        env:
-          APP_ENV: e2e
-          DB_DATABASE: testing_e2e
-          SESSION_DRIVER: file
-          MAIL_MAILER: smtp
-          MAIL_HOST: 127.0.0.1
-          MAIL_PORT: '1025'
-          E2E_MAILPIT_URL: http://127.0.0.1:8025
-      - name: Upload report and traces
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: playwright-report-commercial
-          retention-days: 7
-          if-no-files-found: ignore
-          path: |
-            tests/e2e/.artifacts/html-report/
-            tests/e2e/.artifacts/test-results/
-            tests/e2e/.artifacts/junit.xml
+  # Commercial coverage runs in the package/deployment repositories, so this
+  # public workflow stays OSS-only.
