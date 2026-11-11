@@ -80,14 +80,16 @@ class GoogleApprovalAccessTest extends TestCase
         ]);
 
         // The same identity can now start authenticating with Google instead of
-        // being refused for holding no role.
+        // being refused for holding no role. Google is the second factor for a
+        // delegated Google sign-in, so approval alone opens the session.
         Socialite::fake('google', SocialiteUser::fake([
             'id' => 'google-sub-approval-access',
             'email' => 'google-approval-access@example.com',
             'email_verified' => true,
         ]));
 
-        $this->get(route('google.callback'))->assertRedirect(route('google.otp.setup'));
+        $this->get(route('google.callback'))->assertRedirect(route('dashboard'));
+        $this->assertAuthenticatedAs($user->fresh());
     }
 
     public function test_approving_does_not_touch_a_privileged_role_assigned_before_approval(): void

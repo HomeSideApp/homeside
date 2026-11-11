@@ -46,6 +46,26 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Google Sign-In Second Factor
+    |--------------------------------------------------------------------------
+    |
+    | Whether an account that signs in with Google must ALSO present this
+    | application's own TOTP code. A Google ID token proves the identity, but it
+    | does not assert whether that Google account has MFA enabled, so delegating
+    | the second factor means trusting the provider's own policy. The default is
+    | delegated (`false`): Google is treated as the second factor and only local
+    | password logins are challenged. Setting this to `true` restores the
+    | previous behaviour exactly, where Google sign-in continues into the OTP
+    | challenge (or the forced enrolment) before a session is established.
+    |
+    */
+
+    'google' => [
+        'require_otp' => env('AUTH_REQUIRE_OTP_FOR_GOOGLE', false),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | User Providers
     |--------------------------------------------------------------------------
     |

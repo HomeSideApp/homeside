@@ -10,6 +10,7 @@ use App\Http\Requests\ConfirmGoogleOtpApiRequest;
 use App\Http\Requests\GoogleIdTokenRequest;
 use App\Http\Requests\GoogleOtpSetupRequest;
 use App\Services\Auth\GoogleIdTokenVerifier;
+use App\Support\Auth\GoogleSecondFactorPolicy;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
@@ -37,6 +38,23 @@ class GoogleAuthController extends Controller
 
         $user = $request->authorizeAccount($outcome->user);
         $user->tokens()->whereIn('name', ['temp-otp', 'google-otp-setup'])->delete();
+
+        if (GoogleSecondFactorPolicy::delegates()) {
+            // Google is the second factor: hand out the real token directly.
+            // Any pre-existing OTP secret is left untouched for password logins.
+            $token = $user->createToken('auth-token');
+
+            return response()->json([
+                'message' => __('app.errors.auth_success'),
+                'token' => $token->plainTextToken,
+                'user' => [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'email' => $user->email,
+                ],
+            ])->header('Cache-Control', 'no-store');
+        }
+
         $name = $user->hasEnabledTwoFactorAuthentication() ? 'temp-otp' : 'google-otp-setup';
         $ability = $name === 'temp-otp' ? 'otp-verify' : 'otp-setup';
         $token = $user->createToken($name, [$ability], now()->addMinutes(5));

@@ -9,6 +9,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\ConfirmGoogleOtpSetupRequest;
 use App\Http\Requests\GoogleLoginCallbackRequest;
 use App\Http\Requests\ShowGoogleOtpSetupRequest;
+use App\Support\Auth\GoogleSecondFactorPolicy;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
@@ -58,13 +59,23 @@ class GoogleAuthController extends Controller
             return to_route('login')->withErrors(['google' => 'Tu cuenta no tiene un rol asignado.']);
         }
 
-        $request->session()->invalidate();
-        $request->session()->regenerateToken();
-        $request->session()->put($user->hasEnabledTwoFactorAuthentication() ? 'login.id' : 'google.setup_id', $user->id);
+        if (GoogleSecondFactorPolicy::requiresApplicationOtp()) {
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+            $request->session()->put($user->hasEnabledTwoFactorAuthentication() ? 'login.id' : 'google.setup_id', $user->id);
 
-        return $user->hasEnabledTwoFactorAuthentication()
-            ? to_route('two-factor.login')
-            : to_route('google.otp.setup');
+            return $user->hasEnabledTwoFactorAuthentication()
+                ? to_route('two-factor.login')
+                : to_route('google.otp.setup');
+        }
+
+        // Google is the second factor for this account: no application OTP
+        // challenge and no forced enrolment. An existing OTP secret is left
+        // untouched, so a password login can still use it.
+        Auth::login($user);
+        $request->session()->regenerate();
+
+        return redirect()->intended('/dashboard');
     }
 
     public function showOtpSetup(ShowGoogleOtpSetupRequest $request): Response|RedirectResponse

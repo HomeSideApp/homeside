@@ -374,8 +374,10 @@ class RegistrationChannelsTest extends TestCase
         $this->assertDatabaseMissing('google_identities', ['google_sub' => 'google-sub-blocked']);
     }
 
-    public function test_google_open_policy_creates_an_approved_user_that_must_enrol_two_factor(): void
+    public function test_google_open_policy_creates_an_approved_user_that_must_enrol_two_factor_when_operator_requires_otp(): void
     {
+        config(['auth.google.require_otp' => true]);
+
         app(RegistrationSettings::class)->setPolicy(RegistrationChannel::Google, RegistrationPolicy::Open);
         Socialite::fake('google', SocialiteUser::fake([
             'id' => 'google-web-open-sub',
@@ -389,6 +391,24 @@ class RegistrationChannelsTest extends TestCase
         $this->assertSame(ApprovalStatus::Approved->value, $user->approval_status);
         $this->assertTrue($user->hasRole('user'));
         $this->assertGuest();
+    }
+
+    public function test_google_open_policy_creates_a_user_who_is_not_forced_to_enrol_two_factor(): void
+    {
+        app(RegistrationSettings::class)->setPolicy(RegistrationChannel::Google, RegistrationPolicy::Open);
+        Socialite::fake('google', SocialiteUser::fake([
+            'id' => 'google-web-delegated-sub',
+            'email' => 'google-web-delegated@example.com',
+            'email_verified' => true,
+        ]));
+
+        $this->get(route('google.callback'))->assertRedirect(route('dashboard'));
+
+        $user = User::query()->where('email', 'google-web-delegated@example.com')->firstOrFail();
+        $this->assertSame(ApprovalStatus::Approved->value, $user->approval_status);
+        $this->assertTrue($user->hasRole('user'));
+        $this->assertFalse($user->hasEnabledTwoFactorAuthentication());
+        $this->assertAuthenticatedAs($user);
     }
 
     public function test_the_web_registration_page_reflects_the_public_capabilities(): void

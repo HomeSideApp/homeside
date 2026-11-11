@@ -19,7 +19,9 @@ use App\Models\User;
  *  1. a denied or non-creating decision never establishes a session;
  *  2. a pending account waits for approval;
  *  3. an unverified email must be verified;
- *  4. an account without two-factor must enrol before it can be signed in;
+ *  4. an account without two-factor must enrol before it can be signed in
+ *     (unless the caller explicitly delegates that factor to its identity
+ *     provider, which is the caller's decision, never a guess made here);
  *  5. only then is the account authenticated.
  */
 final class ResolveRegistrationNextStep
@@ -30,9 +32,10 @@ final class ResolveRegistrationNextStep
      * @param  User  $user  The created, completed or matched user.
      * @param  RegistrationDecision  $decision  The decision reached by the use case.
      * @param  string|null  $reason  An optional stable machine code.
+     * @param  bool  $requireTwoFactorEnrolment  Whether an account without two-factor must enrol next. Callers that delegate the second factor to their identity provider pass `false`.
      * @return RegistrationOutcomeData The typed outcome.
      */
-    public function resolve(User $user, RegistrationDecision $decision, ?string $reason = null): RegistrationOutcomeData
+    public function resolve(User $user, RegistrationDecision $decision, ?string $reason = null, bool $requireTwoFactorEnrolment = true): RegistrationOutcomeData
     {
         if (! in_array($decision, [RegistrationDecision::Allowed, RegistrationDecision::ApprovalRequired], true)) {
             return new RegistrationOutcomeData($user, $decision, RegistrationOutcomeData::NEXT_AUTHENTICATE, false, $reason);
@@ -46,7 +49,7 @@ final class ResolveRegistrationNextStep
             return new RegistrationOutcomeData($user, $decision, RegistrationOutcomeData::NEXT_VERIFY_EMAIL, false, $reason);
         }
 
-        if (! $user->hasEnabledTwoFactorAuthentication()) {
+        if ($requireTwoFactorEnrolment && ! $user->hasEnabledTwoFactorAuthentication()) {
             return new RegistrationOutcomeData($user, $decision, RegistrationOutcomeData::NEXT_ENROL_TWO_FACTOR, false, $reason);
         }
 
