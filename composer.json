@@ -39,6 +39,7 @@
         "league/flysystem-aws-s3-v3": "^3.0",
         "mstilkerich/carddavclient": "dev-feat/discovery-options",
         "pragmarx/google2fa": "^9.0",
+        "resend/resend-php": "^1.0",
         "smalot/pdfparser": "^2.13"
     },
     "require-dev": {
