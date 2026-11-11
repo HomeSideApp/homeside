@@ -1,6 +1,7 @@
 includes:
     - vendor/larastan/larastan/extension.neon
     - vendor/nesbot/carbon/extension.neon
+    - phpstan-baseline.neon
 
 parameters:
     paths:
@@ -11,3 +12,9 @@ parameters:
         - routes/
 
     level: 8
+
+    # The baseline freezes the findings that existed when level 8 was turned on
+    # as a real gate; it is debt to shrink, not a place to hide new errors. A
+    # baselined finding that gets fixed must not turn the run red while the file
+    # is being regenerated, so unmatched patterns are not reported.
+    reportUnmatchedIgnoredErrors: false

@@ -1,0 +1,2431 @@
+parameters:
+	ignoreErrors:
+		-
+			message: '#^Access to an undefined property App\\Models\\ShoppingList\|Illuminate\\Database\\Eloquent\\Collection\<int, App\\Models\\ShoppingList\>\:\:\$household_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Actions/Ai/AcceptAiActionProposal.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\ShoppingList\|Illuminate\\Database\\Eloquent\\Collection\<int, App\\Models\\ShoppingList\>\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Actions/Ai/AcceptAiActionProposal.php
+
+		-
+			message: '#^Parameter \#1 \$boolean of function abort_if expects bool, bool\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Actions/Ai/AcceptAiActionProposal.php
+
+		-
+			message: '#^Parameter \#1 \$list of method App\\Actions\\ShoppingLists\\AddListItem\:\:execute\(\) expects App\\Models\\ShoppingList, App\\Models\\ShoppingList\|Illuminate\\Database\\Eloquent\\Collection\<int, App\\Models\\ShoppingList\> given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Actions/Ai/AcceptAiActionProposal.php
+
+		-
+			message: '#^Unable to resolve the template type TKey in call to function collect$#'
+			identifier: argument.templateType
+			count: 1
+			path: app/Actions/Ai/AcceptAiActionProposal.php
+
+		-
+			message: '#^Unable to resolve the template type TValue in call to function collect$#'
+			identifier: argument.templateType
+			count: 1
+			path: app/Actions/Ai/AcceptAiActionProposal.php
+
+		-
+			message: '#^PHPDoc tag @throws with type App\\Actions\\Ai\\ValidationException is not subtype of Throwable$#'
+			identifier: throws.notThrowable
+			count: 1
+			path: app/Actions/Ai/CreateUserAiProvider.php
+
+		-
+			message: '#^Offset 0 on non\-empty\-list\<string\> on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Actions/Auth/ApiRefreshToken.php
+
+		-
+			message: '#^Strict comparison using \!\=\= between string and null will always evaluate to true\.$#'
+			identifier: notIdentical.alwaysTrue
+			count: 1
+			path: app/Actions/Auth/ApiRefreshToken.php
+
+		-
+			message: '#^Method App\\Actions\\Auth\\CompleteAuthenticationBootstrap\:\:newRecoveryCodes\(\) should return list\<string\> but returns array\<int, non\-empty\-string\>\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Actions/Auth/CompleteAuthenticationBootstrap.php
+
+		-
+			message: '#^Cannot access property \$display_name on App\\Models\\Contact\|null\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: app/Actions/Contacts/FindContactDuplicates.php
+
+		-
+			message: '#^Cannot access property \$id on App\\Models\\Contact\|null\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: app/Actions/Contacts/FindContactDuplicates.php
+
+		-
+			message: '#^Method App\\Actions\\Contacts\\FindContactDuplicates\:\:execute\(\) should return list\<array\{primary\: array\{id\: string, name\: string\}, duplicates\: list\<array\{id\: string, name\: string\}\>, matches\: list\<string\>\}\> but returns list\<array\{primary\: array\{id\: string, name\: string\}, duplicates\: array\<int, array\{id\: string, name\: string\}\>, matches\: list\<non\-falsy\-string\>\}\>\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Actions/Contacts/FindContactDuplicates.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\ContactLabel\:\:\$pivot\.$#'
+			identifier: property.notFound
+			count: 3
+			path: app/Actions/Contacts/ImportExternalContact.php
+
+		-
+			message: '#^Cannot access property \$preferred_record_id on App\\Models\\Contact\|null\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: app/Actions/Contacts/ImportExternalContact.php
+
+		-
+			message: '#^Cannot assign offset ''category_label_ids'' to array\|string\.$#'
+			identifier: offsetAssign.dimType
+			count: 1
+			path: app/Actions/Contacts/ImportExternalContact.php
+
+		-
+			message: '#^Cannot call method update\(\) on App\\Models\\Contact\|null\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Actions/Contacts/ImportExternalContact.php
+
+		-
+			message: '#^Offset ''category_label_ids'' on string\|null on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Actions/Contacts/ImportExternalContact.php
+
+		-
+			message: '#^Parameter \#1 \$contact of method App\\Actions\\Contacts\\ImportExternalContact\:\:syncImportedLabels\(\) expects App\\Models\\Contact, App\\Models\\Contact\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Actions/Contacts/ImportExternalContact.php
+
+		-
+			message: '#^Cannot access property \$household_id on App\\Models\\Contact\|null\.$#'
+			identifier: property.nonObject
+			count: 2
+			path: app/Actions/Contacts/MergeContacts.php
+
+		-
+			message: '#^Cannot access property \$user_id on App\\Models\\Contact\|null\.$#'
+			identifier: property.nonObject
+			count: 2
+			path: app/Actions/Contacts/MergeContacts.php
+
+		-
+			message: '#^Cannot call method delete\(\) on App\\Models\\Contact\|null\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Actions/Contacts/MergeContacts.php
+
+		-
+			message: '#^Method App\\Actions\\Contacts\\MergeContacts\:\:externalRecordIds\(\) should return list\<string\> but returns array\<mixed\>\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Actions/Contacts/MergeContacts.php
+
+		-
+			message: '#^Parameter \#1 \$contact of method App\\Actions\\Contacts\\MergeContacts\:\:selectPreferredRecords\(\) expects App\\Models\\Contact, App\\Models\\Contact\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Actions/Contacts/MergeContacts.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>encrypted_credentials" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Actions/Contacts/SaveContactSource.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>display_name" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Actions/Contacts/SaveLocalContact.php
+
+		-
+			message: '#^Cannot call method collections\(\) on App\\Models\\ContactSource\|null\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Actions/Contacts/SetContactCollectionEnabled.php
+
+		-
+			message: '#^Cannot call method toDateString\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Actions/Contacts/UseRemoteContactFields.php
+
+		-
+			message: '#^Property App\\Actions\\Economy\\CreateEconomicImport\:\:\$entitlements is never read, only written\.$#'
+			identifier: property.onlyWritten
+			count: 1
+			path: app/Actions/Economy/CreateEconomicImport.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\EconomicTransaction\:\:\$total_minor\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Actions/Economy/GetAccountBalances.php
+
+		-
+			message: '#^Possibly invalid array key type string\|null\.$#'
+			identifier: offsetAccess.invalidOffset
+			count: 2
+			path: app/Actions/Economy/GetAccountBalances.php
+
+		-
+			message: '#^Method App\\Actions\\Economy\\GetHouseholdEconomyOverview\:\:byMember\(\) should return list\<array\{creator_id\: string, name\: string, total_minor\: int\}\> but returns array\<int, array\{creator_id\: string, name\: mixed, total_minor\: int\}\>\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Actions/Economy/GetHouseholdEconomyOverview.php
+
+		-
+			message: '#^Method App\\Actions\\Economy\\GetHouseholdEconomyOverview\:\:byPlace\(\) should return list\<array\{place\: string, total_minor\: int\}\> but returns array\<int, array\{place\: string, total_minor\: int\}\>\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Actions/Economy/GetHouseholdEconomyOverview.php
+
+		-
+			message: '#^Method App\\Actions\\Economy\\GetHouseholdEconomyOverview\:\:resolveCurrency\(\) should return string\|null but returns int\|string\|null\.$#'
+			identifier: return.type
+			count: 2
+			path: app/Actions/Economy/GetHouseholdEconomyOverview.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Builder\<Illuminate\\Database\\Eloquent\\Model\>\:\:ofType\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Actions/Economy/GetHouseholdsComparison.php
+
+		-
+			message: '#^Cannot access property \$currency on App\\Models\\EconomicTransaction\|null\.$#'
+			identifier: property.nonObject
+			count: 2
+			path: app/Actions/Economy/GetHouseholdsComparison.php
+
+		-
+			message: '#^Method App\\Actions\\Economy\\GetHouseholdsComparison\:\:householdsWithEconomyEnabled\(\) should return list\<string\> but returns array\<mixed\>\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Actions/Economy/GetHouseholdsComparison.php
+
+		-
+			message: '#^Method App\\Actions\\Economy\\GetHouseholdsComparison\:\:resolveCurrency\(\) should return string\|null but returns int\|string\|null\.$#'
+			identifier: return.type
+			count: 2
+			path: app/Actions/Economy/GetHouseholdsComparison.php
+
+		-
+			message: '#^Method App\\Actions\\Economy\\GetHouseholdsComparison\:\:rows\(\) should return list\<array\{scope\: string, household_id\: string\|null, name\: string\|null, own_minor\: int, shared_participation_minor\: int, balance_minor\: int, income_minor\: int, net_minor\: int\}\> but returns array\<int, array\{scope\: string, household_id\: string\|null, name\: mixed, own_minor\: int, shared_participation_minor\: int, balance_minor\: int, income_minor\: int, net_minor\: int\}\>\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Actions/Economy/GetHouseholdsComparison.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Builder\<Illuminate\\Database\\Eloquent\\Model\>\:\:ofType\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Actions/Economy/GetPersonalEconomyOverview.php
+
+		-
+			message: '#^Call to method Illuminate\\Support\\Collection\<\*NEVER\*,\*NEVER\*\>\:\:isEmpty\(\) will always evaluate to true\.$#'
+			identifier: method.alreadyNarrowedType
+			count: 1
+			path: app/Actions/Economy/GetPersonalEconomyOverview.php
+
+		-
+			message: '#^Call to method Illuminate\\Support\\Collection\<int,\*NEVER\*\>\:\:isNotEmpty\(\) will always evaluate to false\.$#'
+			identifier: method.impossibleType
+			count: 1
+			path: app/Actions/Economy/GetPersonalEconomyOverview.php
+
+		-
+			message: '#^Cannot access property \$currency on App\\Models\\EconomicTransaction\|null\.$#'
+			identifier: property.nonObject
+			count: 4
+			path: app/Actions/Economy/GetPersonalEconomyOverview.php
+
+		-
+			message: '#^Cannot call method effectiveOccurredAt\(\) on App\\Models\\EconomicTransaction\|null\.$#'
+			identifier: method.nonObject
+			count: 2
+			path: app/Actions/Economy/GetPersonalEconomyOverview.php
+
+		-
+			message: '#^Illuminate\\Database\\Eloquent\\Collection\<\*NEVER\*, \*NEVER\*\> does not accept int\.$#'
+			identifier: offsetAssign.valueType
+			count: 2
+			path: app/Actions/Economy/GetPersonalEconomyOverview.php
+
+		-
+			message: '#^Method App\\Actions\\Economy\\GetPersonalEconomyOverview\:\:byHousehold\(\) should return list\<array\{household_id\: string\|null, name\: string\|null, total_minor\: int\}\> but returns array\<int, array\{household_id\: string\|null, name\: mixed, total_minor\: int\}\>\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Actions/Economy/GetPersonalEconomyOverview.php
+
+		-
+			message: '#^Method App\\Actions\\Economy\\GetPersonalEconomyOverview\:\:householdsWithEconomyEnabled\(\) should return list\<string\> but returns array\<mixed\>\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Actions/Economy/GetPersonalEconomyOverview.php
+
+		-
+			message: '#^Method App\\Actions\\Economy\\GetPersonalEconomyOverview\:\:resolveCurrency\(\) should return string\|null but returns int\|string\|null\.$#'
+			identifier: return.type
+			count: 2
+			path: app/Actions/Economy/GetPersonalEconomyOverview.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between \*NEVER\* and ''none'' will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 3
+			path: app/Actions/Economy/GetPersonalEconomyOverview.php
+
+		-
+			message: '#^Anonymous function should return string but returns string\|null\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Actions/Economy/GetPersonalTotalsStats.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Builder\<Illuminate\\Database\\Eloquent\\Model\>\:\:effectiveOccurredBetween\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Actions/Economy/GetPersonalTotalsStats.php
+
+		-
+			message: '#^Cannot access property \$currency on App\\Models\\EconomicTransaction\|null\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: app/Actions/Economy/GetPersonalTotalsStats.php
+
+		-
+			message: '#^Cannot access property \$household_id on App\\Models\\EconomicTransaction\|null\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: app/Actions/Economy/GetPersonalTotalsStats.php
+
+		-
+			message: '#^Parameter \#1 \$start of method Illuminate\\Database\\Eloquent\\Builder\<App\\Models\\EconomicTransaction\>\:\:effectiveOccurredBetween\(\) expects Carbon\\CarbonInterface, Illuminate\\Support\\Carbon\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Actions/Economy/GetPersonalTotalsStats.php
+
+		-
+			message: '#^Parameter \#2 \$end of method Illuminate\\Database\\Eloquent\\Builder\<App\\Models\\EconomicTransaction\>\:\:effectiveOccurredBetween\(\) expects Carbon\\CarbonInterface, Illuminate\\Support\\Carbon\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Actions/Economy/GetPersonalTotalsStats.php
+
+		-
+			message: '#^Unable to resolve the template type TWhenReturnType in call to method Illuminate\\Database\\Eloquent\\Builder\<Illuminate\\Database\\Eloquent\\Model\>\:\:when\(\)$#'
+			identifier: argument.templateType
+			count: 1
+			path: app/Actions/Economy/GetPersonalTotalsStats.php
+
+		-
+			message: '#^Cannot access property \$id on App\\Models\\Household\|null\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: app/Actions/Economy/ListEconomicImports.php
+
+		-
+			message: '#^Parameter \#1 \$sql of method Illuminate\\Database\\Eloquent\\Builder\<App\\Models\\EconomicTransaction\>\:\:orderByRaw\(\) expects literal\-string, non\-falsy\-string given\.$#'
+			identifier: argument.type
+			count: 2
+			path: app/Actions/Economy/ListEconomicTransactions.php
+
+		-
+			message: '#^Unknown parameter \$amount in call to method Intervention\\Image\\Interfaces\\ImageInterface\:\:sharpen\(\)\.$#'
+			identifier: argument.unknown
+			count: 1
+			path: app/Actions/Economy/ReprocessEconomicImport.php
+
+		-
+			message: '#^Method App\\Actions\\Economy\\RetryEconomicImport\:\:execute\(\) should return App\\Models\\EconomicImport but returns App\\Models\\EconomicImport\|null\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Actions/Economy/RetryEconomicImport.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between App\\Models\\User and null will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: app/Actions/Economy/UpdateEconomicTransaction.php
+
+		-
+			message: '#^Unknown parameter \$amount in call to method Intervention\\Image\\Interfaces\\ImageInterface\:\:sharpen\(\)\.$#'
+			identifier: argument.unknown
+			count: 1
+			path: app/Actions/Economy/UploadEconomicDocument.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>id" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Actions/Economy/UploadEconomicDocument.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>settings" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Actions/Households/GetHouseholdSettings.php
+
+		-
+			message: '#^Parameter \#1 \$owner of method App\\Services\\Contacts\\ContactResolutionService\:\:findOrCreateByEmail\(\) expects App\\Models\\User, App\\Models\\User\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Actions/Households/RegisterViaInviteLink.php
+
+		-
+			message: '#^Method App\\Actions\\Products\\GetRecentProducts\:\:execute\(\) should return Illuminate\\Support\\Collection\<int, array\{id\: string, name\: string, slug\: string, icon\: string\|null, category\: array\{id\: string, name\: string, color\: string\}\|null\}\> but returns Illuminate\\Support\\Collection\<int, array\{id\: string, name\: string\|null, slug\: string, icon\: string\|null, category\: array\{id\: string, name\: string\|null, color\: string\|null\}\|null\}\>\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Actions/Products/GetRecentProducts.php
+
+		-
+			message: '#^Method App\\Actions\\Products\\SearchProducts\:\:execute\(\) should return Illuminate\\Support\\Collection\<int, array\{id\: string, name\: string, slug\: string, icon\: string\|null, is_personal\: bool, category\: array\{id\: string, name\: string, color\: string\}\|null\}\> but returns Illuminate\\Support\\Collection\<int, array\{id\: string, name\: string\|null, slug\: string, icon\: string\|null, is_personal\: bool, category\: array\{id\: string, name\: string\|null, color\: string\|null\}\|null\}\>\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Actions/Products/SearchProducts.php
+
+		-
+			message: '#^Method App\\Actions\\Recipes\\GenerateRecipeWithAi\:\:retryOnReferenceWarnings\(\) has parameter \$recipe with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Actions/Recipes/GenerateRecipeWithAi.php
+
+		-
+			message: '#^Parameter \#2 \$direction of method Illuminate\\Database\\Eloquent\\Builder\<App\\Models\\HouseholdRecipe\>\:\:orderBy\(\) expects ''asc''\|''desc''\|SortDirection, string given\.$#'
+			identifier: argument.type
+			count: 2
+			path: app/Actions/Recipes/ListHouseholdRecipes.php
+
+		-
+			message: '#^Parameter \#2 \$direction of method Illuminate\\Database\\Eloquent\\Builder\<App\\Models\\Recipe\>\:\:orderBy\(\) expects ''asc''\|''desc''\|SortDirection, string given\.$#'
+			identifier: argument.type
+			count: 2
+			path: app/Actions/Recipes/ListRecipes.php
+
+		-
+			message: '#^Unable to resolve the template type TKey in call to function collect$#'
+			identifier: argument.templateType
+			count: 1
+			path: app/Ai/ImageGenerationService.php
+
+		-
+			message: '#^Unable to resolve the template type TValue in call to function collect$#'
+			identifier: argument.templateType
+			count: 1
+			path: app/Ai/ImageGenerationService.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>user_id" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Ai/ImageGenerationService.php
+
+		-
+			message: '#^Property App\\Ai\\Tools\\GetAvailableIngredientsTool\:\:\$context is never read, only written\.$#'
+			identifier: property.onlyWritten
+			count: 1
+			path: app/Ai/Tools/GetAvailableIngredientsTool.php
+
+		-
+			message: '#^Trait App\\Concerns\\ServesImage is used zero times and is not analysed\.$#'
+			identifier: trait.unused
+			count: 1
+			path: app/Concerns/ServesImage.php
+
+		-
+			message: '#^Offset ''mime'' on array\{0\: 128, 1\: 128, 2\: int, 3\: string, mime\: string, channels\?\: int, bits\?\: int\} on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Console/Commands/BuildWebpIcons.php
+
+		-
+			message: '#^Parameter \#1 \$sourceFiles of method App\\Console\\Commands\\BuildWebpIcons\:\:validateCatalog\(\) expects list\<SplFileInfo\>, array\<int, Symfony\\Component\\Finder\\SplFileInfo\> given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Console/Commands/BuildWebpIcons.php
+
+		-
+			message: '#^Parameter \#3 \$x of method Imagick\:\:compositeImage\(\) expects int, float\|int\<min, 64\> given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Console/Commands/BuildWebpIcons.php
+
+		-
+			message: '#^Using nullsafe method call on non\-nullable type Illuminate\\Support\\Carbon\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Console/Commands/E2EBootstrapCommand.php
+
+		-
+			message: '#^Offset ''pid'' on array\{command\: string, pid\: int, running\: bool, signaled\: bool, stopped\: bool, exitcode\: int, termsig\: int, stopsig\: int\} on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Console/Commands/E2EServeCommand.php
+
+		-
+			message: '#^Offset ''running'' on array\{command\: string, pid\: int, running\: bool, signaled\: bool, stopped\: bool, exitcode\: int, termsig\: int, stopsig\: int\} on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 2
+			path: app/Console/Commands/E2EServeCommand.php
+
+		-
+			message: '#^Instanceof between App\\Enums\\AccountStatus and App\\Enums\\AccountStatus will always evaluate to true\.$#'
+			identifier: instanceof.alwaysTrue
+			count: 1
+			path: app/Console/Commands/E2EUserStateCommand.php
+
+		-
+			message: '#^Parameter \$modules of class App\\Data\\Admin\\CreateGlobalAiProviderData constructor expects list\<string\>, array\<''assistant''\|''economy''\|''general''\|''image_generation''\|''recipes''\|''translations''\> given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Data/Admin/CreateGlobalAiProviderData.php
+
+		-
+			message: '#^Parameter \$modules of class App\\Data\\Admin\\UpdateGlobalAiProviderData constructor expects list\<string\>, array\<''assistant''\|''economy''\|''general''\|''image_generation''\|''recipes''\|''translations''\> given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Data/Admin/UpdateGlobalAiProviderData.php
+
+		-
+			message: '#^Parameter \#12 \$emails of class App\\Data\\Contacts\\ContactData constructor expects list\<App\\Data\\Contacts\\ContactValueData\>, array\<App\\Data\\Contacts\\ContactValueData\> given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Data/Contacts/ContactData.php
+
+		-
+			message: '#^Parameter \#13 \$phones of class App\\Data\\Contacts\\ContactData constructor expects list\<App\\Data\\Contacts\\ContactValueData\>, array\<App\\Data\\Contacts\\ContactValueData\> given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Data/Contacts/ContactData.php
+
+		-
+			message: '#^Parameter \#14 \$addresses of class App\\Data\\Contacts\\ContactData constructor expects list\<App\\Data\\Contacts\\ContactValueData\>, array\<App\\Data\\Contacts\\ContactValueData\> given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Data/Contacts/ContactData.php
+
+		-
+			message: '#^Parameter \#15 \$urls of class App\\Data\\Contacts\\ContactData constructor expects list\<App\\Data\\Contacts\\ContactValueData\>, array\<App\\Data\\Contacts\\ContactValueData\> given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Data/Contacts/ContactData.php
+
+		-
+			message: '#^Parameter \#16 \$dates of class App\\Data\\Contacts\\ContactData constructor expects list\<array\{kind\: string, label\: string\|null, value\: string\}\>, array\<array\{kind\: mixed, label\: mixed, value\: mixed\}\> given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Data/Contacts/ContactData.php
+
+		-
+			message: '#^Parameter \#17 \$relations of class App\\Data\\Contacts\\ContactData constructor expects list\<array\{type\: string, related_contact_id\: string\|null, name\: string\|null\}\>, array\<array\{type\: mixed, related_contact_id\: mixed, name\: mixed\}\> given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Data/Contacts/ContactData.php
+
+		-
+			message: '#^Method App\\Data\\Economy\\CreateEconomicImportData\:\:fromArray\(\) has parameter \$data with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Data/Economy/CreateEconomicImportData.php
+
+		-
+			message: '#^Method App\\Data\\Economy\\EconomicTransactionItemData\:\:fromArray\(\) has parameter \$data with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Data/Economy/EconomicTransactionItemData.php
+
+		-
+			message: '#^Method App\\Data\\Economy\\EconomicTransactionParticipantData\:\:fromArray\(\) has parameter \$data with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Data/Economy/EconomicTransactionParticipantData.php
+
+		-
+			message: '#^Method App\\Data\\Economy\\EconomicTransactionTaxData\:\:fromArray\(\) has parameter \$data with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Data/Economy/EconomicTransactionTaxData.php
+
+		-
+			message: '#^Method App\\Data\\Economy\\ReceiptAnalysisResultData\:\:fromArray\(\) has parameter \$data with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Data/Economy/ReceiptAnalysisResultData.php
+
+		-
+			message: '#^Method App\\Data\\Economy\\ReceiptAnalysisResultData\:\:toArray\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Data/Economy/ReceiptAnalysisResultData.php
+
+		-
+			message: '#^Method App\\Data\\Economy\\ReceiptItemAnalysisData\:\:fromArray\(\) has parameter \$data with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Data/Economy/ReceiptItemAnalysisData.php
+
+		-
+			message: '#^Method App\\Data\\Economy\\ReceiptTaxAnalysisData\:\:fromArray\(\) has parameter \$data with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Data/Economy/ReceiptTaxAnalysisData.php
+
+		-
+			message: '#^Parameter \$modules of class App\\Data\\Households\\CreateAiProviderData constructor expects list\<string\>, array\<''assistant''\|''economy''\|''general''\|''image_generation''\|''recipes''\|''translations''\> given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Data/Households/CreateAiProviderData.php
+
+		-
+			message: '#^Parameter \$modules of class App\\Data\\Households\\UpdateAiProviderData constructor expects list\<string\>, array\<''assistant''\|''economy''\|''general''\|''image_generation''\|''recipes''\|''translations''\> given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Data/Households/UpdateAiProviderData.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Models\\RecipeStep\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 1
+			path: app/Data/Recipes/RecipeData.php
+
+		-
+			message: '#^Return type of call to method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Models\\RecipeStep\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: method.unresolvableReturnType
+			count: 1
+			path: app/Data/Recipes/RecipeData.php
+
+		-
+			message: '#^Return type of call to method Illuminate\\Support\\Collection\<int,array\<string, mixed\>\>\:\:all\(\) contains unresolvable type\.$#'
+			identifier: method.unresolvableReturnType
+			count: 1
+			path: app/Data/Recipes/RecipeData.php
+
+		-
+			message: '#^Cannot call method diffForHumans\(\) on Illuminate\\Support\\Carbon\|null\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Events/JobCompleted.php
+
+		-
+			message: '#^Cannot call method diffForHumans\(\) on Illuminate\\Support\\Carbon\|null\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Events/JobFailed.php
+
+		-
+			message: '#^Cannot call method diffForHumans\(\) on Illuminate\\Support\\Carbon\|null\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Events/JobStarted.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\Admin\\AdminPersonalProductController\:\:groupBySimilarity\(\) has parameter \$products with generic class Illuminate\\Support\\Collection but does not specify its types\: TKey, TValue$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Http/Controllers/Admin/AdminPersonalProductController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\Admin\\AdminPersonalProductController\:\:groupBySimilarity\(\) is unused\.$#'
+			identifier: method.unused
+			count: 1
+			path: app/Http/Controllers/Admin/AdminPersonalProductController.php
+
+		-
+			message: '#^Parameter \#2 \$userId of method App\\Actions\\Products\\CreateProduct\:\:execute\(\) expects string, string\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/Admin/AdminPersonalProductController.php
+
+		-
+			message: '#^Possibly invalid array key type string\|null\.$#'
+			identifier: offsetAccess.invalidOffset
+			count: 3
+			path: app/Http/Controllers/Admin/AdminRoleController.php
+
+		-
+			message: '#^Parameter \#1 \$locale of method App\\Models\\Category\:\:isComplete\(\) expects string, string\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/Admin/AdminTranslationController.php
+
+		-
+			message: '#^Parameter \#1 \$locale of method App\\Models\\Category\:\:isPublished\(\) expects string, string\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/Admin/AdminTranslationController.php
+
+		-
+			message: '#^Parameter \#3 \$locale of method App\\Http\\Controllers\\Admin\\AdminTranslationController\:\:applyStatusFilter\(\) expects string, string\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/Admin/AdminTranslationController.php
+
+		-
+			message: '#^Parameter \$locale of class App\\Data\\Translations\\PublishTranslationData constructor expects string, string\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/Admin/AdminTranslationController.php
+
+		-
+			message: '#^Instanceof between App\\Enums\\AccountStatus and App\\Enums\\AccountStatus will always evaluate to true\.$#'
+			identifier: instanceof.alwaysTrue
+			count: 1
+			path: app/Http/Controllers/Admin/AdminUserController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\User\:\:\$registration_channel\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Http/Controllers/Admin/RegistrationController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\Admin\\RegistrationController\:\:blocks\(\) should return list\<array\<string, mixed\>\> but returns array\<int, array\{id\: string, reason_code\: ''abuse''\|''deleted_and_blocked''\|''manual_block''\|''other''\|''rejected…''\|''security_risk'', reason\: string\|null, source\: ''admin''\|''system'', source_label\: string, created_at\: string\|null, created_by\: string\|null\}\>\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Http/Controllers/Admin/RegistrationController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\Admin\\RegistrationController\:\:pending\(\) should return list\<array\<string, mixed\>\> but returns array\<int, array\{id\: string, name\: string, email\: string, channel\: mixed, created_at\: string\|null, email_verified\: bool, can_approve\: true\}\>\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Http/Controllers/Admin/RegistrationController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\Admin\\RegistrationController\:\:rejected\(\) should return list\<array\<string, mixed\>\> but returns array\<int, array\{id\: string, name\: string, email\: string, channel\: mixed, rejected_at\: string\|null, reason\: string\|null, rejected_by\: string\|null\}\>\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Http/Controllers/Admin/RegistrationController.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Models\\User\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 2
+			path: app/Http/Controllers/Admin/RegistrationController.php
+
+		-
+			message: '#^Parameter \#1 \$channel of method App\\Http\\Controllers\\Admin\\RegistrationController\:\:userIdsForChannel\(\) expects string, string\|null given\.$#'
+			identifier: argument.type
+			count: 2
+			path: app/Http/Controllers/Admin/RegistrationController.php
+
+		-
+			message: '#^Return type of call to method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Models\\User\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: method.unresolvableReturnType
+			count: 2
+			path: app/Http/Controllers/Admin/RegistrationController.php
+
+		-
+			message: '#^Return type of call to method Illuminate\\Support\\Collection\<int,array\<string, mixed\>\>\:\:all\(\) contains unresolvable type\.$#'
+			identifier: method.unresolvableReturnType
+			count: 2
+			path: app/Http/Controllers/Admin/RegistrationController.php
+
+		-
+			message: '#^Cannot access property \$value on string\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: app/Http/Controllers/Api/V1/AdminAiProviderController.php
+
+		-
+			message: '#^Cannot call method label\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Http/Controllers/Api/V1/AdminAiProviderController.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,HomeSide\\AiAgents\\Models\\AiGlobalSetting\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 1
+			path: app/Http/Controllers/Api/V1/AdminAiProviderController.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Support\\Collection\<string,HomeSide\\AiAgents\\Contracts\\ModuleAiProvider\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 1
+			path: app/Http/Controllers/Api/V1/AdminAiProviderController.php
+
+		-
+			message: '#^Return type of call to method Illuminate\\Database\\Eloquent\\Collection\<int,HomeSide\\AiAgents\\Models\\AiGlobalSetting\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: method.unresolvableReturnType
+			count: 1
+			path: app/Http/Controllers/Api/V1/AdminAiProviderController.php
+
+		-
+			message: '#^Return type of call to method Illuminate\\Support\\Collection\<string,HomeSide\\AiAgents\\Contracts\\ModuleAiProvider\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: method.unresolvableReturnType
+			count: 1
+			path: app/Http/Controllers/Api/V1/AdminAiProviderController.php
+
+		-
+			message: '#^Return type of call to method Illuminate\\Support\\Collection\<string,array\<string, mixed\>\>\:\:values\(\) contains unresolvable type\.$#'
+			identifier: method.unresolvableReturnType
+			count: 1
+			path: app/Http/Controllers/Api/V1/AdminAiProviderController.php
+
+		-
+			message: '#^Access to an undefined property HomeSide\\AiAgents\\Models\\AiRun\:\:\$avg_duration_ms\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Api/V1/AdminAiUsageController.php
+
+		-
+			message: '#^Access to an undefined property HomeSide\\AiAgents\\Models\\AiRun\:\:\$error_runs\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Api/V1/AdminAiUsageController.php
+
+		-
+			message: '#^Access to an undefined property HomeSide\\AiAgents\\Models\\AiRun\:\:\$max_duration_ms\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Api/V1/AdminAiUsageController.php
+
+		-
+			message: '#^Access to an undefined property HomeSide\\AiAgents\\Models\\AiRun\:\:\$success_runs\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Api/V1/AdminAiUsageController.php
+
+		-
+			message: '#^Access to an undefined property HomeSide\\AiAgents\\Models\\AiRun\:\:\$total_runs\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Api/V1/AdminAiUsageController.php
+
+		-
+			message: '#^Access to an undefined property HomeSide\\AiAgents\\Models\\AiRun\:\:\$unknown_token_runs\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Http/Controllers/Api/V1/AdminAiUsageController.php
+
+		-
+			message: '#^Cannot call method load\(\) on App\\Models\\Product\|null\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Http/Controllers/Api/V1/AdminProductImageController.php
+
+		-
+			message: '#^Parameter \#1 \$user of method App\\Actions\\Auth\\ApiResendOtp\:\:execute\(\) expects App\\Models\\User, App\\Models\\User\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/Api/V1/Auth/RefreshController.php
+
+		-
+			message: '#^Unable to resolve the template type TFlatMapKey in call to method Illuminate\\Support\\Collection\<\(int\|string\),mixed\>\:\:flatMap\(\)$#'
+			identifier: argument.templateType
+			count: 1
+			path: app/Http/Controllers/Api/V1/HouseholdConfigurationController.php
+
+		-
+			message: '#^Unable to resolve the template type TFlatMapValue in call to method Illuminate\\Support\\Collection\<\(int\|string\),mixed\>\:\:flatMap\(\)$#'
+			identifier: argument.templateType
+			count: 1
+			path: app/Http/Controllers/Api/V1/HouseholdConfigurationController.php
+
+		-
+			message: '#^Unable to resolve the template type TKey in call to function collect$#'
+			identifier: argument.templateType
+			count: 3
+			path: app/Http/Controllers/Api/V1/HouseholdConfigurationController.php
+
+		-
+			message: '#^Unable to resolve the template type TValue in call to function collect$#'
+			identifier: argument.templateType
+			count: 3
+			path: app/Http/Controllers/Api/V1/HouseholdConfigurationController.php
+
+		-
+			message: '#^Cannot call method load\(\) on App\\Models\\HouseholdInvitation\|null\.$#'
+			identifier: method.nonObject
+			count: 3
+			path: app/Http/Controllers/Api/V1/HouseholdController.php
+
+		-
+			message: '#^Parameter \#3 \$creator of method App\\Actions\\Households\\CreateHouseholdInviteLink\:\:execute\(\) expects App\\Models\\User, App\\Models\\User\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/Api/V1/HouseholdController.php
+
+		-
+			message: '#^Parameter \#2 \$user of method App\\Actions\\Households\\GetHouseholdDashboard\:\:execute\(\) expects App\\Models\\User, App\\Models\\User\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/Api/V1/HouseholdDashboardController.php
+
+		-
+			message: '#^Cannot call method diffForHumans\(\) on Illuminate\\Support\\Carbon\|null\.$#'
+			identifier: method.nonObject
+			count: 2
+			path: app/Http/Controllers/Api/V1/JobMonitoringController.php
+
+		-
+			message: '#^Parameter \#2 \$data of method App\\Actions\\ShoppingLists\\QuickCreateListItem\:\:execute\(\) expects array\{product\: array\{name\: string, category_id\?\: string\|null, icon\?\: string\|null\}, item\: array\<string, mixed\>\}, array\<string, mixed\> given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/Api/V1/ListItemController.php
+
+		-
+			message: '#^Using nullsafe property access on non\-nullable type Laravel\\Sanctum\\PersonalAccessToken\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Http/Controllers/Api/V1/MeAccountController.php
+
+		-
+			message: '#^Cannot access property \$active_household_id on App\\Models\\User\|null\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: app/Http/Controllers/Api/V1/PersonalProductController.php
+
+		-
+			message: '#^PHPDoc tag @param references unknown parameter\: \$action$#'
+			identifier: parameter.notFound
+			count: 2
+			path: app/Http/Controllers/Api/V1/ProductSearchController.php
+
+		-
+			message: '#^Cannot access property \$candidates on App\\Data\\Recipes\\RecipeImportResult\|null\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: app/Http/Controllers/Api/V1/RecipeImportController.php
+
+		-
+			message: '#^Cannot access property \$recipe on App\\Data\\Recipes\\RecipeImportResult\|null\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: app/Http/Controllers/Api/V1/RecipeImportController.php
+
+		-
+			message: '#^Cannot access property \$warnings on App\\Data\\Recipes\\RecipeImportResult\|null\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: app/Http/Controllers/Api/V1/RecipeImportController.php
+
+		-
+			message: '#^Offset ''scheme'' might not exist on array\{scheme\?\: string, host\: string, port\?\: int\<0, 65535\>, user\?\: string, pass\?\: string, path\?\: string, query\?\: string, fragment\?\: string\}\.$#'
+			identifier: offsetAccess.notFound
+			count: 1
+			path: app/Http/Controllers/Api/V1/RecipeImportController.php
+
+		-
+			message: '#^Cannot call method toISOString\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Http/Controllers/Api/V1/TwoFactorController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\Api\\V1\\TwoFactorController\:\:newRecoveryCodes\(\) should return list\<string\> but returns array\<int, non\-empty\-string\>\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Http/Controllers/Api/V1/TwoFactorController.php
+
+		-
+			message: '#^Strict comparison using \!\=\= between Illuminate\\Support\\Carbon and null will always evaluate to true\.$#'
+			identifier: notIdentical.alwaysTrue
+			count: 1
+			path: app/Http/Controllers/Auth/AuthenticationBootstrapController.php
+
+		-
+			message: '#^Cannot call method googleIdentity\(\) on App\\Models\\User\|null\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Http/Controllers/Settings/ProfileController.php
+
+		-
+			message: '#^Strict comparison using \!\=\= between Laravel\\Sanctum\\PersonalAccessToken and null will always evaluate to true\.$#'
+			identifier: notIdentical.alwaysTrue
+			count: 1
+			path: app/Http/Controllers/Settings/SecurityController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\Settings\\UserAiProviderController\:\:serializeProvider\(\) should return array\{id\: string, name\: string, type\: string, driver\: string, base_url\: string, model\: string, module\: string, module_label\: string, \.\.\.\} but returns array\{id\: string, name\: string, type\: string, driver\: string, base_url\: string, model\: string, module\: string, modules\: list\<string\>, \.\.\.\}\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Http/Controllers/Settings/UserAiProviderController.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Contracts\\Pagination\\LengthAwarePaginator\<int, HomeSide\\AiAgents\\Models\\ModelsDevModel\>\:\:withPath\(\)\.$#'
+			identifier: method.notFound
+			count: 5
+			path: app/Http/Controllers/Web/CatalogController.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Contracts\\Pagination\\LengthAwarePaginator\<int, HomeSide\\AiAgents\\Models\\ModelsDevProvider\>\:\:withPath\(\)\.$#'
+			identifier: method.notFound
+			count: 4
+			path: app/Http/Controllers/Web/CatalogController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\ContactLabel\:\:\$pivot\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Http/Controllers/Web/ContactController.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Builder\<Illuminate\\Database\\Eloquent\\Model\>\:\:visibleTo\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Http/Controllers/Web/ContactController.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Relations\\BelongsToMany\:\:visibleTo\(\)\.$#'
+			identifier: method.notFound
+			count: 3
+			path: app/Http/Controllers/Web/ContactController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\Web\\ContactController\:\:contactsPage\(\) has parameter \$favoriteContactIds with generic class Illuminate\\Support\\Collection but does not specify its types\: TKey, TValue$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Http/Controllers/Web/ContactController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\Web\\ContactController\:\:contactsQuery\(\) return type with generic class Illuminate\\Database\\Eloquent\\Builder does not specify its types\: TModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Http/Controllers/Web/ContactController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\Web\\ContactController\:\:favoriteContactsPayload\(\) has parameter \$favoriteContactIds with generic class Illuminate\\Support\\Collection but does not specify its types\: TKey, TValue$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Http/Controllers/Web/ContactController.php
+
+		-
+			message: '#^Parameter \#1 \$contacts of method App\\Actions\\Contacts\\MarkFavoriteContacts\:\:execute\(\) expects Illuminate\\Database\\Eloquent\\Collection\<int, App\\Models\\Contact\>, Illuminate\\Database\\Eloquent\\Collection\<int, Illuminate\\Database\\Eloquent\\Model\> given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/Web/ContactController.php
+
+		-
+			message: '#^Parameter \#1 \$relations of method Illuminate\\Database\\Eloquent\\Builder\<App\\Models\\Contact\>\:\:with\(\) expects array\<array\|\(Closure\(Illuminate\\Database\\Eloquent\\Relations\\Relation\<\*, \*, \*\>\)\: mixed\)\|string\>\|string, array\{labels\: Closure\(Illuminate\\Database\\Eloquent\\Relations\\BelongsToMany\)\: Illuminate\\Database\\Eloquent\\Relations\\BelongsToMany\} given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/Web/ContactController.php
+
+		-
+			message: '#^Parameter \#2 \$remote of method App\\Actions\\Contacts\\UseRemoteContactFields\:\:execute\(\) expects App\\Models\\ContactRecord, App\\Models\\ContactRecord\|Illuminate\\Database\\Eloquent\\Collection\<int, App\\Models\\ContactRecord\> given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/Web/ContactController.php
+
+		-
+			message: '#^Cannot access property \$id on App\\Models\\User\|null\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: app/Http/Controllers/Web/ContactSourceController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\Web\\EconomicDocumentController\:\:destroy\(\) should return Illuminate\\Http\\JsonResponse but returns Illuminate\\Http\\Response\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Http/Controllers/Web/EconomicDocumentController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\Web\\EconomicDocumentController\:\:resolveHousehold\(\) should return App\\Models\\Household\|null but returns App\\Models\\Household\|Illuminate\\Database\\Eloquent\\Collection\<int, App\\Models\\Household\>\|null\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Http/Controllers/Web/EconomicDocumentController.php
+
+		-
+			message: '#^Parameter \#3 \$user of method App\\Actions\\Economy\\UploadEconomicDocument\:\:execute\(\) expects App\\Models\\User, App\\Models\\User\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/Web/EconomicDocumentController.php
+
+		-
+			message: '#^Cannot access property \$id on App\\Models\\User\|null\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: app/Http/Controllers/Web/EconomicTransactionController.php
+
+		-
+			message: '#^Cannot access property \$name on App\\Models\\User\|null\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: app/Http/Controllers/Web/EconomicTransactionController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\Web\\EconomicTransactionController\:\:resolveHousehold\(\) should return App\\Models\\Household\|null but returns App\\Models\\Household\|Illuminate\\Database\\Eloquent\\Collection\<int, App\\Models\\Household\>\|null\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Http/Controllers/Web/EconomicTransactionController.php
+
+		-
+			message: '#^Parameter \#1 \$household of method App\\Actions\\Economy\\ListEconomicTransactions\:\:execute\(\) expects App\\Models\\Household, App\\Models\\Household\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/Web/EconomicTransactionController.php
+
+		-
+			message: '#^Parameter \#1 \$user of method App\\Actions\\Economy\\GetPersonalTotalsStats\:\:execute\(\) expects App\\Models\\User, App\\Models\\User\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/Web/EconomicTransactionController.php
+
+		-
+			message: '#^Parameter \#2 \$user of method App\\Actions\\Economy\\GetEconomyStats\:\:execute\(\) expects App\\Models\\User, App\\Models\\User\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/Web/EconomicTransactionController.php
+
+		-
+			message: '#^Parameter \#2 \$user of method App\\Actions\\Economy\\ListEconomicTransactions\:\:execute\(\) expects App\\Models\\User, App\\Models\\User\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/Web/EconomicTransactionController.php
+
+		-
+			message: '#^Parameter \#3 \$user of method App\\Actions\\Economy\\CreateEconomicTransaction\:\:execute\(\) expects App\\Models\\User, App\\Models\\User\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/Web/EconomicTransactionController.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>settings" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Http/Controllers/Web/EconomicTransactionController.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Contracts\\Pagination\\LengthAwarePaginator\<int, App\\Models\\EconomicTransaction\>\:\:getCollection\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Http/Controllers/Web/HouseholdController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\Web\\HouseholdController\:\:personalAccountsPayload\(\) should return array\{total_minor\: int, accounts\: list\<array\<string, mixed\>\>\} but returns array\{total_minor\: int, accounts\: array\<int, array\>\}\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Http/Controllers/Web/HouseholdController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\Web\\HouseholdController\:\:recentTransactionsPayload\(\) should return array\{items\: list\<array\<string, mixed\>\>, total\: int\} but returns array\{items\: array, total\: int\}\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Http/Controllers/Web/HouseholdController.php
+
+		-
+			message: '#^Parameter \#3 \$creator of method App\\Actions\\Households\\CreateHouseholdInviteLink\:\:execute\(\) expects App\\Models\\User, App\\Models\\User\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/Web/HouseholdController.php
+
+		-
+			message: '#^Parameter \#1 \$boolean of function abort_unless expects bool, App\\Models\\Household\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/Web/ImageController.php
+
+		-
+			message: '#^Parameter \#1 \$boolean of function abort_unless expects bool, App\\Models\\ListItem\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/Web/ImageController.php
+
+		-
+			message: '#^Parameter \#1 \$boolean of function abort_unless expects bool, App\\Models\\Recipe\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/Web/ImageController.php
+
+		-
+			message: '#^Parameter \#1 \$boolean of function abort_unless expects bool, string\|null given\.$#'
+			identifier: argument.type
+			count: 3
+			path: app/Http/Controllers/Web/ImageController.php
+
+		-
+			message: '#^Cannot call method diffForHumans\(\) on Illuminate\\Support\\Carbon\|null\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Http/Controllers/Web/JobMonitoringController.php
+
+		-
+			message: '#^Cannot call method toDateTimeString\(\) on Illuminate\\Support\\Carbon\|null\.$#'
+			identifier: method.nonObject
+			count: 4
+			path: app/Http/Controllers/Web/JobMonitoringController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\Web\\JobMonitoringController\:\:recentJobs\(\) return type with generic interface Illuminate\\Contracts\\Pagination\\LengthAwarePaginator does not specify its types\: TKey, TValue$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Http/Controllers/Web/JobMonitoringController.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Pagination\\AbstractPaginator\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:through\(\) expects callable\(Illuminate\\Database\\Eloquent\\Model, int\)\: array\<string, mixed\>, Closure\(App\\Models\\JobRun\)\: array\<string, mixed\> given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/Web/JobMonitoringController.php
+
+		-
+			message: '#^Unable to resolve the template type TKey in call to function collect$#'
+			identifier: argument.templateType
+			count: 1
+			path: app/Http/Controllers/Web/JobMonitoringController.php
+
+		-
+			message: '#^Unable to resolve the template type TValue in call to function collect$#'
+			identifier: argument.templateType
+			count: 1
+			path: app/Http/Controllers/Web/JobMonitoringController.php
+
+		-
+			message: '#^Parameter \#1 \$data of static method App\\Data\\Economy\\PaymentMethodData\:\:fromArray\(\) expects array\{name\: string, kind\: string, icon\?\: string\|null, color\?\: string\|null, is_active\?\: bool\|int\|string, sort_order\?\: int\|string\|null\}, array\<string, mixed\> given\.$#'
+			identifier: argument.type
+			count: 2
+			path: app/Http/Controllers/Web/PaymentMethodController.php
+
+		-
+			message: '#^Parameter \#1 \$user of method App\\Actions\\Economy\\GetPersonalTotalsStats\:\:execute\(\) expects App\\Models\\User, App\\Models\\User\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/Web/PersonalEconomyOverviewController.php
+
+		-
+			message: '#^Parameter \#1 \$user of method App\\Actions\\Economy\\ListEconomicTransactions\:\:executePersonal\(\) expects App\\Models\\User, App\\Models\\User\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/Web/PersonalEconomyOverviewController.php
+
+		-
+			message: '#^Cannot access property \$candidates on App\\Data\\Recipes\\RecipeImportResult\|null\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: app/Http/Controllers/Web/RecipeImportController.php
+
+		-
+			message: '#^Cannot access property \$recipe on App\\Data\\Recipes\\RecipeImportResult\|null\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: app/Http/Controllers/Web/RecipeImportController.php
+
+		-
+			message: '#^Cannot access property \$warnings on App\\Data\\Recipes\\RecipeImportResult\|null\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: app/Http/Controllers/Web/RecipeImportController.php
+
+		-
+			message: '#^Possibly invalid array key type string\|null\.$#'
+			identifier: offsetAccess.invalidOffset
+			count: 1
+			path: app/Http/Middleware/ApiPermissionsMiddleware.php
+
+		-
+			message: '#^Instanceof between App\\Enums\\AccountStatus and App\\Enums\\AccountStatus will always evaluate to true\.$#'
+			identifier: instanceof.alwaysTrue
+			count: 1
+			path: app/Http/Middleware/EnsureAccountIsActive.php
+
+		-
+			message: '#^Method App\\Http\\Middleware\\HandleInertiaRequests\:\:resolveEnabledModules\(\) should return list\<string\> but returns array\<int, string\>\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Http/Middleware/HandleInertiaRequests.php
+
+		-
+			message: '#^Method App\\Http\\Middleware\\HandleInertiaRequests\:\:share\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Http/Middleware/HandleInertiaRequests.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>locale" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Http/Middleware/SetLocale.php
+
+		-
+			message: '#^Method App\\Http\\Resources\\Assistant\\AiProposalResource\:\:toArray\(\) should return array\{id\: string, conversation_id\: string\|null, household_id\: string\|null, type\: ''add_shopping_items''\|''create_recipe'', status\: ''accepted''\|''expired''\|''pending''\|''rejected'', payload\: array\{list_id\: string, items\: list\<array\{product_id\?\: string\|null, custom_name\?\: string\|null, quantity\?\: float\|int, unit\?\: string\|null, notes\?\: string\|null\}\>\}\|array\{recipe\: array\<string, mixed\>\}, reason\: string\|null, expires_at\: string\|null, \.\.\.\} but returns array\{id\: string, conversation_id\: string\|null, household_id\: int\|string\|null, type\: string, status\: string, payload\: array\<string, mixed\>, reason\: string\|null, expires_at\: string\|null, \.\.\.\}\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Http/Resources/Assistant/AiProposalResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\Contacts\\ContactCollectionResource\:\:\$contact_source_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/Contacts/ContactCollectionResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\Contacts\\ContactCollectionResource\:\:\$description\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/Contacts/ContactCollectionResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\Contacts\\ContactCollectionResource\:\:\$enabled\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/Contacts/ContactCollectionResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\Contacts\\ContactCollectionResource\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/Contacts/ContactCollectionResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\Contacts\\ContactCollectionResource\:\:\$last_synced_at\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/Contacts/ContactCollectionResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\Contacts\\ContactCollectionResource\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/Contacts/ContactCollectionResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\Contacts\\ContactCollectionResource\:\:\$read_only\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/Contacts/ContactCollectionResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\Contacts\\ContactCollectionResource\:\:\$remote_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/Contacts/ContactCollectionResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\Contacts\\ContactResource\:\:\$display_name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/Contacts/ContactResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\Contacts\\ContactResource\:\:\$household_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/Contacts/ContactResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\Contacts\\ContactResource\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Http/Resources/Contacts/ContactResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\Contacts\\ContactResource\:\:\$labels\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/Contacts/ContactResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\Contacts\\ContactResource\:\:\$preferred_photo_record_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/Contacts/ContactResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\Contacts\\ContactResource\:\:\$records\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Http/Resources/Contacts/ContactResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\Contacts\\ContactResource\:\:\$type\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/Contacts/ContactResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\Contacts\\ContactSourceResource\:\:\$authentication_type\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/Contacts/ContactSourceResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\Contacts\\ContactSourceResource\:\:\$collections\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/Contacts/ContactSourceResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\Contacts\\ContactSourceResource\:\:\$enabled\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/Contacts/ContactSourceResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\Contacts\\ContactSourceResource\:\:\$household_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/Contacts/ContactSourceResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\Contacts\\ContactSourceResource\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/Contacts/ContactSourceResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\Contacts\\ContactSourceResource\:\:\$last_sync_error\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/Contacts/ContactSourceResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\Contacts\\ContactSourceResource\:\:\$last_sync_status\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/Contacts/ContactSourceResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\Contacts\\ContactSourceResource\:\:\$last_synced_at\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/Contacts/ContactSourceResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\Contacts\\ContactSourceResource\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/Contacts/ContactSourceResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\Contacts\\ContactSourceResource\:\:\$provider\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/Contacts/ContactSourceResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\Contacts\\ContactSourceResource\:\:\$provider_configuration\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/Contacts/ContactSourceResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\Contacts\\ContactSourceResource\:\:\$sync_enabled\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/Contacts/ContactSourceResource.php
+
+		-
+			message: '#^Call to method toISOString\(\) on an unknown class App\\Models\\Carbon\.$#'
+			identifier: class.notFound
+			count: 1
+			path: app/Http/Resources/Economy/EconomicDocumentResource.php
+
+		-
+			message: '#^Using nullsafe property access on non\-nullable type App\\Models\\HouseholdMember\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 3
+			path: app/Http/Resources/Economy/EconomicTransactionParticipantResource.php
+
+		-
+			message: '#^Method App\\Http\\Resources\\Households\\AiProviderResource\:\:redactSecrets\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Http/Resources/Households/AiProviderResource.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>timestamp" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Http/Resources/Recipes/RecipeStepResource.php
+
+		-
+			message: '#^Class App\\Images\\Strategies\\GeneratedImage does not have a constructor and must be instantiated without any parameters\.$#'
+			identifier: new.noConstructor
+			count: 1
+			path: app/Images/ImageResolver.php
+
+		-
+			message: '#^Class App\\Images\\Strategies\\HouseholdImage does not have a constructor and must be instantiated without any parameters\.$#'
+			identifier: new.noConstructor
+			count: 1
+			path: app/Images/ImageResolver.php
+
+		-
+			message: '#^Class App\\Images\\Strategies\\ListItemImage does not have a constructor and must be instantiated without any parameters\.$#'
+			identifier: new.noConstructor
+			count: 1
+			path: app/Images/ImageResolver.php
+
+		-
+			message: '#^Offset ''generated''\|''household''\|''list_item''\|''recipe''\|''recipe_step'' on array\{household\: ''App\\\\Images\\\\Strategies\\\\HouseholdImage'', list_item\: ''App\\\\Images\\\\Strategies\\\\ListItemImage'', recipe\: ''App\\\\Images\\\\Strategies\\\\RecipeImage'', recipe_step\: ''App\\\\Images\\\\Strategies\\\\RecipeImage'', generated\: ''App\\\\Images\\\\Strategies\\\\GeneratedImage''\} on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Images/ImageResolver.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between ''App\\\\Images\\\\Strategies\\\\GeneratedImage''\|''App\\\\Images\\\\Strategies\\\\HouseholdImage''\|''App\\\\Images\\\\Strategies\\\\ListItemImage''\|''App\\\\Images\\\\Strategies\\\\RecipeImage'' and null will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: app/Images/ImageResolver.php
+
+		-
+			message: '#^Cannot access property \$created_by on App\\Models\\ShoppingList\|null\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: app/Images/Strategies/ListItemImage.php
+
+		-
+			message: '#^Cannot access property \$disk on App\\Models\\EconomicDocument\|null\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: app/Jobs/AnalyzeEconomicDocumentJob.php
+
+		-
+			message: '#^Cannot access property \$mime_type on App\\Models\\EconomicDocument\|null\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: app/Jobs/AnalyzeEconomicDocumentJob.php
+
+		-
+			message: '#^Cannot access property \$path on App\\Models\\EconomicDocument\|null\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: app/Jobs/AnalyzeEconomicDocumentJob.php
+
+		-
+			message: '#^Dead catch \- Symfony\\Component\\HttpKernel\\Exception\\HttpExceptionInterface is never thrown in the try block\.$#'
+			identifier: catch.neverThrown
+			count: 1
+			path: app/Jobs/AnalyzeEconomicDocumentJob.php
+
+		-
+			message: '#^Offset ''errorCode'' might not exist on array\{status\: ''denied'', operationId\: string\|null, errorCode\?\: string, errorMessage\?\: string\}\.$#'
+			identifier: offsetAccess.notFound
+			count: 1
+			path: app/Jobs/AnalyzeEconomicDocumentJob.php
+
+		-
+			message: '#^Offset ''errorMessage'' might not exist on array\{status\: ''denied'', operationId\: string\|null, errorCode\?\: string, errorMessage\?\: string\}\.$#'
+			identifier: offsetAccess.notFound
+			count: 1
+			path: app/Jobs/AnalyzeEconomicDocumentJob.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between string and null will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: app/Jobs/AnalyzeEconomicDocumentJob.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Product\|Illuminate\\Database\\Eloquent\\Collection\<int, App\\Models\\Product\>\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Jobs/GenerateProductImagesJob.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Product\|Illuminate\\Database\\Eloquent\\Collection\<int, App\\Models\\Product\>\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Jobs/GenerateProductImagesJob.php
+
+		-
+			message: '#^Parameter \#1 \$product of method App\\Ai\\ImageGenerationService\:\:generateForProduct\(\) expects App\\Models\\Product, App\\Models\\Product\|Illuminate\\Database\\Eloquent\\Collection\<int, App\\Models\\Product\> given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Jobs/GenerateProductImagesJob.php
+
+		-
+			message: '#^Cannot call method update\(\) on App\\Models\\ContactSource\|null\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Jobs/SyncContactCollectionJob.php
+
+		-
+			message: '#^Instanceof between Illuminate\\Support\\Carbon and Illuminate\\Support\\Carbon will always evaluate to true\.$#'
+			identifier: instanceof.alwaysTrue
+			count: 1
+			path: app/Models/AuthenticationBootstrap.php
+
+		-
+			message: '#^Method App\\Models\\Contact\:\:scopeVisibleTo\(\) has parameter \$query with generic class Illuminate\\Database\\Eloquent\\Builder but does not specify its types\: TModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/Contact.php
+
+		-
+			message: '#^Method App\\Models\\Contact\:\:scopeVisibleTo\(\) return type with generic class Illuminate\\Database\\Eloquent\\Builder does not specify its types\: TModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/Contact.php
+
+		-
+			message: '#^Method App\\Models\\ContactLabel\:\:scopeVisibleTo\(\) has parameter \$query with generic class Illuminate\\Database\\Eloquent\\Builder but does not specify its types\: TModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/ContactLabel.php
+
+		-
+			message: '#^Method App\\Models\\ContactLabel\:\:scopeVisibleTo\(\) return type with generic class Illuminate\\Database\\Eloquent\\Builder does not specify its types\: TModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/ContactLabel.php
+
+		-
+			message: '#^Method App\\Models\\ContactSource\:\:scopeVisibleTo\(\) has parameter \$query with generic class Illuminate\\Database\\Eloquent\\Builder but does not specify its types\: TModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/ContactSource.php
+
+		-
+			message: '#^Method App\\Models\\ContactSource\:\:scopeVisibleTo\(\) return type with generic class Illuminate\\Database\\Eloquent\\Builder does not specify its types\: TModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/ContactSource.php
+
+		-
+			message: '#^Method App\\Models\\EconomicAccount\:\:paymentMethods\(\) should return Illuminate\\Database\\Eloquent\\Relations\\BelongsToMany\<App\\Models\\PaymentMethod, \$this\(App\\Models\\EconomicAccount\), Illuminate\\Database\\Eloquent\\Relations\\Pivot, ''pivot''\> but returns Illuminate\\Database\\Eloquent\\Relations\\BelongsToMany\<App\\Models\\PaymentMethod, \$this\(App\\Models\\EconomicAccount\), App\\Models\\EconomicAccountPaymentMethod, ''pivot''\>\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Models/EconomicAccount.php
+
+		-
+			message: '#^PHPDoc tag @property for property App\\Models\\EconomicDocument\:\:\$created_at contains unknown class App\\Models\\Carbon\.$#'
+			identifier: class.notFound
+			count: 1
+			path: app/Models/EconomicDocument.php
+
+		-
+			message: '#^PHPDoc tag @property for property App\\Models\\EconomicDocument\:\:\$imports contains unknown class App\\Models\\Collection\.$#'
+			identifier: class.notFound
+			count: 1
+			path: app/Models/EconomicDocument.php
+
+		-
+			message: '#^PHPDoc tag @property for property App\\Models\\EconomicDocument\:\:\$transactions contains unknown class App\\Models\\Collection\.$#'
+			identifier: class.notFound
+			count: 1
+			path: app/Models/EconomicDocument.php
+
+		-
+			message: '#^PHPDoc tag @property for property App\\Models\\EconomicDocument\:\:\$updated_at contains unknown class App\\Models\\Carbon\.$#'
+			identifier: class.notFound
+			count: 1
+			path: app/Models/EconomicDocument.php
+
+		-
+			message: '#^Class App\\Models\\EconomicTransactionItem uses generic trait Illuminate\\Database\\Eloquent\\Factories\\HasFactory but does not specify its types\: TFactory$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/EconomicTransactionItem.php
+
+		-
+			message: '#^Class App\\Models\\EconomicTransactionParticipant uses generic trait Illuminate\\Database\\Eloquent\\Factories\\HasFactory but does not specify its types\: TFactory$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/EconomicTransactionParticipant.php
+
+		-
+			message: '#^Class App\\Models\\EconomicTransactionTax uses generic trait Illuminate\\Database\\Eloquent\\Factories\\HasFactory but does not specify its types\: TFactory$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/EconomicTransactionTax.php
+
+		-
+			message: '#^Class App\\Models\\JobRun has PHPDoc tag @property for property \$payload with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Models/JobRun.php
+
+		-
+			message: '#^Class App\\Models\\JobRun has PHPDoc tag @property for property \$tags with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Models/JobRun.php
+
+		-
+			message: '#^Class App\\Models\\JobRun uses generic trait Illuminate\\Database\\Eloquent\\Factories\\HasFactory but does not specify its types\: TFactory$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/JobRun.php
+
+		-
+			message: '#^Method App\\Models\\JobRun\:\:originalJobRun\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\BelongsTo does not specify its types\: TRelatedModel, TDeclaringModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/JobRun.php
+
+		-
+			message: '#^Method App\\Models\\JobRun\:\:retries\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\HasMany does not specify its types\: TRelatedModel, TDeclaringModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/JobRun.php
+
+		-
+			message: '#^Method App\\Models\\JobRun\:\:scopeByJobClass\(\) has parameter \$query with generic class Illuminate\\Database\\Eloquent\\Builder but does not specify its types\: TModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/JobRun.php
+
+		-
+			message: '#^Method App\\Models\\JobRun\:\:scopeByJobClass\(\) return type with generic class Illuminate\\Database\\Eloquent\\Builder does not specify its types\: TModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/JobRun.php
+
+		-
+			message: '#^Method App\\Models\\JobRun\:\:scopeByQueue\(\) has parameter \$query with generic class Illuminate\\Database\\Eloquent\\Builder but does not specify its types\: TModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/JobRun.php
+
+		-
+			message: '#^Method App\\Models\\JobRun\:\:scopeByQueue\(\) return type with generic class Illuminate\\Database\\Eloquent\\Builder does not specify its types\: TModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/JobRun.php
+
+		-
+			message: '#^Method App\\Models\\JobRun\:\:scopeByStatus\(\) has parameter \$query with generic class Illuminate\\Database\\Eloquent\\Builder but does not specify its types\: TModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/JobRun.php
+
+		-
+			message: '#^Method App\\Models\\JobRun\:\:scopeByStatus\(\) return type with generic class Illuminate\\Database\\Eloquent\\Builder does not specify its types\: TModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/JobRun.php
+
+		-
+			message: '#^Method App\\Models\\JobRun\:\:scopeFailed\(\) has parameter \$query with generic class Illuminate\\Database\\Eloquent\\Builder but does not specify its types\: TModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/JobRun.php
+
+		-
+			message: '#^Method App\\Models\\JobRun\:\:scopeFailed\(\) return type with generic class Illuminate\\Database\\Eloquent\\Builder does not specify its types\: TModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/JobRun.php
+
+		-
+			message: '#^Method App\\Models\\JobRun\:\:scopeProcessed\(\) has parameter \$query with generic class Illuminate\\Database\\Eloquent\\Builder but does not specify its types\: TModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/JobRun.php
+
+		-
+			message: '#^Method App\\Models\\JobRun\:\:scopeProcessed\(\) return type with generic class Illuminate\\Database\\Eloquent\\Builder does not specify its types\: TModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/JobRun.php
+
+		-
+			message: '#^Method App\\Models\\JobRun\:\:scopeProcessing\(\) has parameter \$query with generic class Illuminate\\Database\\Eloquent\\Builder but does not specify its types\: TModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/JobRun.php
+
+		-
+			message: '#^Method App\\Models\\JobRun\:\:scopeProcessing\(\) return type with generic class Illuminate\\Database\\Eloquent\\Builder does not specify its types\: TModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/JobRun.php
+
+		-
+			message: '#^Method App\\Models\\JobRun\:\:scopeWithTags\(\) has parameter \$query with generic class Illuminate\\Database\\Eloquent\\Builder but does not specify its types\: TModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/JobRun.php
+
+		-
+			message: '#^Method App\\Models\\JobRun\:\:scopeWithTags\(\) has parameter \$tags with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Models/JobRun.php
+
+		-
+			message: '#^Method App\\Models\\JobRun\:\:scopeWithTags\(\) return type with generic class Illuminate\\Database\\Eloquent\\Builder does not specify its types\: TModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/JobRun.php
+
+		-
+			message: '#^Method App\\Models\\JobRun\:\:user\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\BelongsTo does not specify its types\: TRelatedModel, TDeclaringModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/JobRun.php
+
+		-
+			message: '#^Possibly invalid array key type float\|int\.$#'
+			identifier: offsetAccess.invalidOffset
+			count: 1
+			path: app/Models/JobRun.php
+
+		-
+			message: '#^Method App\\Models\\PaymentMethod\:\:accounts\(\) should return Illuminate\\Database\\Eloquent\\Relations\\BelongsToMany\<App\\Models\\EconomicAccount, \$this\(App\\Models\\PaymentMethod\), Illuminate\\Database\\Eloquent\\Relations\\Pivot, ''pivot''\> but returns Illuminate\\Database\\Eloquent\\Relations\\BelongsToMany\<App\\Models\\EconomicAccount, \$this\(App\\Models\\PaymentMethod\), App\\Models\\EconomicAccountPaymentMethod, ''pivot''\>\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Models/PaymentMethod.php
+
+		-
+			message: '#^Instanceof between App\\Enums\\AccountStatus and App\\Enums\\AccountStatus will always evaluate to true\.$#'
+			identifier: instanceof.alwaysTrue
+			count: 1
+			path: app/Models/User.php
+
+		-
+			message: '#^Access to an undefined property object\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Notifications/AccountSuspended.php
+
+		-
+			message: '#^Cannot call method isoFormat\(\) on Illuminate\\Support\\Carbon\|string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Notifications/HouseholdInvitationNotification.php
+
+		-
+			message: '#^Cannot call method isoFormat\(\) on Illuminate\\Support\\Carbon\|string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Notifications/HouseholdInviteNewUserNotification.php
+
+		-
+			message: '#^Access to an undefined property object\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Notifications/RegistrationApproved.php
+
+		-
+			message: '#^Access to an undefined property object\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Notifications/RegistrationRejected.php
+
+		-
+			message: '#^Access to an undefined property object\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Notifications/RegistrationRequested.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>id" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Providers/AppServiceProvider.php
+
+		-
+			message: '#^Instanceof between Illuminate\\Http\\Request and Illuminate\\Http\\Request will always evaluate to true\.$#'
+			identifier: instanceof.alwaysTrue
+			count: 1
+			path: app/Services/Auth/RegistrationSettings.php
+
+		-
+			message: '#^Cannot access property \$preferred_photo_record_id on App\\Models\\Contact\|null\.$#'
+			identifier: property.nonObject
+			count: 2
+			path: app/Services/Contacts/ContactPhotoProcessor.php
+
+		-
+			message: '#^Cannot call method update\(\) on App\\Models\\Contact\|null\.$#'
+			identifier: method.nonObject
+			count: 2
+			path: app/Services/Contacts/ContactPhotoProcessor.php
+
+		-
+			message: '#^Method App\\Services\\Contacts\\ContactResolutionService\:\:summary\(\) should return array\{display_name\: string, avatar_url\: string\|null, email\: string\|null, phone\: string\|null, labels\: list\<array\{id\: string, name\: string\}\>\}\|null but returns array\{display_name\: string, avatar_url\: string\|null, email\: string\|null, phone\: string\|null, labels\: array\<int, array\{id\: string, name\: string\}\>\}\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Services/Contacts/ContactResolutionService.php
+
+		-
+			message: '#^Argument of an invalid type array\<string\>\|string supplied for foreach, only iterables are supported\.$#'
+			identifier: foreach.nonIterable
+			count: 1
+			path: app/Services/Contacts/Providers/VCardParser.php
+
+		-
+			message: '#^Offset 0 on non\-empty\-list\<string\> on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 2
+			path: app/Services/Contacts/Providers/VCardParser.php
+
+		-
+			message: '#^Comparison operation "\>" between int\<3, max\> and 0 is always true\.$#'
+			identifier: greater.alwaysTrue
+			count: 1
+			path: app/Services/Economy/ReceiptTextParser.php
+
+		-
+			message: '#^Offset 0 on array\{list\<array\{string, int\<\-1, max\>\}\>\} on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Services/Economy/ReceiptTextParser.php
+
+		-
+			message: '#^Offset ''mime'' on array\{0\: int\<0, max\>, 1\: int\<0, max\>, 2\: int, 3\: string, mime\: string, channels\?\: int, bits\?\: int\} on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Services/Economy/TesseractReceiptTextExtractor.php
+
+		-
+			message: '#^Offset 0 on array\{0\: int\<0, max\>, 1\: int\<0, max\>, 2\: int, 3\: string, mime\: string, channels\?\: int, bits\?\: int\} on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Services/Economy/TesseractReceiptTextExtractor.php
+
+		-
+			message: '#^Cannot access offset ''ru_stime\.tv_sec'' on array\|false\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: app/Services/JobMonitor.php
+
+		-
+			message: '#^Cannot access offset ''ru_stime\.tv_usec'' on array\|false\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: app/Services/JobMonitor.php
+
+		-
+			message: '#^Cannot access offset ''ru_utime\.tv_sec'' on array\|false\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: app/Services/JobMonitor.php
+
+		-
+			message: '#^Cannot access offset ''ru_utime\.tv_usec'' on array\|false\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: app/Services/JobMonitor.php
+
+		-
+			message: '#^Cannot call method tags\(\) on class\-string\|object\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Services/JobMonitor.php
+
+		-
+			message: '#^Instanceof between object and Illuminate\\Contracts\\Broadcasting\\ShouldBroadcastNow will always evaluate to false\.$#'
+			identifier: instanceof.alwaysFalse
+			count: 1
+			path: app/Services/JobMonitor.php
+
+		-
+			message: '#^Method App\\Services\\JobMonitor\:\:captureTelemetry\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Services/JobMonitor.php
+
+		-
+			message: '#^Method App\\Services\\JobMonitor\:\:extractTags\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Services/JobMonitor.php
+
+		-
+			message: '#^Method App\\Services\\JobMonitor\:\:extractUserId\(\) should return string\|null but returns int\|string\|null\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Services/JobMonitor.php
+
+		-
+			message: '#^Method App\\Services\\JobMonitor\:\:getJobUuid\(\) has parameter \$payload with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Services/JobMonitor.php
+
+		-
+			message: '#^Method App\\Services\\JobMonitor\:\:getQueueDepth\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Services/JobMonitor.php
+
+		-
+			message: '#^Method App\\Services\\JobMonitor\:\:redactArray\(\) has parameter \$data with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Services/JobMonitor.php
+
+		-
+			message: '#^Method App\\Services\\JobMonitor\:\:redactArray\(\) has parameter \$keys with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Services/JobMonitor.php
+
+		-
+			message: '#^Method App\\Services\\JobMonitor\:\:redactArray\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Services/JobMonitor.php
+
+		-
+			message: '#^Method App\\Services\\JobMonitor\:\:redactPayload\(\) has parameter \$payload with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Services/JobMonitor.php
+
+		-
+			message: '#^Method App\\Services\\JobMonitor\:\:redactPayload\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Services/JobMonitor.php
+
+		-
+			message: '#^Method App\\Services\\JobMonitor\:\:shouldRedactKey\(\) has parameter \$redactKeys with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Services/JobMonitor.php
+
+		-
+			message: '#^Method App\\Services\\JobMonitor\:\:unserializeJob\(\) has parameter \$payload with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Services/JobMonitor.php
+
+		-
+			message: '#^Parameter \#1 \$jobRun of event class App\\Events\\JobCompleted constructor expects App\\Models\\JobRun in App\\Events\\JobCompleted\:\:dispatch\(\), App\\Models\\JobRun\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/JobMonitor.php
+
+		-
+			message: '#^Parameter \#1 \$jobRun of event class App\\Events\\JobFailed constructor expects App\\Models\\JobRun in App\\Events\\JobFailed\:\:dispatch\(\), App\\Models\\JobRun\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/JobMonitor.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\JobRun\:\:\$failures\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/JobMonitoringStatistics.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Builder\:\:byJobClass\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Services/JobMonitoringStatistics.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Builder\:\:byQueue\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Services/JobMonitoringStatistics.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Builder\:\:byStatus\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Services/JobMonitoringStatistics.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Builder\:\:withTags\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Services/JobMonitoringStatistics.php
+
+		-
+			message: '#^Method App\\Services\\JobMonitoringStatistics\:\:applyFilters\(\) has parameter \$query with generic class Illuminate\\Database\\Eloquent\\Builder but does not specify its types\: TModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Services/JobMonitoringStatistics.php
+
+		-
+			message: '#^Method App\\Services\\JobMonitoringStatistics\:\:applyFilters\(\) return type with generic class Illuminate\\Database\\Eloquent\\Builder does not specify its types\: TModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Services/JobMonitoringStatistics.php
+
+		-
+			message: '#^Access to offset ''content'' on an unknown class App\\Services\\Recipes\\Import\\SimpleToken\.$#'
+			identifier: class.notFound
+			count: 3
+			path: app/Services/Recipes/Import/CooklangRecipeImporter.php
+
+		-
+			message: '#^Access to offset ''content'' on an unknown class App\\Services\\Recipes\\Import\\StepToken\.$#'
+			identifier: class.notFound
+			count: 3
+			path: app/Services/Recipes/Import/CooklangRecipeImporter.php
+
+		-
+			message: '#^Access to offset ''cookware_refs'' on an unknown class App\\Services\\Recipes\\Import\\SimpleToken\.$#'
+			identifier: class.notFound
+			count: 1
+			path: app/Services/Recipes/Import/CooklangRecipeImporter.php
+
+		-
+			message: '#^Access to offset ''cookware_refs'' on an unknown class App\\Services\\Recipes\\Import\\StepToken\.$#'
+			identifier: class.notFound
+			count: 1
+			path: app/Services/Recipes/Import/CooklangRecipeImporter.php
+
+		-
+			message: '#^Access to offset ''ingredient_refs'' on an unknown class App\\Services\\Recipes\\Import\\SimpleToken\.$#'
+			identifier: class.notFound
+			count: 1
+			path: app/Services/Recipes/Import/CooklangRecipeImporter.php
+
+		-
+			message: '#^Access to offset ''ingredient_refs'' on an unknown class App\\Services\\Recipes\\Import\\StepToken\.$#'
+			identifier: class.notFound
+			count: 1
+			path: app/Services/Recipes/Import/CooklangRecipeImporter.php
+
+		-
+			message: '#^Access to offset ''timer_refs'' on an unknown class App\\Services\\Recipes\\Import\\SimpleToken\.$#'
+			identifier: class.notFound
+			count: 1
+			path: app/Services/Recipes/Import/CooklangRecipeImporter.php
+
+		-
+			message: '#^Access to offset ''timer_refs'' on an unknown class App\\Services\\Recipes\\Import\\StepToken\.$#'
+			identifier: class.notFound
+			count: 1
+			path: app/Services/Recipes/Import/CooklangRecipeImporter.php
+
+		-
+			message: '#^Access to offset ''type'' on an unknown class App\\Services\\Recipes\\Import\\SimpleToken\.$#'
+			identifier: class.notFound
+			count: 3
+			path: app/Services/Recipes/Import/CooklangRecipeImporter.php
+
+		-
+			message: '#^Access to offset ''type'' on an unknown class App\\Services\\Recipes\\Import\\StepToken\.$#'
+			identifier: class.notFound
+			count: 3
+			path: app/Services/Recipes/Import/CooklangRecipeImporter.php
+
+		-
+			message: '#^Method App\\Services\\Recipes\\Import\\CooklangRecipeImporter\:\:appendToken\(\) has invalid return type App\\Services\\Recipes\\Import\\SimpleToken\.$#'
+			identifier: class.notFound
+			count: 1
+			path: app/Services/Recipes/Import/CooklangRecipeImporter.php
+
+		-
+			message: '#^Method App\\Services\\Recipes\\Import\\CooklangRecipeImporter\:\:appendToken\(\) has invalid return type App\\Services\\Recipes\\Import\\StepToken\.$#'
+			identifier: class.notFound
+			count: 1
+			path: app/Services/Recipes/Import/CooklangRecipeImporter.php
+
+		-
+			message: '#^Method App\\Services\\Recipes\\Import\\CooklangRecipeImporter\:\:appendToken\(\) has parameter \$token with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Services/Recipes/Import/CooklangRecipeImporter.php
+
+		-
+			message: '#^Method App\\Services\\Recipes\\Import\\CooklangRecipeImporter\:\:appendToken\(\) should return array\<int, App\\Services\\Recipes\\Import\\SimpleToken\|App\\Services\\Recipes\\Import\\StepToken\> but returns array\<int, App\\Services\\Recipes\\Import\\SimpleToken\|App\\Services\\Recipes\\Import\\StepToken\|array\>\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Services/Recipes/Import/CooklangRecipeImporter.php
+
+		-
+			message: '#^Method App\\Services\\Recipes\\Import\\CooklangRecipeImporter\:\:extractCooklangFeatures\(\) has invalid return type App\\Services\\Recipes\\Import\\StepToken\.$#'
+			identifier: class.notFound
+			count: 1
+			path: app/Services/Recipes/Import/CooklangRecipeImporter.php
+
+		-
+			message: '#^Method App\\Services\\Recipes\\Import\\CooklangRecipeImporter\:\:extractCooklangFeatures\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Services/Recipes/Import/CooklangRecipeImporter.php
+
+		-
+			message: '#^Method App\\Services\\Recipes\\Import\\CooklangRecipeImporter\:\:import\(\) has parameter \$content with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Services/Recipes/Import/CooklangRecipeImporter.php
+
+		-
+			message: '#^Method App\\Services\\Recipes\\Import\\CooklangRecipeImporter\:\:simpleToken\(\) has invalid return type App\\Services\\Recipes\\Import\\SimpleToken\.$#'
+			identifier: class.notFound
+			count: 1
+			path: app/Services/Recipes/Import/CooklangRecipeImporter.php
+
+		-
+			message: '#^Method App\\Services\\Recipes\\Import\\CooklangRecipeImporter\:\:simpleToken\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Services/Recipes/Import/CooklangRecipeImporter.php
+
+		-
+			message: '#^Method App\\Services\\Recipes\\Import\\CooklangRecipeImporter\:\:tokenize\(\) has invalid return type App\\Services\\Recipes\\Import\\SimpleToken\.$#'
+			identifier: class.notFound
+			count: 1
+			path: app/Services/Recipes/Import/CooklangRecipeImporter.php
+
+		-
+			message: '#^Method App\\Services\\Recipes\\Import\\CooklangRecipeImporter\:\:tokenize\(\) has invalid return type App\\Services\\Recipes\\Import\\StepToken\.$#'
+			identifier: class.notFound
+			count: 1
+			path: app/Services/Recipes/Import/CooklangRecipeImporter.php
+
+		-
+			message: '#^PHPDoc tag @param for parameter \$token with type App\\Services\\Recipes\\Import\\SimpleToken\|App\\Services\\Recipes\\Import\\StepToken is incompatible with native type array\.$#'
+			identifier: parameter.phpDocType
+			count: 1
+			path: app/Services/Recipes/Import/CooklangRecipeImporter.php
+
+		-
+			message: '#^PHPDoc tag @return with type App\\Services\\Recipes\\Import\\SimpleToken is incompatible with native type array\.$#'
+			identifier: return.phpDocType
+			count: 1
+			path: app/Services/Recipes/Import/CooklangRecipeImporter.php
+
+		-
+			message: '#^PHPDoc tag @return with type App\\Services\\Recipes\\Import\\StepToken is incompatible with native type array\.$#'
+			identifier: return.phpDocType
+			count: 1
+			path: app/Services/Recipes/Import/CooklangRecipeImporter.php
+
+		-
+			message: '#^Parameter \#1 \$content of method App\\Services\\Recipes\\Import\\CooklangRecipeImporter\:\:tokenize\(\) expects string, array\|string given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/Recipes/Import/CooklangRecipeImporter.php
+
+		-
+			message: '#^Parameter \#2 \$products of method App\\Services\\Recipes\\IngredientMatcher\:\:matchMany\(\) expects Illuminate\\Support\\Collection\<int, App\\Models\\Product\>, Illuminate\\Support\\Collection\<int, App\\Models\\Product\>\|Illuminate\\Support\\Collection\<int, App\\Services\\Recipes\\Import\\Product\> given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/Recipes/Import/CooklangRecipeImporter.php
+
+		-
+			message: '#^Parameter \#2 \$subject of function preg_match expects string, array\|string given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/Recipes/Import/CooklangRecipeImporter.php
+
+		-
+			message: '#^Parameter \$products of method App\\Services\\Recipes\\Import\\CooklangRecipeImporter\:\:import\(\) has invalid type App\\Services\\Recipes\\Import\\Product\.$#'
+			identifier: class.notFound
+			count: 1
+			path: app/Services/Recipes/Import/CooklangRecipeImporter.php
+
+		-
+			message: '#^Parameter \$token of method App\\Services\\Recipes\\Import\\CooklangRecipeImporter\:\:appendToken\(\) has invalid type App\\Services\\Recipes\\Import\\SimpleToken\.$#'
+			identifier: class.notFound
+			count: 1
+			path: app/Services/Recipes/Import/CooklangRecipeImporter.php
+
+		-
+			message: '#^Parameter \$token of method App\\Services\\Recipes\\Import\\CooklangRecipeImporter\:\:appendToken\(\) has invalid type App\\Services\\Recipes\\Import\\StepToken\.$#'
+			identifier: class.notFound
+			count: 1
+			path: app/Services/Recipes/Import/CooklangRecipeImporter.php
+
+		-
+			message: '#^Parameter \$tokens of method App\\Services\\Recipes\\Import\\CooklangRecipeImporter\:\:appendToken\(\) has invalid type App\\Services\\Recipes\\Import\\SimpleToken\.$#'
+			identifier: class.notFound
+			count: 1
+			path: app/Services/Recipes/Import/CooklangRecipeImporter.php
+
+		-
+			message: '#^Parameter \$tokens of method App\\Services\\Recipes\\Import\\CooklangRecipeImporter\:\:appendToken\(\) has invalid type App\\Services\\Recipes\\Import\\StepToken\.$#'
+			identifier: class.notFound
+			count: 1
+			path: app/Services/Recipes/Import/CooklangRecipeImporter.php
+
+		-
+			message: '#^Method App\\Services\\Recipes\\Import\\JsonLdRecipeImporter\:\:import\(\) has parameter \$source with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Services/Recipes/Import/JsonLdRecipeImporter.php
+
+		-
+			message: '#^Offset ''name'' on array\{id\: null, client_id\: null, name\: mixed, product_id\: null, quantity\: mixed, quantity_text\: mixed, unit\: mixed, preparation\: mixed, \.\.\.\} on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Services/Recipes/Import/JsonLdRecipeImporter.php
+
+		-
+			message: '#^Parameter \#2 \$products of method App\\Services\\Recipes\\IngredientMatcher\:\:matchMany\(\) expects Illuminate\\Support\\Collection\<int, App\\Models\\Product\>, Illuminate\\Support\\Collection\<int, App\\Models\\Product\>\|Illuminate\\Support\\Collection\<int, App\\Services\\Recipes\\Import\\Product\> given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/Recipes/Import/JsonLdRecipeImporter.php
+
+		-
+			message: '#^Parameter \$products of method App\\Services\\Recipes\\Import\\JsonLdRecipeImporter\:\:import\(\) has invalid type App\\Services\\Recipes\\Import\\Product\.$#'
+			identifier: class.notFound
+			count: 1
+			path: app/Services/Recipes/Import/JsonLdRecipeImporter.php
+
+		-
+			message: '#^Parameter \$products of method App\\Services\\Recipes\\Import\\JsonLdRecipeImporter\:\:importJsonLd\(\) has invalid type App\\Services\\Recipes\\Import\\Product\.$#'
+			identifier: class.notFound
+			count: 1
+			path: app/Services/Recipes/Import/JsonLdRecipeImporter.php
+
+		-
+			message: '#^Method App\\Services\\Recipes\\Importer\\RecipeImporter\:\:import\(\) has parameter \$products with generic class Illuminate\\Support\\Collection but does not specify its types\: TKey, TValue$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Services/Recipes/Importer/RecipeImporter.php
+
+		-
+			message: '#^Method App\\Services\\Recipes\\Importer\\RecipeImporter\:\:import\(\) has parameter \$source with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Services/Recipes/Importer/RecipeImporter.php
+
+		-
+			message: '#^Method App\\Services\\Recipes\\IngredientMatcher\:\:findSimilarProducts\(\) has parameter \$products with generic class Illuminate\\Support\\Collection but does not specify its types\: TKey, TValue$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Services/Recipes/IngredientMatcher.php
+
+		-
+			message: '#^Method App\\Services\\Recipes\\IngredientMatcher\:\:findSimilarProducts\(\) should return Illuminate\\Support\\Collection\<int, array\{id\: string, name\: string, score\: float\}\> but returns Illuminate\\Support\\Collection\<int, array\{id\: string, name\: mixed, score\: float\}\>\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Services/Recipes/IngredientMatcher.php
+
+		-
+			message: '#^Parameter \#1 \$haystack of static method Illuminate\\Support\\Str\:\:contains\(\) expects string, string\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/Recipes/ManageRecipeCollections.php
+
+		-
+			message: '#^Parameter \#1 \$subject of static method Illuminate\\Support\\Str\:\:after\(\) expects string, string\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/Recipes/ManageRecipeCollections.php
+
+		-
+			message: '#^Parameter \#1 \$subject of static method Illuminate\\Support\\Str\:\:beforeLast\(\) expects string, string\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/Recipes/ManageRecipeCollections.php
+
+		-
+			message: '#^Parameter \#2 \$search of static method Illuminate\\Support\\Str\:\:after\(\) expects string, string\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/Recipes/ManageRecipeCollections.php
+
+		-
+			message: '#^Method App\\Support\\Auth\\E2EGoogleProvider\:\:getUserByToken\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Support/Auth/E2EGoogleProvider.php
+
+		-
+			message: '#^Call to function is_array\(\) with array\<string, mixed\> will always evaluate to true\.$#'
+			identifier: function.alreadyNarrowedType
+			count: 1
+			path: app/Support/Auth/GoogleSimulator/SimulatorState.php
+
+		-
+			message: '#^Function json_body\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Support/Auth/GoogleSimulator/router.php
+
+		-
+			message: '#^Function normalise_identity\(\) has parameter \$input with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Support/Auth/GoogleSimulator/router.php
+
+		-
+			message: '#^Function normalise_identity\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Support/Auth/GoogleSimulator/router.php
+
+		-
+			message: '#^Function respond_json\(\) has parameter \$payload with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Support/Auth/GoogleSimulator/router.php
+
+		-
+			message: '#^Method App\\Support\\CapabilityRegistry\:\:permissionIndex\(\) should return list\<string\> but returns array\<int, non\-empty\-string\>\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Support/CapabilityRegistry.php
+
+		-
+			message: '#^Parameter \#1 \$array \(list\<non\-empty\-string\>\) of array_values is already a list, call has no effect\.$#'
+			identifier: arrayValues.list
+			count: 1
+			path: app/Support/CapabilityRegistry.php
+
+		-
+			message: '#^Strict comparison using \!\=\= between string\|null and false will always evaluate to true\.$#'
+			identifier: notIdentical.alwaysTrue
+			count: 1
+			path: app/Support/PlatformAccess.php
+
+		-
+			message: '#^Method App\\Support\\SecurityConfirmation\:\:issue\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Support/SecurityConfirmation.php
+
+		-
+			message: '#^Parameter \#2 \$string of function explode expects string, bool\|string given\.$#'
+			identifier: argument.type
+			count: 1
+			path: config/sanctum.php
+
+		-
+			message: '#^Parameter \#1 \$value of static method Illuminate\\Support\\Str\:\:title\(\) expects string, array\|string given\.$#'
+			identifier: argument.type
+			count: 1
+			path: database/factories/EconomicAccountFactory.php
+
+		-
+			message: '#^Method Database\\Factories\\EconomicImportFactory\:\:extracted\(\) has parameter \$payload with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: database/factories/EconomicImportFactory.php
+
+		-
+			message: '#^Parameter \#1 \$value of static method Illuminate\\Support\\Str\:\:studly\(\) expects string, array\|string given\.$#'
+			identifier: argument.type
+			count: 1
+			path: database/factories/JobRunFactory.php
+
+		-
+			message: '#^Parameter \#1 \$title of static method Illuminate\\Support\\Str\:\:slug\(\) expects string, array\|string given\.$#'
+			identifier: argument.type
+			count: 1
+			path: database/factories/PaymentMethodFactory.php
+
+		-
+			message: '#^Parameter \#1 \$value of static method Illuminate\\Support\\Str\:\:title\(\) expects string, array\|string given\.$#'
+			identifier: argument.type
+			count: 1
+			path: database/factories/PaymentMethodFactory.php
+
+		-
+			message: '#^Parameter \#1 \$string of function ucfirst expects string, array\|string given\.$#'
+			identifier: argument.type
+			count: 1
+			path: database/factories/ProductFactory.php
+
+		-
+			message: '#^Parameter \#1 \$title of static method Illuminate\\Support\\Str\:\:slug\(\) expects string, array\|string given\.$#'
+			identifier: argument.type
+			count: 1
+			path: database/factories/ProductFactory.php
+
+		-
+			message: '#^Binary operation "\." between ''\./'' and array\|string results in an error\.$#'
+			identifier: binaryOp.invalid
+			count: 1
+			path: database/factories/RecipeReferenceFactory.php
