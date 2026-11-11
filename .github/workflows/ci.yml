@@ -98,10 +98,8 @@ jobs:
         run: php artisan test --compact
       - name: Formatting (Pint)
         run: vendor/bin/pint --test
-        continue-on-error: true # pre-existing finding in app/Actions/Households/UpdateHouseholdSettings.php; remove once `pint --test` is clean
       - name: Static analysis
         run: vendor/bin/phpstan analyse --memory-limit=1G
-        continue-on-error: true # 458 pre-existing findings; tighten once the baseline is clean
 
   frontend:
     name: Frontend build and typecheck

@@ -6,7 +6,6 @@ use App\Data\Households\UpdateHouseholdSettingsData;
 use App\Enums\HouseholdModule as HouseholdModuleEnum;
 use App\Enums\HouseholdTagType;
 use App\Models\Household;
-use App\Models\HouseholdModule;
 use App\Models\Tag;
 use App\Services\HouseholdModuleService;
 use Illuminate\Support\Facades\DB;
