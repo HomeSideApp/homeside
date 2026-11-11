@@ -10,8 +10,6 @@ import { ApprovalPanelPage } from '../pages/ApprovalPanelPage';
 import { DashboardPage } from '../pages/DashboardPage';
 import { GoogleConsentPage } from '../pages/GoogleConsentPage';
 import { LoginPage } from '../pages/LoginPage';
-import { OtpSetupPage } from '../pages/OtpSetupPage';
-import { TwoFactorPage } from '../pages/TwoFactorPage';
 
 /**
  * E2E-04 — Google registration, approval and second factor.
@@ -29,7 +27,12 @@ import { TwoFactorPage } from '../pages/TwoFactorPage';
  * assign one, which used to hide the fact that approving from the registrations
  * panel left the account unusable. The scenario therefore approves with the
  * plain panel button and then proves the approved identity can sign in with
- * Google and TOTP, which is the assertion that catches the defect.
+ * Google, which is the assertion that catches the defect.
+ *
+ * The second factor is delegated to Google (auth.google.require_otp defaults to
+ * false), so a Google sign-in lands authenticated with no app-level TOTP and no
+ * forced enrolment. The scenario asserts that explicitly, including that no
+ * second factor gets written to the account.
  */
 test.describe('E2E-04 Google approval lifecycle across two real browser contexts', () => {
     test.beforeEach(async () => {
@@ -38,7 +41,7 @@ test.describe('E2E-04 Google approval lifecycle across two real browser contexts
         await resetGoogleSimulator();
     });
 
-    test('a Google account waits for approval, is approved from the registration panel, then enrols TOTP and signs in @critical', async ({
+    test('a Google account waits for approval, is approved from the registration panel, then signs in without an app second factor @critical', async ({
         browser,
     }, testInfo) => {
         const applicantEmail = `e2e-google-${Date.now()}@homeside.test`;
@@ -55,7 +58,6 @@ test.describe('E2E-04 Google approval lifecycle across two real browser contexts
         const pageB = await contextB.newPage();
         const monitorB = monitorPage(pageB);
 
-        let enrolmentSecret = '';
         let applicantId = '';
 
         try {
@@ -118,22 +120,22 @@ test.describe('E2E-04 Google approval lifecycle across two real browser contexts
                 expect(approved.roles).toContain('user');
             });
 
-            await test.step('the applicant signs in with Google and enrols a second factor', async () => {
+            await test.step('the applicant signs in with Google and lands authenticated, with no app second factor', async () => {
                 await pageA.goto('/login');
                 const login = new LoginPage(pageA);
                 await login.startGoogleLogin();
                 await new GoogleConsentPage(pageA).approve();
 
-                await pageA.waitForURL(/\/google\/otp\/setup/);
-                const setup = new OtpSetupPage(pageA);
-                enrolmentSecret = await setup.secret();
-                await setup.submitGeneratedCode(enrolmentSecret);
-
-                await pageA.goto('/dashboard');
+                // Google is the second factor: no OTP challenge and no forced
+                // enrolment, straight to the dashboard.
+                await pageA.waitForURL(/\/dashboard/);
                 await new DashboardPage(pageA).expectAuthenticated();
+
+                const state = registrationState(applicantEmail);
+                expect(state.two_factor_enabled).toBe(false);
             });
 
-            await test.step('the same identity signs in again with Google + TOTP and no duplicate account exists', async () => {
+            await test.step('the same identity signs in again with Google and no duplicate account exists', async () => {
                 const dashboard = new DashboardPage(pageA);
                 await dashboard.logout();
 
@@ -142,20 +144,19 @@ test.describe('E2E-04 Google approval lifecycle across two real browser contexts
                 await login.startGoogleLogin();
                 await new GoogleConsentPage(pageA).approve();
 
-                await pageA.waitForURL(/two-factor\/challenge/);
-                await new TwoFactorPage(pageA).submitGeneratedCode(enrolmentSecret);
+                await pageA.waitForURL(/\/dashboard/);
                 await dashboard.expectAuthenticated();
 
                 const state = registrationState(applicantEmail);
                 expect(state.id).toBe(applicantId);
                 expect(state.approval_status).toBe('approved');
-                expect(state.two_factor_enabled).toBe(true);
+                expect(state.two_factor_enabled).toBe(false);
             });
 
             await test.step('the exchange ran once per sign-in and never created a duplicate', async () => {
                 const calls = await googleSimulatorCalls();
 
-                // Three sign-ins: pending, first enrolment, and the TOTP login.
+                // Three sign-ins: pending, the first delegated sign-in, and the repeat.
                 expect(calls.calls.token).toBe(3);
                 expect(calls.calls.userinfo).toBe(3);
             });
