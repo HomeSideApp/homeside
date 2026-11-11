@@ -13,6 +13,7 @@ use App\Enums\RegistrationDecision;
 use App\Models\GoogleIdentity;
 use App\Models\User;
 use App\Notifications\GoogleAccessRequested;
+use App\Support\Auth\GoogleSecondFactorPolicy;
 use App\Support\Registration\RegistrationIdentifier;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Validation\ValidationException;
@@ -90,6 +91,15 @@ final class ResolveGoogleIdentity
             $this->notifyAdministrators($outcome->user);
         }
 
+        // RegisterAccount resolves the follow-up step for every channel, so it
+        // can only assume the local second factor is mandatory. When Google is
+        // the second factor, a brand-new account is not forced to enrol one —
+        // the delegation is applied here, at the caller, never guessed inside
+        // the shared action.
+        if ($outcome->user !== null && $outcome->nextStep === RegistrationOutcomeData::NEXT_ENROL_TWO_FACTOR) {
+            $outcome = $this->resolveNextStep($outcome->user, $outcome->decision, $outcome->reason);
+        }
+
         return $outcome;
     }
 
@@ -109,7 +119,29 @@ final class ResolveGoogleIdentity
             return new RegistrationOutcomeData($user, RegistrationDecision::Denied, RegistrationOutcomeData::NEXT_AUTHENTICATE, false, 'approval_rejected');
         }
 
-        return $this->nextStep->resolve($user, RegistrationDecision::Allowed, 'existing_identity');
+        return $this->resolveNextStep($user, RegistrationDecision::Allowed, 'existing_identity');
+    }
+
+    /**
+     * Resolve the next authentication step under the Google second factor policy.
+     *
+     * The delegation flag is evaluated here rather than inside the shared action,
+     * so `ResolveRegistrationNextStep` keeps answering the same way for every
+     * channel and never has to know who the identity provider was.
+     *
+     * @param  User  $user  The account being signed in.
+     * @param  RegistrationDecision  $decision  The decision that produced it.
+     * @param  string|null  $reason  An optional stable machine code.
+     * @return RegistrationOutcomeData The typed outcome.
+     */
+    private function resolveNextStep(User $user, RegistrationDecision $decision, ?string $reason = null): RegistrationOutcomeData
+    {
+        return $this->nextStep->resolve(
+            $user,
+            $decision,
+            $reason,
+            requireTwoFactorEnrolment: GoogleSecondFactorPolicy::requiresApplicationOtp(),
+        );
     }
 
     /**

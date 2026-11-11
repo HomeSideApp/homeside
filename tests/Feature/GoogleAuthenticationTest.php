@@ -91,8 +91,37 @@ class GoogleAuthenticationTest extends TestCase
         $this->assertSame(0, $user->tokens()->count());
     }
 
-    public function test_approved_google_user_gets_only_temporary_mobile_token_before_otp(): void
+    public function test_api_google_login_delegates_the_second_factor_to_google(): void
     {
+        $user = User::factory()->user()->create();
+        $user->googleIdentity()->create(['google_sub' => 'delegated-api-sub']);
+        // A stale challenge token from an interrupted flow must not survive.
+        $user->createToken('temp-otp', ['otp-verify'], now()->addMinutes(5));
+        $user->createToken('google-otp-setup', ['otp-setup'], now()->addMinutes(5));
+        $this->mock(GoogleIdTokenVerifier::class)->shouldReceive('verify')->once()->andReturn([
+            'sub' => 'delegated-api-sub',
+            'email' => $user->email,
+            'name' => $user->name,
+            'email_verified' => true,
+        ]);
+
+        $response = $this->postJson(route('api.v1.auth.google.login'), ['id_token' => 'verified-id-token'])
+            ->assertOk()
+            ->assertJsonMissingPath('requires_otp')
+            ->assertJsonMissingPath('requires_otp_setup')
+            ->assertJsonMissingPath('temp_token')
+            ->assertJsonPath('user.id', $user->id);
+
+        $this->assertSame(['auth-token'], $user->tokens()->pluck('name')->all());
+        $this->assertFalse($user->fresh()->hasEnabledTwoFactorAuthentication());
+        $this->app['auth']->forgetGuards();
+        $this->withToken($response->json('token'))->getJson(route('api.v1.me'))->assertOk();
+    }
+
+    public function test_api_google_login_keeps_the_temporary_mobile_token_when_operator_requires_otp(): void
+    {
+        config(['auth.google.require_otp' => true]);
+
         $user = User::factory()->withTwoFactor()->user()->create();
         $user->googleIdentity()->create(['google_sub' => 'approved-sub']);
         $this->mock(GoogleIdTokenVerifier::class)->shouldReceive('verify')->once()->andReturn([
@@ -107,8 +136,10 @@ class GoogleAuthenticationTest extends TestCase
         $this->withToken($response->json('temp_token'))->getJson(route('api.v1.me'))->assertForbidden();
     }
 
-    public function test_mobile_google_user_sets_up_otp_before_receiving_full_token(): void
+    public function test_mobile_google_user_sets_up_otp_before_receiving_full_token_when_operator_requires_otp(): void
     {
+        config(['auth.google.require_otp' => true]);
+
         $user = User::factory()->user()->create();
         $user->googleIdentity()->create(['google_sub' => 'first-login-sub']);
         $this->mock(GoogleIdTokenVerifier::class)->shouldReceive('verify')->once()->andReturn([
@@ -155,8 +186,10 @@ class GoogleAuthenticationTest extends TestCase
         }
     }
 
-    public function test_approved_google_user_still_needs_web_otp(): void
+    public function test_approved_google_user_still_needs_web_otp_when_operator_requires_otp(): void
     {
+        config(['auth.google.require_otp' => true]);
+
         $user = User::factory()->user()->create([
             'two_factor_secret' => encrypt('JBSWY3DPEHPK3PXP'),
             'two_factor_confirmed_at' => now(),
@@ -211,8 +244,49 @@ class GoogleAuthenticationTest extends TestCase
         $this->assertDatabaseCount('users', 1);
     }
 
-    public function test_approved_google_user_sets_up_web_otp_before_access(): void
+    public function test_web_google_callback_delegates_the_second_factor_to_google(): void
     {
+        $user = User::factory()->user()->create([
+            'two_factor_secret' => encrypt('JBSWY3DPEHPK3PXP'),
+            'two_factor_confirmed_at' => now(),
+        ]);
+        $user->googleIdentity()->create(['google_sub' => 'delegated-web-sub']);
+        Socialite::fake('google', SocialiteUser::fake([
+            'id' => 'delegated-web-sub',
+            'email' => $user->email,
+            'email_verified' => true,
+        ]));
+
+        $this->get(route('google.callback'))->assertRedirect(route('dashboard'));
+
+        $this->assertAuthenticatedAs($user);
+        $this->assertNull(session('login.id'));
+        // The existing secret is preserved, so the password login keeps working.
+        $this->assertSame('JBSWY3DPEHPK3PXP', decrypt($user->fresh()->two_factor_secret));
+        $this->assertTrue($user->fresh()->hasEnabledTwoFactorAuthentication());
+    }
+
+    public function test_web_google_callback_delegates_for_a_user_without_otp(): void
+    {
+        $user = User::factory()->user()->create();
+        $user->googleIdentity()->create(['google_sub' => 'delegated-web-no-otp-sub']);
+        Socialite::fake('google', SocialiteUser::fake([
+            'id' => 'delegated-web-no-otp-sub',
+            'email' => $user->email,
+            'email_verified' => true,
+        ]));
+
+        $this->get(route('google.callback'))->assertRedirect(route('dashboard'));
+
+        $this->assertAuthenticatedAs($user);
+        $this->assertNull(session('google.setup_id'));
+        $this->assertFalse($user->fresh()->hasEnabledTwoFactorAuthentication());
+    }
+
+    public function test_approved_google_user_sets_up_web_otp_before_access_when_operator_requires_otp(): void
+    {
+        config(['auth.google.require_otp' => true]);
+
         $user = User::factory()->user()->create();
         $user->googleIdentity()->create(['google_sub' => 'web-setup-sub']);
         Socialite::fake('google', SocialiteUser::fake([
