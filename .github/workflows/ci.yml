@@ -2,11 +2,12 @@ name: CI
 
 # Mandatory gates for the registration, authentication and approval work.
 #
-# The PHP suite and the CRITICAL browser scenarios run on every pull request,
-# because a change that silently reopens a registration or bootstrap bypass must
-# never reach review. The full browser matrix (Firefox and the long E2E set) is
-# scheduled rather than per-push, so contributors get fast signal without losing
-# the deep coverage.
+# The PHP suite and the CRITICAL browser scenarios run on every pull request and
+# on every push to `develop`, because a change that silently reopens a
+# registration or bootstrap bypass must never reach review — and `develop` is the
+# branch that deployments consume, so it cannot be the branch nobody tests. The
+# full browser matrix (Firefox and the long E2E set) stays scheduled rather than
+# per-push, so contributors get fast signal without losing the deep coverage.
 #
 # UNVERIFIED: this workflow has not been executed on a runner. It is written from
 # the commands that were verified locally. Treat the first run as the real test.
@@ -24,7 +25,7 @@ name: CI
 on:
   pull_request:
   push:
-    branches: [main, master]
+    branches: [main, master, develop]
   schedule:
     - cron: '0 3 * * *'
   workflow_dispatch:
