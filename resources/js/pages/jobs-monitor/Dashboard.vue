@@ -60,8 +60,7 @@ const periods = ['1h', '6h', '24h', '7d', '30d'];
 usePoll(5000, { only: ['statistics', 'queueDepths', 'recentJobs', 'topFailingJobs'] });
 
 function changePeriod(period: string): void {
-    router.reload({
-        url: jobsMonitorIndex.url({ period }),
+    router.get(jobsMonitorIndex.url({ query: { period } }), {}, {
         only: ['statistics', 'queueDepths', 'recentJobs', 'topFailingJobs', 'filters'],
         preserveState: true,
         preserveScroll: true,
@@ -69,16 +68,29 @@ function changePeriod(period: string): void {
 }
 
 function statusVariant(status: string): 'default' | 'secondary' | 'destructive' | 'outline' {
-    if (status === 'processed') return 'default';
-    if (status === 'failed') return 'destructive';
-    if (status === 'processing') return 'secondary';
+    if (status === 'processed') {
+        return 'default';
+    }
+
+    if (status === 'failed') {
+        return 'destructive';
+    }
+
+    if (status === 'processing') {
+        return 'secondary';
+    }
 
     return 'outline';
 }
 
 function depthVariant(status: string): 'default' | 'secondary' | 'destructive' | 'outline' {
-    if (status === 'critical' || status === 'warning') return 'destructive';
-    if (status === 'normal') return 'secondary';
+    if (status === 'critical' || status === 'warning') {
+        return 'destructive';
+    }
+
+    if (status === 'normal') {
+        return 'secondary';
+    }
 
     return 'outline';
 }

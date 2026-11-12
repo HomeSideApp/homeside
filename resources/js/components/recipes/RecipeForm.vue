@@ -1,37 +1,5 @@
-<script setup lang="ts">
-import { Link, useForm } from '@inertiajs/vue3';
-import { BookOpen, FolderTree, Plus } from '@lucide/vue';
-import { computed, nextTick, ref } from 'vue';
-import { useI18n } from 'vue-i18n';
-import InputError from '@/components/InputError.vue';
-import RecipeAiGenerator from '@/components/recipes/RecipeAiGenerator.vue';
-import RecipeFormSidebar from '@/components/recipes/RecipeFormSidebar.vue';
-import RecipeImageUploader from '@/components/recipes/RecipeImageUploader.vue';
-import RecipeIngredientsEditor from '@/components/recipes/RecipeIngredientsEditor.vue';
-import RecipeSectionEditor from '@/components/recipes/RecipeSectionEditor.vue';
-import RecipeStepsEditor from '@/components/recipes/RecipeStepsEditor.vue';
-import TimeInput from '@/components/recipes/TimeInput.vue';
-import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui/accordion';
-import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
-import { vCan } from '@/directives/can';
-import { index as collectionsIndex } from '@/routes/recipes/collections';
-
-interface Product {
-    id: string;
-    name: string;
-}
-
-interface Cookware {
-    id: string;
-    name: string;
-}
-
-interface RecipeData {
+<script lang="ts">
+export interface RecipeData {
     id?: string;
     name: string;
     description: string | null;
@@ -75,6 +43,8 @@ interface RecipeData {
         client_id: string;
         id?: string;
         description: string;
+        image_path?: string | null;
+        image_url?: string | null;
         section_id: string | null;
         order: number | null;
         ingredients: string[];
@@ -100,6 +70,54 @@ interface RecipeData {
         order: number | null;
     }>;
     tags: string[];
+}
+</script>
+
+<script setup lang="ts">
+import { Link, useForm } from '@inertiajs/vue3';
+import { BookOpen, FolderTree, Plus } from '@lucide/vue';
+import type { AcceptableValue } from 'reka-ui';
+import { computed, nextTick, ref } from 'vue';
+import { useI18n } from 'vue-i18n';
+import InputError from '@/components/InputError.vue';
+import RecipeAiGenerator from '@/components/recipes/RecipeAiGenerator.vue';
+import RecipeFormSidebar from '@/components/recipes/RecipeFormSidebar.vue';
+import RecipeImageUploader from '@/components/recipes/RecipeImageUploader.vue';
+import RecipeIngredientsEditor from '@/components/recipes/RecipeIngredientsEditor.vue';
+import RecipeSectionEditor from '@/components/recipes/RecipeSectionEditor.vue';
+import RecipeStepsEditor from '@/components/recipes/RecipeStepsEditor.vue';
+import TimeInput from '@/components/recipes/TimeInput.vue';
+import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui/accordion';
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
+import { vCan } from '@/directives/can';
+import { index as collectionsIndex } from '@/routes/recipes/collections';
+
+interface Product {
+    id: string;
+    name: string;
+}
+
+interface Cookware {
+    id: string;
+    name: string;
+}
+
+/** A cookware entry as the form holds it: `id` is absent until the recipe is persisted. */
+interface RecipeCookwareRow {
+    client_id: string;
+    id?: string;
+    name: string;
+    type: string;
+    quantity: number | null;
+    quantity_text: string | null;
+    unit: string | null;
+    section_id: string | null;
+    order: number | null;
 }
 
 const props = withDefaults(defineProps<{
@@ -149,7 +167,9 @@ const form = useForm({
     prep_time_seconds: props.recipe?.prep_time_seconds ?? null,
     cook_time_seconds: props.recipe?.cook_time_seconds ?? null,
     total_time_seconds: props.recipe?.total_time_seconds ?? null,
-    difficulty: props.recipe?.difficulty ?? '',
+    // Widened so the difficulty Select can clear the field to `null`; the submitted value is
+    // unchanged (empty string when the recipe has no difficulty).
+    difficulty: (props.recipe?.difficulty ?? '') as string | null,
     cuisine: props.recipe?.cuisine ?? '',
     cooking_method: props.recipe?.cooking_method ?? '',
     recipe_category: props.recipe?.recipe_category ?? '',
@@ -199,7 +219,7 @@ const form = useForm({
             order: t.order,
         })) ?? [],
     })) ?? [],
-    cookware: props.recipe?.cookware?.map((c) => ({
+    cookware: props.recipe?.cookware?.map((c): RecipeCookwareRow => ({
         client_id: c.client_id || generateClientId(),
         id: c.id,
         name: c.name,
@@ -410,7 +430,7 @@ function scrollToSection(sectionId: string): void {
         <div v-if="form.hasErrors" class="rounded-md border border-destructive/50 bg-destructive/10 p-4">
             <p class="text-sm font-medium text-destructive mb-2">{{ t('recipes.form.errors') }}</p>
             <ul class="list-disc list-inside text-sm text-destructive space-y-1">
-                <li v-for="(message, key) in form.errors" :key="key">{{ cleanErrorMessage(message) }}</li>
+                <li v-for="(message, key) in form.errors" :key="key">{{ cleanErrorMessage(message ?? '') }}</li>
             </ul>
         </div>
 
@@ -712,7 +732,7 @@ function scrollToSection(sectionId: string): void {
 
                                     <Field>
                                         <FieldLabel for="difficulty">{{ t('recipes.form.difficulty') }}</FieldLabel>
-                                        <Select :model-value="form.difficulty ?? '__none__'" @update:model-value="(val: string | number) => { form.difficulty = val === '__none__' ? null : String(val); }">
+                                        <Select :model-value="form.difficulty ?? '__none__'" @update:model-value="(val: AcceptableValue) => { form.difficulty = val === '__none__' ? null : String(val); }">
                                             <SelectTrigger>
                                                 <SelectValue :placeholder="t('recipes.form.select')" />
                                             </SelectTrigger>

@@ -4,6 +4,7 @@ import { ArrowUpDown } from '@lucide/vue';
 import { createColumnHelper } from '@tanstack/vue-table';
 import type { ColumnDef } from '@tanstack/vue-table';
 import { h } from 'vue';
+import DataTable from '@/components/DataTable.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,7 +15,6 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import DataTable from '@/components/DataTable.vue';
 import { jobs as jobsMonitorJobs, show as showJob } from '@/routes/jobs-monitor';
 import type { Paginated } from '@/types';
 
@@ -58,9 +58,17 @@ defineOptions({
 });
 
 function statusVariant(status: string): 'default' | 'secondary' | 'destructive' | 'outline' {
-    if (status === 'processed') return 'default';
-    if (status === 'failed') return 'destructive';
-    if (status === 'processing') return 'secondary';
+    if (status === 'processed') {
+        return 'default';
+    }
+
+    if (status === 'failed') {
+        return 'destructive';
+    }
+
+    if (status === 'processing') {
+        return 'secondary';
+    }
 
     return 'outline';
 }
@@ -162,8 +170,7 @@ function applyFilters(patch: Record<string, string | null | undefined>): void {
         }
     }
 
-    router.reload({
-        url: jobsMonitorJobs.url(query),
+    router.get(jobsMonitorJobs.url({ query }), {}, {
         only: ['jobs', 'filters'],
         preserveState: true,
         preserveScroll: true,

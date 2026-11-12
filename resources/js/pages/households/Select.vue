@@ -84,7 +84,7 @@ function cancelInvitation(invitationId: string) {
                     </CardHeader>
                     <CardContent>
                         <p class="text-sm text-muted-foreground">
-                            {{ t('households.select.memberCount', h.members_count, { count: h.members_count }) }}
+                            {{ t('households.select.memberCount', h.members_count) }}
                         </p>
                     </CardContent>
                     <CardFooter>
