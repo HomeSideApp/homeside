@@ -3,6 +3,7 @@ import { Head, Link } from '@inertiajs/vue3';
 import { useI18n } from 'vue-i18n';
 import Heading from '@/components/Heading.vue';
 import RecipeForm from '@/components/recipes/RecipeForm.vue';
+import type { RecipeData } from '@/components/recipes/RecipeForm.vue';
 import { Button } from '@/components/ui/button';
 import { vCan } from '@/directives/can';
 
@@ -12,7 +13,7 @@ interface Product {
 }
 
 defineProps<{
-    recipe: Record<string, any>;
+    recipe: RecipeData;
     products: Product[];
 }>();
 

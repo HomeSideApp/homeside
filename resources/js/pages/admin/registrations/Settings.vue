@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Form, Head } from '@inertiajs/vue3';
 import { ShieldAlert } from '@lucide/vue';
+import type { AcceptableValue } from 'reka-ui';
 import { computed, reactive } from 'vue';
 import { useI18n } from 'vue-i18n';
 import InputError from '@/components/InputError.vue';
@@ -21,7 +22,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { settings as registrationSettings } from '@/routes/admin/registrations';
+import { update as registrationSettingsUpdate } from '@/routes/admin/registrations/settings';
 
 type SettingKey =
     | 'web'
@@ -110,7 +111,7 @@ function fieldLabel(key: SettingKey): string {
         </Alert>
 
         <Form
-            :action="registrationSettings.update.url()"
+            :action="registrationSettingsUpdate.url()"
             method="POST"
             class="flex flex-col gap-6"
             v-slot="{ errors, processing, hasErrors, validate }"
@@ -141,10 +142,14 @@ function fieldLabel(key: SettingKey): string {
                         class="grid gap-2"
                     >
                         <Label :for="field">{{ fieldLabel(field) }}</Label>
+                        <!-- The Select emits its option value; `validate` keeps receiving it as its field argument, exactly as the previous bare handler did. -->
                         <Select
                             :name="field"
                             v-model="values[field]"
-                            @update:model-value="validate"
+                            @update:model-value="
+                                (value: AcceptableValue) =>
+                                    validate(String(value))
+                            "
                         >
                             <SelectTrigger :id="field" class="w-full">
                                 <SelectValue />

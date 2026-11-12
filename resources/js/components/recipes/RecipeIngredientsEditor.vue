@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useForm, usePage } from '@inertiajs/vue3';
 import { Check, Plus, Trash2 } from '@lucide/vue';
+import type { AcceptableValue } from 'reka-ui';
 import { ref, toRef, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import InputError from '@/components/InputError.vue';
@@ -194,7 +195,7 @@ function getProductDisplayName(productId: string | null): string {
 
                     <Field>
                         <FieldLabel :for="`ingredient-product-${index}`">{{ t('recipes.ingredientsEditor.product') }}</FieldLabel>
-                        <Combobox :model-value="ingredient.product_id ?? undefined" @update:model-value="(val: string) => {
+                        <Combobox :model-value="ingredient.product_id ?? undefined" @update:model-value="(val: AcceptableValue) => {
                             const product = allProducts.find(p => p.id === val);
                             selectProduct(ingredient, product ?? null);
                         }">
@@ -244,7 +245,7 @@ function getProductDisplayName(productId: string | null): string {
                         <Input
                             :id="`ingredient-quantity-${index}`"
                             :model-value="ingredient.quantity ?? undefined"
-                            @update:model-value="(val: string) => { ingredient.quantity = val ? Number(val) : null; validate(`ingredients.${index}.quantity`); }"
+                            @update:model-value="(val: string | number) => { ingredient.quantity = val ? Number(val) : null; validate(`ingredients.${index}.quantity`); }"
                             type="number"
                             min="0"
                             step="0.01"
@@ -260,7 +261,7 @@ function getProductDisplayName(productId: string | null): string {
                             :id="`ingredient-unit-${index}`"
                             :model-value="ingredient.unit ?? undefined"
                             :placeholder="t('recipes.ingredientsEditor.unitPlaceholder')"
-                            @update:model-value="(val: string) => { ingredient.unit = val || null; validate(`ingredients.${index}.unit`); }"
+                            @update:model-value="(val: string | number) => { ingredient.unit = val ? String(val) : null; validate(`ingredients.${index}.unit`); }"
                             @blur="validate(`ingredients.${index}.unit`)"
                         />
                         <InputError :message="getIngredientError(index, 'unit')" />
@@ -272,7 +273,7 @@ function getProductDisplayName(productId: string | null): string {
                             :id="`ingredient-preparation-${index}`"
                             :model-value="ingredient.preparation ?? undefined"
                             :placeholder="t('recipes.ingredientsEditor.preparationPlaceholder')"
-                            @update:model-value="(val: string) => { ingredient.preparation = val || null; validate(`ingredients.${index}.preparation`); }"
+                            @update:model-value="(val: string | number) => { ingredient.preparation = val ? String(val) : null; validate(`ingredients.${index}.preparation`); }"
                             @blur="validate(`ingredients.${index}.preparation`)"
                         />
                         <InputError :message="getIngredientError(index, 'preparation')" />
@@ -284,7 +285,7 @@ function getProductDisplayName(productId: string | null): string {
                             :id="`ingredient-notes-${index}`"
                             :model-value="ingredient.notes ?? undefined"
                             :placeholder="t('recipes.ingredientsEditor.notesPlaceholder')"
-                            @update:model-value="(val: string) => { ingredient.notes = val || null; validate(`ingredients.${index}.notes`); }"
+                            @update:model-value="(val: string | number) => { ingredient.notes = val ? String(val) : null; validate(`ingredients.${index}.notes`); }"
                             @blur="validate(`ingredients.${index}.notes`)"
                         />
                         <InputError :message="getIngredientError(index, 'notes')" />
@@ -292,7 +293,7 @@ function getProductDisplayName(productId: string | null): string {
 
                     <Field v-if="sections.length > 0">
                         <FieldLabel :for="`ingredient-section-${index}`">{{ t('recipes.ingredientsEditor.section') }}</FieldLabel>
-                        <Select :model-value="ingredient.section_id ?? '__none__'" @update:model-value="(val: string | number) => { ingredient.section_id = val === '__none__' ? null : String(val); validate(`ingredients.${index}.section_id`); }">
+                        <Select :model-value="ingredient.section_id ?? '__none__'" @update:model-value="(val: AcceptableValue) => { ingredient.section_id = val === '__none__' ? null : String(val); validate(`ingredients.${index}.section_id`); }">
                             <SelectTrigger>
                                 <SelectValue :placeholder="t('recipes.ingredientsEditor.noSection')" />
                             </SelectTrigger>
