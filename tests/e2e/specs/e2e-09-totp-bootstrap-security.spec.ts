@@ -1,5 +1,5 @@
 import { expect, test } from '../fixtures/test';
-import { clearMailbox } from '../fixtures/mail';
+import { clearMailbox, messageCountTo, waitForBootstrapLink } from '../fixtures/mail';
 import {
     consumeBootstraps,
     expireBootstraps,
@@ -13,6 +13,7 @@ import { ApprovalPanelPage } from '../pages/ApprovalPanelPage';
 import { DashboardPage } from '../pages/DashboardPage';
 import { LoginPage } from '../pages/LoginPage';
 import { OtpSetupPage } from '../pages/OtpSetupPage';
+import { ResendEnrolmentPage } from '../pages/ResendEnrolmentPage';
 
 /**
  * E2E-09 — The two-factor bootstrap and identity-boundary security matrix.
@@ -26,6 +27,7 @@ import { OtpSetupPage } from '../pages/OtpSetupPage';
 
 const INVALID_MESSAGE = 'This enrolment link is invalid, expired or already used. Sign in to continue.';
 const NOT_READY_MESSAGE = 'Your account is not ready yet. Sign in to continue.';
+const LINK_SENT_MESSAGE = 'If an account is waiting for two-factor enrolment, we have sent it a new link.';
 
 test.describe('E2E-09 TOTP and bootstrap security @critical', () => {
     test.beforeEach(async () => {
@@ -48,16 +50,43 @@ test.describe('E2E-09 TOTP and bootstrap security @critical', () => {
         expect(state.two_factor_enabled).toBe(true);
     });
 
-    test('an expired bootstrap is refused', async ({ page }) => {
+    test('an expired bootstrap cannot enrol and offers a resend instead', async ({ page }) => {
         const grant = issueBootstrap(FIXTURE.enrolReady);
         expect(expireBootstraps(FIXTURE.enrolReady)).toBeGreaterThan(0);
 
+        const mailed = await messageCountTo(FIXTURE.enrolReady);
+
+        // A genuine-but-expired link is not a dead end: the product answers it
+        // at the SAME URL with the resend page instead of the enrolment form.
+        await page.goto(grant.url);
+        expect(new URL(page.url()).pathname).toBe(grant.path);
+
+        const resend = new ResendEnrolmentPage(page);
+        await resend.expectExpiredMode();
+
+        // The expired link cannot start a session either.
+        await page.goto('/dashboard');
+        await expect(page).toHaveURL(/\/login/);
+
+        // The one action it offers really mints and mails a fresh single-use link.
+        await page.goto(grant.url);
+        await resend.resend();
+        await expect(page.getByText(LINK_SENT_MESSAGE)).toBeVisible();
+        await expect
+            .poll(() => messageCountTo(FIXTURE.enrolReady), { timeout: 15_000 })
+            .toBeGreaterThan(mailed);
+
+        // Reissuing supersedes the expired credential, so the old link stops
+        // offering anything at all.
         await page.goto(grant.url);
         await expect(page).toHaveURL(/\/login/);
         await new LoginPage(page).expectStatus(INVALID_MESSAGE);
 
-        await page.goto('/dashboard');
-        await expect(page).toHaveURL(/\/login/);
+        const replacement = await waitForBootstrapLink(FIXTURE.enrolReady);
+        expect(replacement).not.toBe(grant.url);
+
+        await page.goto(replacement);
+        await new OtpSetupPage(page).expectLoaded();
     });
 
     test('an already-consumed bootstrap is refused', async ({ page }) => {

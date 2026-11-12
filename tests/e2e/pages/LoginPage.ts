@@ -38,15 +38,29 @@ export class LoginPage {
     }
 
     /**
-     * Complete a full password + TOTP login.
+     * Complete the password + TOTP exchange and stop before the landing page.
+     *
+     * A signed-in account can still be refused the dashboard (an unverified
+     * address lands on the verification gate), so the caller decides which gate
+     * it expects instead of this object assuming the dashboard.
+     *
+     * @param totpSecret Overrides the seeded secret for an account that enrolled
+     *   a second factor during the run (a freshly registered account).
+     */
+    async completeChallenge(email: string, password: string, totpSecret?: string): Promise<void> {
+        await this.submitCredentials(email, password);
+        await this.expectChallenge();
+        await completeLoginChallenge(this.page, totpSecret ?? secretForEmail(email));
+    }
+
+    /**
+     * Complete a full password + TOTP login that lands on the dashboard.
      *
      * @param totpSecret Overrides the seeded secret for an account that enrolled
      *   a second factor during the run (a freshly registered account).
      */
     async login(email: string, password: string, totpSecret?: string): Promise<void> {
-        await this.submitCredentials(email, password);
-        await this.expectChallenge();
-        await completeLoginChallenge(this.page, totpSecret ?? secretForEmail(email));
+        await this.completeChallenge(email, password, totpSecret);
         await this.page.waitForURL(/\/dashboard/);
     }
 
