@@ -59,6 +59,13 @@ jobs:
   php:
     name: PHP tests, formatting and static analysis
     runs-on: ubuntu-latest
+    # The suite must not need a mail server: phpunit.xml asks for the `array`
+    # transport, but PHPUnit does not overwrite an environment variable that is
+    # already set, so this workflow's SMTP settings used to win and every test
+    # that notifies someone died on a refused connection to 127.0.0.1:1025.
+    # The browser jobs are the ones that talk to Mailpit, and they start it.
+    env:
+      MAIL_MAILER: array
     services:
       mysql:
         image: mysql:8.4
