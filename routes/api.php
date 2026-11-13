@@ -25,6 +25,7 @@ use App\Http\Controllers\Api\V1\ContactController;
 use App\Http\Controllers\Api\V1\ContactSourceController;
 use App\Http\Controllers\Api\V1\EconomicDocumentController;
 use App\Http\Controllers\Api\V1\EconomicImportController;
+use App\Http\Controllers\Api\V1\EconomicAccountController;
 use App\Http\Controllers\Api\V1\EconomicTransactionController;
 use App\Http\Controllers\Api\V1\EconomyOverviewController;
 use App\Http\Controllers\Api\V1\ForkRecipeController;
@@ -363,6 +364,8 @@ Route::prefix('v1')->as('api.v1.')->middleware(['auth:sanctum', 'locale', 'api.p
 // api.v1.) coincide con un Permission del seeder, como exige api.permission.
 Route::prefix('v1/economy/me')->as('api.v1.economy.me.')->middleware(['auth:sanctum', 'locale', 'api.permission'])->group(function () {
     Route::get('overview', [EconomyOverviewController::class, 'personal'])->name('overview');
+    Route::get('accounts', [EconomicAccountController::class, 'index'])->name('accounts.index');
+
     Route::get('transactions', [EconomicTransactionController::class, 'personalIndex'])->name('transactions.index');
     Route::get('totals', [EconomicTransactionController::class, 'personalTotals'])->name('totals');
     Route::post('transactions', [EconomicTransactionController::class, 'store'])->name('transactions.store');
