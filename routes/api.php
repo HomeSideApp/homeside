@@ -26,6 +26,7 @@ use App\Http\Controllers\Api\V1\ContactSourceController;
 use App\Http\Controllers\Api\V1\EconomicDocumentController;
 use App\Http\Controllers\Api\V1\EconomicImportController;
 use App\Http\Controllers\Api\V1\EconomicAccountController;
+use App\Http\Controllers\Api\V1\EconomicTransactionAttachmentController;
 use App\Http\Controllers\Api\V1\EconomicTransactionController;
 use App\Http\Controllers\Api\V1\EconomyOverviewController;
 use App\Http\Controllers\Api\V1\ForkRecipeController;
@@ -369,6 +370,8 @@ Route::prefix('v1/economy/me')->as('api.v1.economy.me.')->middleware(['auth:sanc
     Route::get('transactions', [EconomicTransactionController::class, 'personalIndex'])->name('transactions.index');
     Route::get('totals', [EconomicTransactionController::class, 'personalTotals'])->name('totals');
     Route::post('transactions', [EconomicTransactionController::class, 'store'])->name('transactions.store');
+    Route::post('transactions/{transaction}/attachments', [EconomicTransactionAttachmentController::class, 'store'])->name('transactions.attachments.store');
+    Route::delete('transactions/{transaction}/attachments/{attachment}', [EconomicTransactionAttachmentController::class, 'destroy'])->name('transactions.attachments.destroy');
     Route::get('transactions/{transaction}', [EconomicTransactionController::class, 'show'])->name('transactions.show');
     Route::put('transactions/{transaction}', [EconomicTransactionController::class, 'update'])->name('transactions.update');
     Route::patch('transactions/{transaction}', [EconomicTransactionController::class, 'update'])->name('transactions.patch');
@@ -392,6 +395,8 @@ Route::prefix('v1/households/{household}/economy')->as('api.v1.households.econom
     Route::get('transactions', [EconomicTransactionController::class, 'index'])->name('transactions.index');
     Route::get('totals', [EconomicTransactionController::class, 'totals'])->name('totals');
     Route::post('transactions', [EconomicTransactionController::class, 'store'])->name('transactions.store');
+    Route::post('transactions/{transaction}/attachments', [EconomicTransactionAttachmentController::class, 'store'])->name('transactions.attachments.store');
+    Route::delete('transactions/{transaction}/attachments/{attachment}', [EconomicTransactionAttachmentController::class, 'destroy'])->name('transactions.attachments.destroy');
     Route::get('transactions/{transaction}', [EconomicTransactionController::class, 'show'])->name('transactions.show');
     Route::put('transactions/{transaction}', [EconomicTransactionController::class, 'update'])->name('transactions.update');
     Route::patch('transactions/{transaction}', [EconomicTransactionController::class, 'update'])->name('transactions.patch');
