@@ -21,7 +21,12 @@ final class UpdateListItem
     {
         if (isset($data['image_url']) && $data['image_url'] instanceof UploadedFile) {
             $path = Image::fromUpload($data['image_url'])
-                ->resize(1024)
+                // Phones record rotation in EXIF.
+                ->orient()
+                // Proportional fit inside 1024x1024. `resize(1024)` forced the
+                // width and left the height alone: a 3000x4000 portrait photo
+                // came out as 1024x4000 — squashed, and still half a megabyte.
+                ->scale(1024, 1024)
                 ->toWebp()
                 ->quality(80)
                 ->store('list-items/'.$item->list_id, 'local');

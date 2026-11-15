@@ -157,6 +157,57 @@ class ListItemTest extends TestCase
         $this->assertStringContainsString('list-items/', $item->fresh()->image_url);
     }
 
+    public function test_a_phone_sized_photo_is_accepted_and_stored_as_a_small_webp()
+    {
+        Storage::fake('local');
+
+        $user = $this->createUserWithRole('user', ['view lists', 'view list', 'update list items']);
+        $household = $this->createHouseholdForUser($user);
+        $list = ShoppingList::factory()->create(['created_by' => $user->id, 'household_id' => $household->id]);
+        $item = ListItem::factory()->create(['list_id' => $list->id]);
+
+        $photo = $this->phonePhoto();
+
+        // The real case: the file weighs more than the 2 MB the old rule
+        // rejected.
+        $this->assertGreaterThan(2 * 1024 * 1024, $photo->getSize());
+
+        $response = $this->actingAs($user)->put(route('households.lists.items.update', [$household, $list, $item]), [
+            'image_url' => $photo,
+        ], ['Content-Type' => 'multipart/form-data']);
+
+        $response->assertSessionHasNoErrors();
+
+        $path = $item->fresh()->image_url;
+
+        $this->assertStringEndsWith('.webp', $path);
+
+        [$width, $height] = getimagesize(Storage::disk('local')->path($path));
+
+        $this->assertSame(1024, max($width, $height));
+        $this->assertLessThan(2 * 1024 * 1024, Storage::disk('local')->size($path));
+
+        // Proportional: the photo must not come out squashed.
+        $this->assertEqualsWithDelta(1.0, $width / $height, 0.01);
+    }
+
+    /** Build a noisy JPEG, the kind a phone camera produces. */
+    private function phonePhoto(int $side = 2400, int $quality = 92): UploadedFile
+    {
+        $image = imagecreatetruecolor($side, $side);
+
+        for ($i = 0; $i < 4000; $i++) {
+            $colour = imagecolorallocate($image, random_int(0, 255), random_int(0, 255), random_int(0, 255));
+            imagefilledellipse($image, random_int(0, $side), random_int(0, $side), 60, 60, $colour);
+        }
+
+        $path = tempnam(sys_get_temp_dir(), 'phone-photo').'.jpg';
+        imagejpeg($image, $path, $quality);
+        imagedestroy($image);
+
+        return new UploadedFile($path, 'photo.jpg', 'image/jpeg', null, true);
+    }
+
     public function test_user_can_view_list_item_image()
     {
         Storage::fake('local');
