@@ -118,7 +118,11 @@ function formatDate(iso: string): string {
                                 </p>
                                 <p class="text-xs text-muted-foreground">
                                     {{ conversation.agent }} ·
-                                    {{ t('assistant.runs', { count: conversation.runs_count }) }}
+                                    {{
+                                        t('assistant.runs', {
+                                            count: conversation.runs_count,
+                                        })
+                                    }}
                                 </p>
                             </div>
                         </div>
@@ -148,15 +152,17 @@ function formatDate(iso: string): string {
                         </AlertDialogTrigger>
                         <AlertDialogContent>
                             <AlertDialogHeader>
-                                <AlertDialogTitle
-                                    >{{ t('assistant.deleteTitle') }}</AlertDialogTitle
-                                >
+                                <AlertDialogTitle>{{
+                                    t('assistant.deleteTitle')
+                                }}</AlertDialogTitle>
                                 <AlertDialogDescription>
                                     {{ t('assistant.deleteDescription') }}
                                 </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
-                                <AlertDialogCancel>{{ t('common.actions.cancel') }}</AlertDialogCancel>
+                                <AlertDialogCancel>{{
+                                    t('common.actions.cancel')
+                                }}</AlertDialogCancel>
                                 <AlertDialogAction
                                     @click="deleteConversation(conversation.id)"
                                 >

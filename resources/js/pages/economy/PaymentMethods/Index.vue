@@ -119,9 +119,7 @@ function confirmDelete(): void {
                     class="flex flex-col gap-4 md:flex-row md:items-end"
                     @submit.prevent="submit"
                 >
-                    <FieldGroup
-                        class="grid flex-1 gap-4 md:grid-cols-2"
-                    >
+                    <FieldGroup class="grid flex-1 gap-4 md:grid-cols-2">
                         <Field :data-invalid="Boolean(form.errors.name)">
                             <FieldLabel for="method-name">{{
                                 t('economy.paymentMethod.name')
@@ -179,9 +177,7 @@ function confirmDelete(): void {
 
         <Empty v-if="paymentMethods.length === 0">
             <EmptyHeader>
-                <EmptyTitle>{{
-                    t('economy.paymentMethods.empty')
-                }}</EmptyTitle>
+                <EmptyTitle>{{ t('economy.paymentMethods.empty') }}</EmptyTitle>
             </EmptyHeader>
         </Empty>
 
@@ -194,9 +190,7 @@ function confirmDelete(): void {
                         <span class="font-medium">{{ method.name }}</span>
                         <span class="text-xs text-muted-foreground">
                             {{
-                                t(
-                                    `economy.paymentMethods.kinds.${method.kind}`,
-                                )
+                                t(`economy.paymentMethods.kinds.${method.kind}`)
                             }}
                         </span>
                     </div>
@@ -206,11 +200,7 @@ function confirmDelete(): void {
                                 <TooltipTrigger as-child>
                                     <Badge variant="outline">
                                         <Lock aria-hidden="true" />
-                                        {{
-                                            t(
-                                                'economy.paymentMethods.global',
-                                            )
-                                        }}
+                                        {{ t('economy.paymentMethods.global') }}
                                     </Badge>
                                 </TooltipTrigger>
                                 <TooltipContent>{{

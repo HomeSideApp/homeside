@@ -1,10 +1,5 @@
 <script setup lang="ts">
-import {
-    ClipboardList,
-    Receipt,
-    TrendingUp,
-    Wallet,
-} from '@lucide/vue';
+import { ClipboardList, Receipt, TrendingUp, Wallet } from '@lucide/vue';
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { formatMoney } from '@/components/dashboard/chartUtils';
@@ -39,9 +34,7 @@ type StatCard = {
  */
 const cards = computed<StatCard[]>(() => {
     const items: StatCard[] = [];
-    const totals = props.showEconomy
-        ? props.comparison?.totals
-        : undefined;
+    const totals = props.showEconomy ? props.comparison?.totals : undefined;
 
     if (totals) {
         const currency = props.comparison?.currency ?? null;
@@ -110,10 +103,7 @@ const cards = computed<StatCard[]>(() => {
                 </CardHeader>
                 <CardContent class="flex flex-col gap-1">
                     <p class="text-2xl font-semibold">{{ card.value }}</p>
-                    <p
-                        v-if="card.detail"
-                        class="text-xs text-muted-foreground"
-                    >
+                    <p v-if="card.detail" class="text-xs text-muted-foreground">
                         {{ card.detail }}
                     </p>
                 </CardContent>

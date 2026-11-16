@@ -25,11 +25,14 @@ const checkedState = reactive<Record<string, boolean>>(
 
 // Permisos agrupados por grupo
 const groupedPermissions = computed(() => {
-    return props.permissions.reduce<Record<string, Permission[]>>((acc, perm) => {
-        (acc[perm.group] ??= []).push(perm);
+    return props.permissions.reduce<Record<string, Permission[]>>(
+        (acc, perm) => {
+            (acc[perm.group] ??= []).push(perm);
 
-        return acc;
-    }, {});
+            return acc;
+        },
+        {},
+    );
 });
 
 // Nombres de los grupos
@@ -71,13 +74,26 @@ defineOptions({
 <template>
     <Head title="Crear Rol" />
 
-    <div class="flex flex-col gap-6 px-8 py-6 max-w-3xl">
+    <div class="flex max-w-3xl flex-col gap-6 px-8 py-6">
         <h1 class="text-2xl font-bold">Crear Rol</h1>
 
-        <Form action="/admin/roles" method="POST" v-slot="{ errors, processing, hasErrors, validate }" class="space-y-6">
+        <Form
+            action="/admin/roles"
+            method="POST"
+            v-slot="{ errors, processing, hasErrors, validate }"
+            class="space-y-6"
+        >
             <!-- Hidden inputs para permisos activados -->
-            <template v-for="(checked, name) in checkedState" :key="'hp-' + name">
-                <input v-if="checked" type="hidden" name="permissions[]" :value="name" />
+            <template
+                v-for="(checked, name) in checkedState"
+                :key="'hp-' + name"
+            >
+                <input
+                    v-if="checked"
+                    type="hidden"
+                    name="permissions[]"
+                    :value="name"
+                />
             </template>
 
             <!-- Nombre del rol -->
@@ -97,15 +113,28 @@ defineOptions({
             <!-- Permisos agrupados -->
             <div class="flex flex-col gap-4">
                 <Card v-for="group in groupNames" :key="group">
-                    <CardHeader class="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle class="text-lg capitalize">{{ group }}</CardTitle>
+                    <CardHeader
+                        class="flex flex-row items-center justify-between space-y-0 pb-2"
+                    >
+                        <CardTitle class="text-lg capitalize">{{
+                            group
+                        }}</CardTitle>
                         <div class="flex items-center gap-2">
                             <Checkbox
                                 :id="`group-${group}`"
-                                :model-value="isGroupIndeterminate(group) ? 'indeterminate' : isGroupFullyChecked(group)"
-                                @update:model-value="toggleGroup(group, $event === true)"
+                                :model-value="
+                                    isGroupIndeterminate(group)
+                                        ? 'indeterminate'
+                                        : isGroupFullyChecked(group)
+                                "
+                                @update:model-value="
+                                    toggleGroup(group, $event === true)
+                                "
                             />
-                            <Label :for="`group-${group}`" class="text-sm text-muted-foreground cursor-pointer">
+                            <Label
+                                :for="`group-${group}`"
+                                class="cursor-pointer text-sm text-muted-foreground"
+                            >
                                 Seleccionar todo
                             </Label>
                         </div>
@@ -121,7 +150,10 @@ defineOptions({
                                     :id="`perm-${perm.id}`"
                                     v-model="checkedState[perm.name]"
                                 />
-                                <Label :for="`perm-${perm.id}`" class="text-sm cursor-pointer">
+                                <Label
+                                    :for="`perm-${perm.id}`"
+                                    class="cursor-pointer text-sm"
+                                >
                                     {{ perm.name }}
                                 </Label>
                             </div>
@@ -131,7 +163,9 @@ defineOptions({
             </div>
             <InputError :message="errors.permissions" />
 
-            <Button type="submit" :disabled="processing || hasErrors">Crear Rol</Button>
+            <Button type="submit" :disabled="processing || hasErrors"
+                >Crear Rol</Button
+            >
         </Form>
     </div>
 </template>

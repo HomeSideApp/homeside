@@ -3,10 +3,7 @@ import { Head, setLayoutProps } from '@inertiajs/vue3';
 import { watchEffect } from 'vue';
 import { useI18n } from 'vue-i18n';
 import AccountForm from '@/components/economy/AccountForm.vue';
-import type {
-    CryptoAsset,
-    PaymentMethod,
-} from '@/components/economy/types';
+import type { CryptoAsset, PaymentMethod } from '@/components/economy/types';
 import Heading from '@/components/Heading.vue';
 import { index as accountsIndex } from '@/routes/economy/me/accounts';
 

@@ -1,7 +1,10 @@
 import { usePage } from '@inertiajs/vue3';
 import type { Directive, DirectiveBinding } from 'vue';
 
-type CanValue = string | string[] | { permission: string | string[]; type?: 'permission' | 'role' };
+type CanValue =
+    | string
+    | string[]
+    | { permission: string | string[]; type?: 'permission' | 'role' };
 
 export const vCan: Directive<HTMLElement, CanValue> = {
     mounted(el: HTMLElement, binding: DirectiveBinding<CanValue>) {
@@ -12,9 +15,15 @@ export const vCan: Directive<HTMLElement, CanValue> = {
     },
 };
 
-function checkPermission(el: HTMLElement, binding: DirectiveBinding<CanValue>): void {
+function checkPermission(
+    el: HTMLElement,
+    binding: DirectiveBinding<CanValue>,
+): void {
     const page = usePage();
-    const auth = page.props.auth as { permissions?: string[]; roles?: string[] };
+    const auth = page.props.auth as {
+        permissions?: string[];
+        roles?: string[];
+    };
     const value = binding.value;
 
     const permissions = auth.permissions ?? [];
@@ -41,13 +50,15 @@ function checkPermission(el: HTMLElement, binding: DirectiveBinding<CanValue>): 
     } else if (Array.isArray(value)) {
         hasAccess = value.some((permission) => check(permission));
     } else if (value.type === 'role') {
-        hasAccess = typeof value.permission === 'string'
-            ? roles.includes(value.permission)
-            : value.permission.some((p) => roles.includes(p));
+        hasAccess =
+            typeof value.permission === 'string'
+                ? roles.includes(value.permission)
+                : value.permission.some((p) => roles.includes(p));
     } else {
-        hasAccess = typeof value.permission === 'string'
-            ? check(value.permission)
-            : value.permission.some((p) => check(p));
+        hasAccess =
+            typeof value.permission === 'string'
+                ? check(value.permission)
+                : value.permission.some((p) => check(p));
     }
 
     el.style.display = hasAccess ? '' : 'none';

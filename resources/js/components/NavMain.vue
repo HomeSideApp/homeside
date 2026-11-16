@@ -33,7 +33,7 @@ const filteredItems = computed(() =>
             : [item.permission];
 
         return canAny(...permissions);
-    })
+    }),
 );
 </script>
 

@@ -132,7 +132,11 @@ const hasMore = computed(() => props.total > props.transactions.length);
             </ul>
 
             <p v-if="hasMore" class="pt-3 text-xs text-muted-foreground">
-                {{ t('dashboard.moreMovements', { count: total - transactions.length }) }}
+                {{
+                    t('dashboard.moreMovements', {
+                        count: total - transactions.length,
+                    })
+                }}
             </p>
         </CardContent>
     </Card>

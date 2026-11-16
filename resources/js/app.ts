@@ -32,7 +32,10 @@ createInertiaApp({
     setup({ el, App, props }) {
         const app = createApp({ render: () => h(App, props) });
         const localization = props.initialPage.props.localization;
-        const i18n = createApplicationI18n(localization.locale, localization.fallbackLocale);
+        const i18n = createApplicationI18n(
+            localization.locale,
+            localization.fallbackLocale,
+        );
 
         app.use(i18n);
         app.directive('can', vCan);
@@ -41,16 +44,18 @@ createInertiaApp({
             const nextLocalization = event.detail.page.props.localization;
             i18n.global.locale.value = nextLocalization.locale;
             document.documentElement.lang = nextLocalization.locale;
-            document.documentElement.dir = nextLocalization.supportedLocales.find(
-                (locale) => locale.code === nextLocalization.locale,
-            )?.direction ?? 'ltr';
+            document.documentElement.dir =
+                nextLocalization.supportedLocales.find(
+                    (locale) => locale.code === nextLocalization.locale,
+                )?.direction ?? 'ltr';
         });
 
         if (typeof document !== 'undefined' && el) {
             document.documentElement.lang = localization.locale;
-            document.documentElement.dir = localization.supportedLocales.find(
-                (locale) => locale.code === localization.locale,
-            )?.direction ?? 'ltr';
+            document.documentElement.dir =
+                localization.supportedLocales.find(
+                    (locale) => locale.code === localization.locale,
+                )?.direction ?? 'ltr';
             app.mount(el);
         }
 

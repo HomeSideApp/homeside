@@ -9,7 +9,13 @@ import GlobalPromptForm from '@/components/admin/GlobalPromptForm.vue';
 import Heading from '@/components/Heading.vue';
 import AiProvidersForm from '@/components/households/AiProvidersForm.vue';
 import { aiProviders as adminAiProvidersIndex } from '@/routes/admin';
-import type { AiProvider, PaginatedData, CatalogProvider, CatalogModel, CatalogPrefillData } from '@/types';
+import type {
+    AiProvider,
+    PaginatedData,
+    CatalogProvider,
+    CatalogModel,
+    CatalogPrefillData,
+} from '@/types';
 
 type GlobalSetting = {
     id?: string;

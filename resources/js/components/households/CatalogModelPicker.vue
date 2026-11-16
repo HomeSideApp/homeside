@@ -108,34 +108,34 @@ watch(
 
 function formatCost(value: number | string | null): string | null {
     if (value === null || value === undefined) {
-return null;
-}
+        return null;
+    }
 
     const num = typeof value === 'string' ? parseFloat(value) : value;
 
     if (Number.isNaN(num) || num === 0) {
-return null;
-}
+        return null;
+    }
 
     if (num < 0.01) {
-return `$${(num * 1000).toFixed(2)}/M`;
-}
+        return `$${(num * 1000).toFixed(2)}/M`;
+    }
 
     return `$${num.toFixed(4)}/tok`;
 }
 
 function formatTokens(value: number | null): string | null {
     if (value === null) {
-return null;
-}
+        return null;
+    }
 
     if (value >= 1_000_000) {
-return `${(value / 1_000_000).toFixed(1)}M`;
-}
+        return `${(value / 1_000_000).toFixed(1)}M`;
+    }
 
     if (value >= 1_000) {
-return `${(value / 1_000).toFixed(0)}K`;
-}
+        return `${(value / 1_000).toFixed(0)}K`;
+    }
 
     return value.toString();
 }

@@ -43,7 +43,7 @@ const props = defineProps<{
 }>();
 
 // Form state
-const form = useForm({
+const form = useForm('post', promote.url(props.product.id), {
     name: props.product.name,
     category_id: props.product.category?.id ?? null,
     icon: props.product.icon,
@@ -81,10 +81,12 @@ const filteredIcons = computed(() => {
 
 function selectStaticIcon(icon: IconOption) {
     form.icon = form.icon === icon.name ? null : icon.name;
+    form.validate('icon');
 }
 
 function selectGeneratedIcon(iconUrl: string) {
     form.icon = form.icon === iconUrl ? null : iconUrl;
+    form.validate('icon');
 }
 
 async function generateIcon() {
@@ -161,6 +163,8 @@ function submit() {
                         :placeholder="
                             t('admin.personalProducts.namePlaceholder')
                         "
+                        @blur="form.validate('name')"
+                        @input="form.validate('name')"
                     />
                 </div>
 
@@ -169,7 +173,10 @@ function submit() {
                     <label class="text-sm font-medium">{{
                         t('admin.personalProducts.category')
                     }}</label>
-                    <Select v-model="form.category_id">
+                    <Select
+                        v-model="form.category_id"
+                        @update:model-value="form.validate('category_id')"
+                    >
                         <SelectTrigger class="w-full">
                             <SelectValue
                                 :placeholder="

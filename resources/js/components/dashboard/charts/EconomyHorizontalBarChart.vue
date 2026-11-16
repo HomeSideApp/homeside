@@ -64,8 +64,7 @@ const tooltipTemplate = computed(() =>
                 :grid-line="false"
                 :tick-values="tickValues"
                 :tick-format="
-                    (value: number) =>
-                        data[Math.round(value)]?.label ?? ''
+                    (value: number) => data[Math.round(value)]?.label ?? ''
                 "
             />
             <ChartTooltip />

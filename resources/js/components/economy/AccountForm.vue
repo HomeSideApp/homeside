@@ -31,11 +31,7 @@ import {
 import { Spinner } from '@/components/ui/spinner';
 import { store as accountsStore } from '@/routes/economy/me/accounts';
 import { update as accountsUpdate } from '@/routes/economy/me/accounts';
-import type {
-    CryptoAsset,
-    EconomicAccount,
-    PaymentMethod,
-} from './types';
+import type { CryptoAsset, EconomicAccount, PaymentMethod } from './types';
 
 const { t } = useI18n();
 const props = defineProps<{
@@ -154,9 +150,7 @@ function submit(): void {
 
                     <Field
                         class="md:col-span-2"
-                        :data-invalid="
-                            Boolean(form.errors.payment_method_ids)
-                        "
+                        :data-invalid="Boolean(form.errors.payment_method_ids)"
                     >
                         <FieldLabel>{{
                             t('economy.account.paymentMethods')
@@ -292,12 +286,9 @@ function submit(): void {
                         <FieldDescription>{{
                             t('economy.account.initialBalanceHelp')
                         }}</FieldDescription>
-                        <FieldError
-                            v-if="form.errors.initial_balance_minor"
-                            >{{
-                                form.errors.initial_balance_minor
-                            }}</FieldError
-                        >
+                        <FieldError v-if="form.errors.initial_balance_minor">{{
+                            form.errors.initial_balance_minor
+                        }}</FieldError>
                     </Field>
 
                     <Field

@@ -10,7 +10,10 @@ import { send } from '@/routes/verification';
 
 const { t } = useI18n();
 watchEffect(() => {
-    setLayoutProps({ title: t('auth.verifyEmail.title'), description: t('auth.verifyEmail.description') });
+    setLayoutProps({
+        title: t('auth.verifyEmail.title'),
+        description: t('auth.verifyEmail.description'),
+    });
 });
 
 defineProps<{

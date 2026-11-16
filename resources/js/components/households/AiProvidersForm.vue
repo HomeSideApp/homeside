@@ -160,24 +160,24 @@ const showCatalogPicker = ref(false);
 
 function applyCatalogPrefill(prefill: CatalogPrefillData) {
     if (prefill.name) {
-newProvider.name = prefill.name;
-}
+        newProvider.name = prefill.name;
+    }
 
     if (prefill.type) {
-newProvider.driver = prefill.type;
-}
+        newProvider.driver = prefill.type;
+    }
 
     if (prefill.model) {
-newProvider.model = prefill.model;
-}
+        newProvider.model = prefill.model;
+    }
 
     if (prefill.base_url) {
-newProvider.base_url = prefill.base_url;
-}
+        newProvider.base_url = prefill.base_url;
+    }
 
     if (prefill.privacy_level) {
-newProvider.privacy_level = prefill.privacy_level;
-}
+        newProvider.privacy_level = prefill.privacy_level;
+    }
 
     newProvider.family = prefill.family;
     newProvider.description = prefill.description;

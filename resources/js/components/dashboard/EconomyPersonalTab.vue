@@ -131,7 +131,9 @@ const hasHouseholdData = computed(() => householdTotal.value > 0);
         <div class="flex flex-wrap items-center justify-between gap-3">
             <h3 class="text-lg font-medium">{{ t('dashboard.myEconomy') }}</h3>
             <div class="flex items-center gap-2">
-                <Badge v-if="currency" variant="secondary">{{ currency }}</Badge>
+                <Badge v-if="currency" variant="secondary">{{
+                    currency
+                }}</Badge>
                 <Button as-child variant="outline" size="sm">
                     <Link :href="personalEconomyIndex.url()">
                         <Wallet data-icon="inline-start" />
@@ -186,9 +188,13 @@ const hasHouseholdData = computed(() => householdTotal.value > 0);
                             :slices="householdSlices"
                             :config="householdConfig"
                             :central-label="householdTotal.toLocaleString()"
-                            :central-sub-label="t('economy.stats.personalTotal')"
+                            :central-sub-label="
+                                t('economy.stats.personalTotal')
+                            "
                         />
-                        <ul class="flex flex-wrap justify-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                        <ul
+                            class="flex flex-wrap justify-center gap-x-4 gap-y-1 text-xs text-muted-foreground"
+                        >
                             <li
                                 v-for="slice in householdSlices"
                                 :key="slice.key"
@@ -201,7 +207,8 @@ const hasHouseholdData = computed(() => householdTotal.value > 0);
                                             householdConfig[slice.key]?.color,
                                     }"
                                 />
-                                {{ slice.label }} · {{ slice.value.toLocaleString() }}
+                                {{ slice.label }} ·
+                                {{ slice.value.toLocaleString() }}
                             </li>
                         </ul>
                     </div>

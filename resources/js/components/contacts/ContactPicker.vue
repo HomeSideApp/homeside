@@ -33,7 +33,12 @@ const props = defineProps<{
 const query = ref('');
 const selected = ref<ContactOption | null>(
     props.selectedName
-        ? { id: model.value ?? '', display_name: props.selectedName, avatar_url: null, emails: [] }
+        ? {
+              id: model.value ?? '',
+              display_name: props.selectedName,
+              avatar_url: null,
+              emails: [],
+          }
         : null,
 );
 const results = ref<ContactOption[]>([]);
@@ -181,10 +186,7 @@ watch(model, (value) => {
                     </button>
                 </li>
             </ul>
-            <p
-                v-else-if="searching"
-                class="text-xs text-muted-foreground"
-            >
+            <p v-else-if="searching" class="text-xs text-muted-foreground">
                 Buscando...
             </p>
         </div>

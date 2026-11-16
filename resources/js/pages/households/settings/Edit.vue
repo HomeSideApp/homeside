@@ -89,7 +89,7 @@ const flashWarnings = computed(
     () => (page.props.flash as any)?.warnings as WarningData[] | undefined,
 );
 
-const form = useForm({
+const form = useForm('put', `/households/${props.household.id}/settings`, {
     name: props.household.name,
     description: props.household.description || '',
     color: props.household.color || '',
@@ -128,7 +128,7 @@ function submit() {
     form.put(`/households/${props.household.id}/settings`);
 }
 
-const linkForm = useForm({
+const linkForm = useForm('post', storeInviteLink.url(props.household.id), {
     access_profile: 'member' as HouseholdAccessProfile,
     module_access: { ...page.props.householdAccessDefaults.member },
     expires_at: '',
@@ -227,7 +227,12 @@ function revokeLink(link: InviteLink) {
                     <label class="text-sm font-medium" for="default-split-type">
                         {{ t('economy.ui.splitType') }}
                     </label>
-                    <Select v-model="form.default_split_type">
+                    <Select
+                        v-model="form.default_split_type"
+                        @update:model-value="
+                            form.validate('default_split_type')
+                        "
+                    >
                         <SelectTrigger id="default-split-type">
                             <SelectValue />
                         </SelectTrigger>
@@ -283,6 +288,7 @@ function revokeLink(link: InviteLink) {
                         v-model="linkForm.expires_at"
                         type="date"
                         class="h-9 rounded-md border border-input bg-transparent px-3 text-sm"
+                        @change="linkForm.validate('expires_at')"
                     />
                 </div>
                 <div class="grid gap-2">
@@ -295,6 +301,8 @@ function revokeLink(link: InviteLink) {
                         type="number"
                         min="1"
                         class="h-9 rounded-md border border-input bg-transparent px-3 text-sm"
+                        @blur="linkForm.validate('max_uses')"
+                        @input="linkForm.validate('max_uses')"
                     />
                 </div>
                 <HouseholdAccessForm

@@ -264,8 +264,7 @@ watchEffect(() => {
                             transaction.type === 'expense'
                                 ? t('economy.transaction.typeExpense')
                                 : t('economy.transaction.typeIncome')
-                        }}</Badge
-                    ><Badge variant="secondary">{{
+                        }}</Badge><Badge variant="secondary">{{
                         transaction.scope === 'shared'
                             ? t('economy.transaction.shared')
                             : t('economy.transaction.personal')

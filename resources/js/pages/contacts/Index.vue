@@ -122,7 +122,7 @@ let searchTimeout: ReturnType<typeof setTimeout> | undefined;
 const createOpen = ref(false);
 const labelOpen = ref(false);
 const pendingLabel = ref<ContactLabel | null>(null);
-const labelForm = useForm({ name: '' });
+const labelForm = useForm('post', storeLabel().url, { name: '' });
 const form = useForm<ContactFormData>({
     household_id: null,
     type: 'person',
@@ -698,6 +698,8 @@ function submit(): void {
                         v-model="labelForm.name"
                         maxlength="80"
                         required
+                        @blur="labelForm.validate('name')"
+                        @input="labelForm.validate('name')"
                     />
                     <p
                         v-if="labelForm.errors.name"

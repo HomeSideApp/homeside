@@ -81,9 +81,9 @@ watchEffect(() => {
 const filtersOpen = ref(
     Boolean(
         props.filters.search ||
-            props.filters.currency ||
-            props.filters.payment_method_id ||
-            props.filters.include_archived === '1',
+        props.filters.currency ||
+        props.filters.payment_method_id ||
+        props.filters.include_archived === '1',
     ),
 );
 const search = ref(props.filters.search ?? '');
@@ -169,7 +169,9 @@ function toggleArchive(account: EconomicAccount): void {
                                 size="icon-sm"
                                 :aria-expanded="filtersOpen"
                                 aria-controls="accounts-filters"
-                                :aria-label="t('economy.accounts.toggleFilters')"
+                                :aria-label="
+                                    t('economy.accounts.toggleFilters')
+                                "
                                 @click="filtersOpen = !filtersOpen"
                             >
                                 <Search aria-hidden="true" />
@@ -261,7 +263,9 @@ function toggleArchive(account: EconomicAccount): void {
                             @update:model-value="applyFilters"
                         >
                             <SelectTrigger id="accounts-method">
-                                <SelectValue :placeholder="t('economy.ui.all')" />
+                                <SelectValue
+                                    :placeholder="t('economy.ui.all')"
+                                />
                             </SelectTrigger>
                             <SelectContent>
                                 <SelectGroup>
@@ -280,7 +284,9 @@ function toggleArchive(account: EconomicAccount): void {
                         </Select>
                     </Field>
                 </FieldGroup>
-                <div class="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div
+                    class="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+                >
                     <div class="flex items-center gap-2">
                         <Checkbox
                             id="accounts-archived"
@@ -355,9 +361,7 @@ function toggleArchive(account: EconomicAccount): void {
                                         as-child
                                     >
                                         <Link
-                                            :href="
-                                                accountsEdit.url(account.id)
-                                            "
+                                            :href="accountsEdit.url(account.id)"
                                             :aria-label="t('economy.ui.edit')"
                                         >
                                             <Pencil aria-hidden="true" />

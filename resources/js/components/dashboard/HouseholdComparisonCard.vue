@@ -137,7 +137,9 @@ const hasRows = computed(() => rows.value.length > 0);
                                         )
                                     }}
                                 </td>
-                                <td class="py-2 text-right font-mono font-medium">
+                                <td
+                                    class="py-2 text-right font-mono font-medium"
+                                >
                                     {{
                                         formatMoney(
                                             row.balance_minor,
@@ -153,7 +155,9 @@ const hasRows = computed(() => rows.value.length > 0);
                                         )
                                     }}
                                 </td>
-                                <td class="py-2 text-right font-mono font-medium">
+                                <td
+                                    class="py-2 text-right font-mono font-medium"
+                                >
                                     {{
                                         formatMoney(
                                             row.net_minor,
@@ -215,7 +219,9 @@ const hasRows = computed(() => rows.value.length > 0);
                                         )
                                     }}
                                 </td>
-                                <td class="pt-2 text-right font-mono font-medium">
+                                <td
+                                    class="pt-2 text-right font-mono font-medium"
+                                >
                                     {{
                                         formatMoney(
                                             comparison.totals.net_minor,

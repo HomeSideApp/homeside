@@ -34,10 +34,7 @@ export function formatAccountAmount(
 /**
  * Format a minor-unit amount as a displayable money string for a currency.
  */
-export function formatMoney(
-    minor: number,
-    currency: string | null,
-): string {
+export function formatMoney(minor: number, currency: string | null): string {
     const value = formatMinor(minor);
 
     if (!currency) {
@@ -77,7 +74,5 @@ export function monthLabel(
         options.year = '2-digit';
     }
 
-    return new Intl.DateTimeFormat(locale, options).format(
-        monthToDate(month),
-    );
+    return new Intl.DateTimeFormat(locale, options).format(monthToDate(month));
 }

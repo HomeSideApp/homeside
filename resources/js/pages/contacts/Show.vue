@@ -92,7 +92,10 @@ setLayoutProps({
 const deleteOpen = ref(false);
 const remoteOpen = ref(false);
 const selectedRemote = ref<ContactRecordData | null>(null);
-const remoteForm = useForm({ record_id: '', fields: [] as string[] });
+const remoteForm = useForm('put', useRemoteFields(props.contact.id).url, {
+    record_id: '',
+    fields: [] as string[],
+});
 type RemoteField =
     | 'formatted_name'
     | 'given_name'
@@ -221,6 +224,8 @@ function toggleRemoteField(key: RemoteField, checked: boolean): void {
     remoteForm.fields = checked
         ? [...remoteForm.fields, key]
         : remoteForm.fields.filter((field) => field !== key);
+
+    remoteForm.validate('fields');
 }
 function applyRemoteFields(): void {
     if (!selectedRemote.value || remoteForm.fields.length === 0) {

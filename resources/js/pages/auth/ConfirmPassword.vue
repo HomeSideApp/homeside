@@ -22,7 +22,6 @@ watchEffect(() => {
 <template>
     <Head :title="t('auth.confirm.title')" />
 
-
     <Form
         v-bind="store.form()"
         reset-on-success

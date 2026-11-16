@@ -43,9 +43,7 @@ const donutData = computed(() =>
 );
 
 function datumKey(datum: Record<string, unknown>): string {
-    return (
-        Object.keys(datum).find((key) => key !== 'fill') ?? ''
-    );
+    return Object.keys(datum).find((key) => key !== 'fill') ?? '';
 }
 
 const tooltipTemplate = computed(() =>
@@ -61,9 +59,11 @@ const tooltipTemplate = computed(() =>
         class="mx-auto aspect-square max-h-[240px]"
         :style="{
             '--vis-donut-central-label-font-size': 'var(--text-xl)',
-            '--vis-donut-central-label-font-weight': 'var(--font-weight-semibold)',
+            '--vis-donut-central-label-font-weight':
+                'var(--font-weight-semibold)',
             '--vis-donut-central-label-text-color': 'var(--foreground)',
-            '--vis-donut-central-sub-label-text-color': 'var(--muted-foreground)',
+            '--vis-donut-central-sub-label-text-color':
+                'var(--muted-foreground)',
         }"
     >
         <VisSingleContainer

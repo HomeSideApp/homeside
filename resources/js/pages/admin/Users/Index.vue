@@ -195,13 +195,10 @@ const columns: ColumnDef<any, User, any>[] = [
                 ),
                 ...(row.original.account_status !== 'active'
                     ? [
-                          h(
-                              Badge,
-                              { variant: 'destructive' },
-                              () =>
-                                  row.original.account_status === 'suspended'
-                                      ? t('admin.users.status.suspended')
-                                      : t('admin.users.status.blocked'),
+                          h(Badge, { variant: 'destructive' }, () =>
+                              row.original.account_status === 'suspended'
+                                  ? t('admin.users.status.suspended')
+                                  : t('admin.users.status.blocked'),
                           ),
                       ]
                     : []),
@@ -238,7 +235,10 @@ const columns: ColumnDef<any, User, any>[] = [
             // Only the transition the row's own state allows is offered: an
             // active account can be suspended or blocked, a suspended one can
             // be restored or blocked, and a blocked one can only be unblocked.
-            if (user.account_status === 'active' && can('admin.users.suspend')) {
+            if (
+                user.account_status === 'active' &&
+                can('admin.users.suspend')
+            ) {
                 lifecycle.push(
                     h(
                         IconAction,
@@ -251,13 +251,17 @@ const columns: ColumnDef<any, User, any>[] = [
                 );
             }
 
-            if (user.account_status === 'suspended' && can('admin.users.suspend')) {
+            if (
+                user.account_status === 'suspended' &&
+                can('admin.users.suspend')
+            ) {
                 lifecycle.push(
                     h(
                         IconAction,
                         {
                             label: `${t('admin.users.unsuspend')}: ${user.name}`,
-                            onClick: () => confirmLifecycle(unsuspendUser, user),
+                            onClick: () =>
+                                confirmLifecycle(unsuspendUser, user),
                         },
                         { default: () => h(Play, { 'aria-hidden': 'true' }) },
                     ),
@@ -278,7 +282,10 @@ const columns: ColumnDef<any, User, any>[] = [
                 );
             }
 
-            if (user.account_status === 'blocked' && can('admin.users.unblock')) {
+            if (
+                user.account_status === 'blocked' &&
+                can('admin.users.unblock')
+            ) {
                 lifecycle.push(
                     h(
                         IconAction,
@@ -286,7 +293,10 @@ const columns: ColumnDef<any, User, any>[] = [
                             label: `${t('admin.users.unblock')}: ${user.name}`,
                             onClick: () => confirmLifecycle(unblockUser, user),
                         },
-                        { default: () => h(ShieldCheck, { 'aria-hidden': 'true' }) },
+                        {
+                            default: () =>
+                                h(ShieldCheck, { 'aria-hidden': 'true' }),
+                        },
                     ),
                 );
             }
@@ -319,7 +329,8 @@ const columns: ColumnDef<any, User, any>[] = [
                     },
                     { default: () => h(Pencil, { 'aria-hidden': 'true' }) },
                 ),
-                ...(can('admin.users.delete') || can('admin.users.delete-and-block')
+                ...(can('admin.users.delete') ||
+                can('admin.users.delete-and-block')
                     ? [
                           h(
                               IconAction,
@@ -416,7 +427,11 @@ function confirmLifecycle(
     route: (user: { id: string }) => { url: string },
     user: User,
 ): void {
-    router.post(route({ id: String(user.id) }).url, {}, { preserveScroll: true });
+    router.post(
+        route({ id: String(user.id) }).url,
+        {},
+        { preserveScroll: true },
+    );
 }
 
 const showBlockDialog = ref(false);
@@ -466,16 +481,14 @@ function confirmDelete() {
     }
 
     const user = userToDelete.value;
-    const alsoBlock = deleteAlsoBlock.value && can('admin.users.delete-and-block');
+    const alsoBlock =
+        deleteAlsoBlock.value && can('admin.users.delete-and-block');
 
     const request = alsoBlock
-        ? router.delete(
-              deleteAndBlockUser({ id: String(user.id) }).url,
-              {
-                  data: { reason: deleteReason.value || undefined },
-                  preserveScroll: true,
-              },
-          )
+        ? router.delete(deleteAndBlockUser({ id: String(user.id) }).url, {
+              data: { reason: deleteReason.value || undefined },
+              preserveScroll: true,
+          })
         : router.delete(deleteUser({ id: String(user.id) }).url, {
               preserveScroll: true,
           });

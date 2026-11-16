@@ -15,7 +15,12 @@ import { Input } from '@/components/ui/input';
 import type { HouseholdModule, HouseholdTag } from '@/types';
 
 defineOptions({
-    layout: { breadcrumbs: [{ title: 'Hogares', href: '/households' }, { title: 'Crear hogar', href: '/households/create' }] },
+    layout: {
+        breadcrumbs: [
+            { title: 'Hogares', href: '/households' },
+            { title: 'Crear hogar', href: '/households/create' },
+        ],
+    },
 });
 
 const { t } = useI18n();
@@ -26,13 +31,15 @@ const props = defineProps<{
     available_tags: HouseholdTag[];
 }>();
 
-const form = useForm({
+const form = useForm('post', '/households', {
     name: '',
     description: '',
     color: '',
     image: null as File | null,
     tags: [] as string[],
-    modules: Object.fromEntries(props.modules.map((m) => [m.module, m.enabled])) as Record<string, boolean>,
+    modules: Object.fromEntries(
+        props.modules.map((m) => [m.module, m.enabled]),
+    ) as Record<string, boolean>,
 });
 
 const imagePreview = ref<string | null>(null);
@@ -76,7 +83,9 @@ function submit() {
         <!-- Step indicator -->
         <div class="flex items-center gap-4">
             <div class="flex items-center gap-2">
-                <div class="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-sm font-medium text-primary-foreground">
+                <div
+                    class="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-sm font-medium text-primary-foreground"
+                >
                     1
                 </div>
                 <span class="text-sm font-medium text-foreground">
@@ -85,7 +94,9 @@ function submit() {
             </div>
             <div class="h-px flex-1 bg-border" />
             <div class="flex items-center gap-2">
-                <div class="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-sm font-medium text-muted-foreground">
+                <div
+                    class="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-sm font-medium text-muted-foreground"
+                >
                     2
                 </div>
                 <span class="text-sm font-medium text-muted-foreground">
@@ -98,14 +109,23 @@ function submit() {
         <form @submit.prevent="submit" class="flex flex-col gap-6">
             <Card>
                 <CardHeader>
-                    <CardTitle>{{ t('households.create.newHousehold') }}</CardTitle>
+                    <CardTitle>{{
+                        t('households.create.newHousehold')
+                    }}</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <Field :label="t('households.create.householdName')" :error="form.errors?.name">
+                    <Field
+                        :label="t('households.create.householdName')"
+                        :error="form.errors?.name"
+                    >
                         <Input
                             v-model="form.name"
-                            :placeholder="t('households.create.householdNamePlaceholder')"
+                            :placeholder="
+                                t('households.create.householdNamePlaceholder')
+                            "
                             :class="{ 'border-destructive': form.errors?.name }"
+                            @blur="form.validate('name')"
+                            @input="form.validate('name')"
                         />
                     </Field>
                 </CardContent>
@@ -116,23 +136,20 @@ function submit() {
                 :image-preview="imagePreview"
                 :image-removed="imageRemoved"
                 :show-name="false"
-                @update:image-preview="(val) => imagePreview = val"
-                @update:image-removed="(val) => imageRemoved = val"
+                @update:image-preview="(val) => (imagePreview = val)"
+                @update:image-removed="(val) => (imageRemoved = val)"
             />
 
-            <HouseholdModulesForm
-                :form="form"
-                :modules="modules"
-            />
+            <HouseholdModulesForm :form="form" :modules="modules" />
 
-            <HouseholdTagsForm
-                :form="form"
-                :available-tags="available_tags"
-            />
+            <HouseholdTagsForm :form="form" :available-tags="available_tags" />
 
             <div class="flex justify-end">
                 <Button type="submit" :disabled="form.processing">
-                    <Loader2 v-if="form.processing" class="mr-2 h-4 w-4 animate-spin" />
+                    <Loader2
+                        v-if="form.processing"
+                        class="mr-2 h-4 w-4 animate-spin"
+                    />
                     Crear hogar y continuar
                     <ArrowRight v-if="!form.processing" class="ml-2 h-4 w-4" />
                 </Button>

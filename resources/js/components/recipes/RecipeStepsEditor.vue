@@ -1,5 +1,13 @@
 <script setup lang="ts">
-import { Plus, Trash2, GripVertical, Clock, Tag, CookingPot, ChevronsUpDown } from '@lucide/vue';
+import {
+    Plus,
+    Trash2,
+    GripVertical,
+    Clock,
+    Tag,
+    CookingPot,
+    ChevronsUpDown,
+} from '@lucide/vue';
 import { refDebounced } from '@vueuse/core';
 import { nextTick, ref, toRef, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
@@ -10,8 +18,16 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { parseCookware, parseIngredients, parseTimers } from '@/composables/useCooklangParser';
+import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from '@/components/ui/popover';
+import {
+    parseCookware,
+    parseIngredients,
+    parseTimers,
+} from '@/composables/useCooklangParser';
 
 interface RecipeStepTimer {
     client_id: string;
@@ -67,7 +83,11 @@ const props = defineProps<{
     errors: Record<string, string>;
     sections: Array<{ client_id: string; name: string }>;
     validate: (field?: string) => void;
-    referenceRecipes: Array<{ id: string; name: string; collection_path: string | null }>;
+    referenceRecipes: Array<{
+        id: string;
+        name: string;
+        collection_path: string | null;
+    }>;
 }>();
 
 const steps = toRef(props, 'steps');
@@ -79,18 +99,23 @@ const recipeSearch = ref('');
 const debouncedRecipeSearch = refDebounced(recipeSearch, 200);
 
 function normalizeSearch(value: string): string {
-    return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase();
+    return value
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLocaleLowerCase();
 }
 
 function filteredReferenceRecipes() {
     const query = normalizeSearch(debouncedRecipeSearch.value);
 
     if (!query) {
-return props.referenceRecipes;
-}
+        return props.referenceRecipes;
+    }
 
     return props.referenceRecipes.filter((recipe) => {
-        const label = [recipe.collection_path, recipe.name].filter(Boolean).join('/');
+        const label = [recipe.collection_path, recipe.name]
+            .filter(Boolean)
+            .join('/');
 
         return normalizeSearch(label).includes(query);
     });
@@ -108,7 +133,13 @@ function generateClientId(): string {
 let isSyncingIngredients = false;
 let isInsertingFromToolbar = false;
 
-function snapshotIngredients(): Array<{ name: string; quantity: number | null; quantity_text: string | null; unit: string | null; preparation: string | null }> {
+function snapshotIngredients(): Array<{
+    name: string;
+    quantity: number | null;
+    quantity_text: string | null;
+    unit: string | null;
+    preparation: string | null;
+}> {
     return props.ingredients.map((i) => ({
         name: i.name,
         quantity: i.quantity ?? null,
@@ -124,8 +155,8 @@ watch(
     () => props.ingredients,
     () => {
         if (isSyncingIngredients || isInsertingFromToolbar) {
-return;
-}
+            return;
+        }
 
         const newSnapshot = snapshotIngredients();
         const oldSnapshot = prevIngredientSnapshot.value;
@@ -135,8 +166,8 @@ return;
             const oldVal = oldSnapshot[i];
 
             if (!oldVal || !newVal) {
-continue;
-}
+                continue;
+            }
 
             // Check if any relevant property changed
             if (
@@ -152,13 +183,15 @@ continue;
             const oldName = oldVal.name;
 
             if (!oldName) {
-continue;
-}
+                continue;
+            }
 
             isSyncingIngredients = true;
 
             // Build new reference from current ingredient data
-            const qty = newVal.quantity_text || (newVal.quantity != null ? String(newVal.quantity) : '');
+            const qty =
+                newVal.quantity_text ||
+                (newVal.quantity != null ? String(newVal.quantity) : '');
             const unit = newVal.unit || '';
             const qtyPart = qty ? `{${qty}${unit ? '%' + unit : ''}}` : '';
             const prep = newVal.preparation ? `(${newVal.preparation})` : '';
@@ -168,8 +201,8 @@ continue;
             // Update all steps that reference this ingredient
             for (const step of props.steps) {
                 if (!step.description) {
-continue;
-}
+                    continue;
+                }
 
                 const text = step.description;
                 const regex = new RegExp(
@@ -179,8 +212,8 @@ continue;
                 const match = regex.exec(text);
 
                 if (!match) {
-continue;
-}
+                    continue;
+                }
 
                 step.description =
                     text.substring(0, match.index) +
@@ -212,14 +245,19 @@ function addStep() {
 }
 
 function addRecipeReference(step: RecipeStep, recipeId: string) {
-    const recipe = props.referenceRecipes.find((candidate) => candidate.id === recipeId);
+    const recipe = props.referenceRecipes.find(
+        (candidate) => candidate.id === recipeId,
+    );
 
     if (!recipe) {
-return;
-}
+        return;
+    }
 
-    const path = [recipe.collection_path, recipe.name].filter(Boolean).join('/');
-    const separator = step.description && !step.description.endsWith(' ') ? ' ' : '';
+    const path = [recipe.collection_path, recipe.name]
+        .filter(Boolean)
+        .join('/');
+    const separator =
+        step.description && !step.description.endsWith(' ') ? ' ' : '';
     step.description += `${separator}@./${path}{}`;
     recipePickerOpen.value[step.client_id] = false;
     recipeSearch.value = '';
@@ -243,7 +281,10 @@ function removeTimer(step: RecipeStep, timerIndex: number) {
     step.timers.splice(timerIndex, 1);
 }
 
-function addTimerFromToolbar(step: RecipeStep, timer: { name: string; duration_seconds: number }) {
+function addTimerFromToolbar(
+    step: RecipeStep,
+    timer: { name: string; duration_seconds: number },
+) {
     // Detect the best unit for display
     const unit = detectBestUnit(timer.duration_seconds);
     step.timers.push({
@@ -259,23 +300,27 @@ function syncTimerToText(step: RecipeStep, timerIndex: number) {
     const timer = step.timers[timerIndex];
 
     if (!timer) {
-return;
-}
+        return;
+    }
 
     const text = step.description;
     const reference = parseTimers(text)[timerIndex];
 
     if (!reference) {
-return;
-}
+        return;
+    }
 
     const name = timer.name || '';
     const displayValue = getTimerDisplayValue(timer);
     const unit = timer.duration_unit || 'seconds';
-    const unitCooklang = displayValue === 1 && unit.endsWith('s') ? unit.slice(0, -1) : unit;
+    const unitCooklang =
+        displayValue === 1 && unit.endsWith('s') ? unit.slice(0, -1) : unit;
     const duration = `${displayValue}%${unitCooklang}`;
     const newRef = name ? `~${name}{${duration}}` : `~{${duration}}`;
-    step.description = text.substring(0, reference.start) + newRef + text.substring(reference.end);
+    step.description =
+        text.substring(0, reference.start) +
+        newRef +
+        text.substring(reference.end);
 }
 
 function removeTimerFromText(step: RecipeStep, timerIndex: number) {
@@ -283,12 +328,14 @@ function removeTimerFromText(step: RecipeStep, timerIndex: number) {
     const reference = parseTimers(text)[timerIndex];
 
     if (!reference) {
-return;
-}
+        return;
+    }
 
     const afterText = text.substring(reference.end);
     const spaceToRemove = afterText.startsWith(' ') ? 1 : 0;
-    step.description = text.substring(0, reference.start) + text.substring(reference.end + spaceToRemove);
+    step.description =
+        text.substring(0, reference.start) +
+        text.substring(reference.end + spaceToRemove);
 }
 
 function getTimerDisplayValue(timer: RecipeStepTimer): number {
@@ -298,36 +345,43 @@ function getTimerDisplayValue(timer: RecipeStepTimer): number {
     return convertSecondsToUnit(seconds, unit);
 }
 
-function convertSecondsToUnit(seconds: number, unit: 'seconds' | 'minutes' | 'hours'): number {
+function convertSecondsToUnit(
+    seconds: number,
+    unit: 'seconds' | 'minutes' | 'hours',
+): number {
     if (unit === 'hours') {
-return Math.round(seconds / 3600);
-}
+        return Math.round(seconds / 3600);
+    }
 
     if (unit === 'minutes') {
-return Math.round(seconds / 60);
-}
+        return Math.round(seconds / 60);
+    }
 
     return seconds;
 }
 
 function detectBestUnit(seconds: number): 'seconds' | 'minutes' | 'hours' {
     if (seconds >= 3600 && seconds % 3600 === 0) {
-return 'hours';
-}
+        return 'hours';
+    }
 
     if (seconds >= 60 && seconds % 60 === 0) {
-return 'minutes';
-}
+        return 'minutes';
+    }
 
     return 'seconds';
 }
 
-function onTimerValueChange(step: RecipeStep, timerIndex: number, newValue: string | number) {
+function onTimerValueChange(
+    step: RecipeStep,
+    timerIndex: number,
+    newValue: string | number,
+) {
     const timer = step.timers[timerIndex];
 
     if (!timer) {
-return;
-}
+        return;
+    }
 
     const numValue = newValue ? Number(newValue) : 0;
     const unit = timer.duration_unit || 'seconds';
@@ -335,12 +389,16 @@ return;
     syncTimerToText(step, timerIndex);
 }
 
-function onTimerUnitChange(step: RecipeStep, timerIndex: number, newUnit: string) {
+function onTimerUnitChange(
+    step: RecipeStep,
+    timerIndex: number,
+    newUnit: string,
+) {
     const timer = step.timers[timerIndex];
 
     if (!timer) {
-return;
-}
+        return;
+    }
 
     // Get display value in the OLD unit, then convert to seconds using old unit
     const oldValue = getTimerDisplayValue(timer);
@@ -353,14 +411,17 @@ return;
     syncTimerToText(step, timerIndex);
 }
 
-function convertUnitToSeconds(value: number, unit: 'seconds' | 'minutes' | 'hours'): number {
+function convertUnitToSeconds(
+    value: number,
+    unit: 'seconds' | 'minutes' | 'hours',
+): number {
     if (unit === 'hours') {
-return value * 3600;
-}
+        return value * 3600;
+    }
 
     if (unit === 'minutes') {
-return value * 60;
-}
+        return value * 60;
+    }
 
     return value;
 }
@@ -369,12 +430,20 @@ return value * 60;
  * Sync ingredients from Cooklang text → step.ingredients (checkboxes).
  * Matches detected @ingredient references by name to recipe ingredients.
  */
-function syncIngredientsFromText(step: RecipeStep, detected: Array<{ name: string; quantity: number | null; unit: string | null; preparation: string | null }>) {
+function syncIngredientsFromText(
+    step: RecipeStep,
+    detected: Array<{
+        name: string;
+        quantity: number | null;
+        unit: string | null;
+        preparation: string | null;
+    }>,
+) {
     const matchedIds: string[] = [];
 
     for (const ing of detected) {
         const recipeIng = props.ingredients.find(
-            (ri) => ri.name.toLowerCase() === ing.name.toLowerCase()
+            (ri) => ri.name.toLowerCase() === ing.name.toLowerCase(),
         );
 
         if (recipeIng && !matchedIds.includes(recipeIng.client_id)) {
@@ -389,12 +458,15 @@ function syncIngredientsFromText(step: RecipeStep, detected: Array<{ name: strin
  * Sync cookware from Cooklang text → step.cookware (checkboxes).
  * Matches detected #cookware references by name to recipe cookware.
  */
-function syncCookwareFromText(step: RecipeStep, detected: Array<{ name: string }>) {
+function syncCookwareFromText(
+    step: RecipeStep,
+    detected: Array<{ name: string }>,
+) {
     const matchedIds: string[] = [];
 
     for (const cw of detected) {
         const recipeCw = props.cookware.find(
-            (rc) => rc.name.toLowerCase() === cw.name.toLowerCase()
+            (rc) => rc.name.toLowerCase() === cw.name.toLowerCase(),
         );
 
         if (recipeCw && !matchedIds.includes(recipeCw.client_id)) {
@@ -414,8 +486,8 @@ function escapeRegex(str: string): string {
  */
 function getReferencedIngredientNames(step: RecipeStep): string[] {
     if (!step.description) {
-return [];
-}
+        return [];
+    }
 
     const refs = parseIngredients(step.description);
 
@@ -427,8 +499,8 @@ return [];
  */
 function getReferencedCookwareNames(step: RecipeStep): string[] {
     if (!step.description) {
-return [];
-}
+        return [];
+    }
 
     const refs = parseCookware(step.description);
 
@@ -439,7 +511,11 @@ function getStepError(index: number, field: string): string | undefined {
     return props.errors[`steps.${index}.${field}`];
 }
 
-function getTimerError(stepIndex: number, timerIndex: number, field: string): string | undefined {
+function getTimerError(
+    stepIndex: number,
+    timerIndex: number,
+    field: string,
+): string | undefined {
     return props.errors[`steps.${stepIndex}.timers.${timerIndex}.${field}`];
 }
 
@@ -447,10 +523,15 @@ function getTimerError(stepIndex: number, timerIndex: number, field: string): st
  * Called when a new ingredient is created via CooklangWysiwyg dialog.
  * Adds it to the recipe's ingredients list if not already present.
  */
-function addIngredientFromEditor(data: { name: string; quantity: number | null; unit: string | null; preparation: string | null }) {
+function addIngredientFromEditor(data: {
+    name: string;
+    quantity: number | null;
+    unit: string | null;
+    preparation: string | null;
+}) {
     isInsertingFromToolbar = true;
     const existing = props.ingredients.find(
-        (i) => i.name.toLowerCase() === data.name.toLowerCase()
+        (i) => i.name.toLowerCase() === data.name.toLowerCase(),
     );
 
     if (!existing) {
@@ -464,8 +545,8 @@ function addIngredientFromEditor(data: { name: string; quantity: number | null; 
     }
 
     nextTick(() => {
- isInsertingFromToolbar = false; 
-});
+        isInsertingFromToolbar = false;
+    });
 }
 
 /**
@@ -475,7 +556,7 @@ function addIngredientFromEditor(data: { name: string; quantity: number | null; 
 function addCookwareFromEditor(data: { name: string; type: string }) {
     isInsertingFromToolbar = true;
     const existing = props.cookware.find(
-        (c) => c.name.toLowerCase() === data.name.toLowerCase()
+        (c) => c.name.toLowerCase() === data.name.toLowerCase(),
     );
 
     if (!existing) {
@@ -492,49 +573,74 @@ function addCookwareFromEditor(data: { name: string; type: string }) {
     }
 
     nextTick(() => {
- isInsertingFromToolbar = false; 
-});
+        isInsertingFromToolbar = false;
+    });
 }
 </script>
 
 <template>
     <div class="space-y-4">
         <div class="flex items-center justify-between">
-            <h3 class="text-sm font-medium">{{ t('recipes.stepsEditor.title') }}</h3>
+            <h3 class="text-sm font-medium">
+                {{ t('recipes.stepsEditor.title') }}
+            </h3>
             <Button type="button" variant="outline" size="sm" @click="addStep">
                 <Plus class="mr-2 h-4 w-4" />
                 {{ t('recipes.stepsEditor.add') }}
             </Button>
         </div>
 
-        <div v-if="steps.length === 0" class="rounded-md border border-dashed p-4 text-center text-sm text-muted-foreground">
+        <div
+            v-if="steps.length === 0"
+            class="rounded-md border border-dashed p-4 text-center text-sm text-muted-foreground"
+        >
             {{ t('recipes.stepsEditor.empty') }}
         </div>
 
-        <div v-for="(step, index) in steps" :key="step.client_id" class="rounded-md border p-4 space-y-4">
+        <div
+            v-for="(step, index) in steps"
+            :key="step.client_id"
+            class="space-y-4 rounded-md border p-4"
+        >
             <div class="flex items-center justify-between">
                 <div class="flex items-center gap-2">
                     <GripVertical class="h-4 w-4 text-muted-foreground" />
-                    <span class="text-xs font-medium text-muted-foreground">{{ t('recipes.stepsEditor.stepN', { index: index + 1 }) }}</span>
+                    <span class="text-xs font-medium text-muted-foreground">{{
+                        t('recipes.stepsEditor.stepN', { index: index + 1 })
+                    }}</span>
                 </div>
-                <Button type="button" variant="ghost" size="icon" class="h-7 w-7 text-destructive" @click="removeStep(index)">
+                <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    class="h-7 w-7 text-destructive"
+                    @click="removeStep(index)"
+                >
                     <Trash2 class="h-4 w-4" />
                 </Button>
             </div>
 
             <!-- Step image -->
             <Field>
-                <FieldLabel>{{ t('recipes.stepsEditor.stepImage') }}</FieldLabel>
+                <FieldLabel>{{
+                    t('recipes.stepsEditor.stepImage')
+                }}</FieldLabel>
                 <RecipeImageUploader
                     :model-value="step.image"
                     :current-url="step.image_url || step.image_path"
-                    @update:model-value="(val: File | null) => { step.image = val; }"
+                    @update:model-value="
+                        (val: File | null) => {
+                            step.image = val;
+                        }
+                    "
                 />
             </Field>
 
             <FieldGroup>
                 <Field>
-                    <FieldLabel :for="`step-recipe-reference-${index}`">{{ t('recipes.stepsEditor.addSubrecipe') }}</FieldLabel>
+                    <FieldLabel :for="`step-recipe-reference-${index}`">{{
+                        t('recipes.stepsEditor.addSubrecipe')
+                    }}</FieldLabel>
                     <Popover v-model:open="recipePickerOpen[step.client_id]">
                         <PopoverTrigger as-child>
                             <Button
@@ -544,20 +650,46 @@ function addCookwareFromEditor(data: { name: string; type: string }) {
                                 class="w-full justify-between font-normal"
                                 :disabled="referenceRecipes.length === 0"
                             >
-                                {{ referenceRecipes.length === 0 ? t('recipes.stepsEditor.noOtherRecipes') : t('recipes.stepsEditor.searchRecipe') }}
-                                <ChevronsUpDown data-icon="inline-end" class="opacity-50" />
+                                {{
+                                    referenceRecipes.length === 0
+                                        ? t(
+                                              'recipes.stepsEditor.noOtherRecipes',
+                                          )
+                                        : t('recipes.stepsEditor.searchRecipe')
+                                }}
+                                <ChevronsUpDown
+                                    data-icon="inline-end"
+                                    class="opacity-50"
+                                />
                             </Button>
                         </PopoverTrigger>
-                        <PopoverContent align="start" class="w-(--reka-popover-trigger-width) p-2">
+                        <PopoverContent
+                            align="start"
+                            class="w-(--reka-popover-trigger-width) p-2"
+                        >
                             <div class="flex flex-col gap-2">
                                 <Input
                                     v-model="recipeSearch"
-                                    :placeholder="t('recipes.stepsEditor.searchPlaceholder')"
+                                    :placeholder="
+                                        t(
+                                            'recipes.stepsEditor.searchPlaceholder',
+                                        )
+                                    "
                                     autocomplete="off"
                                 />
                                 <div class="max-h-64 overflow-y-auto">
-                                    <p v-if="filteredReferenceRecipes().length === 0" class="p-3 text-center text-sm text-muted-foreground">
-                                        {{ t('recipes.stepsEditor.noRecipesFound') }}
+                                    <p
+                                        v-if="
+                                            filteredReferenceRecipes()
+                                                .length === 0
+                                        "
+                                        class="p-3 text-center text-sm text-muted-foreground"
+                                    >
+                                        {{
+                                            t(
+                                                'recipes.stepsEditor.noRecipesFound',
+                                            )
+                                        }}
                                     </p>
                                     <div v-else class="flex flex-col gap-1">
                                         <Button
@@ -566,11 +698,26 @@ function addCookwareFromEditor(data: { name: string; type: string }) {
                                             type="button"
                                             variant="ghost"
                                             class="h-auto w-full justify-start px-2 py-2 text-left font-normal"
-                                            @click="addRecipeReference(step, recipe.id)"
+                                            @click="
+                                                addRecipeReference(
+                                                    step,
+                                                    recipe.id,
+                                                )
+                                            "
                                         >
                                             <span class="min-w-0">
-                                                <span class="block truncate">{{ recipe.name }}</span>
-                                                <span v-if="recipe.collection_path" class="block truncate text-xs text-muted-foreground">{{ recipe.collection_path }}</span>
+                                                <span class="block truncate">{{
+                                                    recipe.name
+                                                }}</span>
+                                                <span
+                                                    v-if="
+                                                        recipe.collection_path
+                                                    "
+                                                    class="block truncate text-xs text-muted-foreground"
+                                                    >{{
+                                                        recipe.collection_path
+                                                    }}</span
+                                                >
                                             </span>
                                         </Button>
                                     </div>
@@ -578,37 +725,85 @@ function addCookwareFromEditor(data: { name: string; type: string }) {
                             </div>
                         </PopoverContent>
                     </Popover>
-                    <p class="text-xs text-muted-foreground">{{ t('recipes.stepsEditor.insertNote', { code: '@./Carpeta/Receta{}' }) }}</p>
+                    <p class="text-xs text-muted-foreground">
+                        {{
+                            t('recipes.stepsEditor.insertNote', {
+                                code: '@./Carpeta/Receta{}',
+                            })
+                        }}
+                    </p>
                 </Field>
 
                 <Field>
-                    <FieldLabel :for="`step-description-${index}`">{{ t('recipes.stepsEditor.description') }}</FieldLabel>
+                    <FieldLabel :for="`step-description-${index}`">{{
+                        t('recipes.stepsEditor.description')
+                    }}</FieldLabel>
                     <CooklangWysiwyg
                         :model-value="step.description"
                         :recipe-ingredients="ingredients"
                         :recipe-cookware="cookware"
                         :reference-recipes="referenceRecipes"
-                        :placeholder="t('recipes.stepsEditor.descriptionPlaceholder')"
-                        @update:model-value="(val: string) => { step.description = val; }"
-                        @update:detected-ingredients="(detected) => { syncIngredientsFromText(step, detected); }"
-                        @update:detected-cookware="(detected) => { syncCookwareFromText(step, detected); }"
-                        @add-ingredient="(data) => { addIngredientFromEditor(data); }"
-                        @add-cookware="(data) => { addCookwareFromEditor(data); }"
-                        @add-timer="(timer) => { addTimerFromToolbar(step, timer); }"
+                        :placeholder="
+                            t('recipes.stepsEditor.descriptionPlaceholder')
+                        "
+                        @update:model-value="
+                            (val: string) => {
+                                step.description = val;
+                            }
+                        "
+                        @update:detected-ingredients="
+                            (detected) => {
+                                syncIngredientsFromText(step, detected);
+                            }
+                        "
+                        @update:detected-cookware="
+                            (detected) => {
+                                syncCookwareFromText(step, detected);
+                            }
+                        "
+                        @add-ingredient="
+                            (data) => {
+                                addIngredientFromEditor(data);
+                            }
+                        "
+                        @add-cookware="
+                            (data) => {
+                                addCookwareFromEditor(data);
+                            }
+                        "
+                        @add-timer="
+                            (timer) => {
+                                addTimerFromToolbar(step, timer);
+                            }
+                        "
                     />
                     <InputError :message="getStepError(index, 'description')" />
                 </Field>
 
                 <Field v-if="sections.length > 0">
-                    <FieldLabel :for="`step-section-${index}`">{{ t('recipes.stepsEditor.section') }}</FieldLabel>
+                    <FieldLabel :for="`step-section-${index}`">{{
+                        t('recipes.stepsEditor.section')
+                    }}</FieldLabel>
                     <select
                         :id="`step-section-${index}`"
                         :value="step.section_id ?? ''"
-                        class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                        @change="(e: Event) => { step.section_id = (e.target as HTMLSelectElement).value || null; }"
+                        class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none"
+                        @change="
+                            (e: Event) => {
+                                step.section_id =
+                                    (e.target as HTMLSelectElement).value ||
+                                    null;
+                            }
+                        "
                     >
-                        <option value="">{{ t('recipes.stepsEditor.noSection') }}</option>
-                        <option v-for="section in sections" :key="section.client_id" :value="section.client_id">
+                        <option value="">
+                            {{ t('recipes.stepsEditor.noSection') }}
+                        </option>
+                        <option
+                            v-for="section in sections"
+                            :key="section.client_id"
+                            :value="section.client_id"
+                        >
                             {{ section.name }}
                         </option>
                     </select>
@@ -616,7 +811,9 @@ function addCookwareFromEditor(data: { name: string; type: string }) {
 
                 <!-- Ingredientes del paso (derivados del texto Cooklang) -->
                 <Field v-if="getReferencedIngredientNames(step).length > 0">
-                    <FieldLabel>{{ t('recipes.stepsEditor.stepIngredients') }}</FieldLabel>
+                    <FieldLabel>{{
+                        t('recipes.stepsEditor.stepIngredients')
+                    }}</FieldLabel>
                     <div class="flex flex-wrap gap-1.5">
                         <Badge
                             v-for="name in getReferencedIngredientNames(step)"
@@ -632,7 +829,9 @@ function addCookwareFromEditor(data: { name: string; type: string }) {
 
                 <!-- Utensilios del paso (derivados del texto Cooklang) -->
                 <Field v-if="getReferencedCookwareNames(step).length > 0">
-                    <FieldLabel>{{ t('recipes.stepsEditor.stepCookware') }}</FieldLabel>
+                    <FieldLabel>{{
+                        t('recipes.stepsEditor.stepCookware')
+                    }}</FieldLabel>
                     <div class="flex flex-wrap gap-1.5">
                         <Badge
                             v-for="name in getReferencedCookwareNames(step)"
@@ -649,50 +848,120 @@ function addCookwareFromEditor(data: { name: string; type: string }) {
                 <!-- Timers -->
                 <div class="space-y-2">
                     <div class="flex items-center justify-between">
-                        <FieldLabel>{{ t('recipes.stepsEditor.timers') }}</FieldLabel>
-                        <Button type="button" variant="ghost" size="sm" @click="addTimer(step)">
+                        <FieldLabel>{{
+                            t('recipes.stepsEditor.timers')
+                        }}</FieldLabel>
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            @click="addTimer(step)"
+                        >
                             <Clock class="mr-1 h-3 w-3" />
                             {{ t('recipes.stepsEditor.addTimer') }}
                         </Button>
                     </div>
 
-                    <div v-for="(timer, timerIdx) in step.timers" :key="timer.client_id" class="flex items-end gap-2">
+                    <div
+                        v-for="(timer, timerIdx) in step.timers"
+                        :key="timer.client_id"
+                        class="flex items-end gap-2"
+                    >
                         <Field class="flex-1">
-                            <FieldLabel :for="`timer-name-${index}-${timerIdx}`">{{ t('recipes.stepsEditor.timerName') }}</FieldLabel>
+                            <FieldLabel
+                                :for="`timer-name-${index}-${timerIdx}`"
+                                >{{
+                                    t('recipes.stepsEditor.timerName')
+                                }}</FieldLabel
+                            >
                             <Input
                                 :id="`timer-name-${index}-${timerIdx}`"
                                 v-model="timer.name"
-                                :placeholder="t('recipes.stepsEditor.timerNamePlaceholder')"
-                                @update:model-value="syncTimerToText(step, timerIdx)"
+                                :placeholder="
+                                    t(
+                                        'recipes.stepsEditor.timerNamePlaceholder',
+                                    )
+                                "
+                                @update:model-value="
+                                    syncTimerToText(step, timerIdx)
+                                "
                             />
-                            <InputError :message="getTimerError(index, timerIdx, 'name')" />
+                            <InputError
+                                :message="
+                                    getTimerError(index, timerIdx, 'name')
+                                "
+                            />
                         </Field>
                         <Field class="w-24">
-                            <FieldLabel :for="`timer-duration-${index}-${timerIdx}`">{{ t('recipes.stepsEditor.timerDuration') }}</FieldLabel>
+                            <FieldLabel
+                                :for="`timer-duration-${index}-${timerIdx}`"
+                                >{{
+                                    t('recipes.stepsEditor.timerDuration')
+                                }}</FieldLabel
+                            >
                             <Input
                                 :id="`timer-duration-${index}-${timerIdx}`"
                                 :model-value="getTimerDisplayValue(timer)"
                                 type="number"
                                 min="1"
                                 placeholder="0"
-                                @update:model-value="(val: string | number) => onTimerValueChange(step, timerIdx, val)"
+                                @update:model-value="
+                                    (val: string | number) =>
+                                        onTimerValueChange(step, timerIdx, val)
+                                "
                             />
-                            <InputError :message="getTimerError(index, timerIdx, 'duration_seconds')" />
+                            <InputError
+                                :message="
+                                    getTimerError(
+                                        index,
+                                        timerIdx,
+                                        'duration_seconds',
+                                    )
+                                "
+                            />
                         </Field>
                         <Field class="w-28">
-                            <FieldLabel :for="`timer-unit-${index}-${timerIdx}`">{{ t('recipes.stepsEditor.timerUnit') }}</FieldLabel>
+                            <FieldLabel
+                                :for="`timer-unit-${index}-${timerIdx}`"
+                                >{{
+                                    t('recipes.stepsEditor.timerUnit')
+                                }}</FieldLabel
+                            >
                             <select
                                 :id="`timer-unit-${index}-${timerIdx}`"
                                 :value="timer.duration_unit"
-                                class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                                @change="(e: Event) => onTimerUnitChange(step, timerIdx, (e.target as HTMLSelectElement).value)"
+                                class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none"
+                                @change="
+                                    (e: Event) =>
+                                        onTimerUnitChange(
+                                            step,
+                                            timerIdx,
+                                            (e.target as HTMLSelectElement)
+                                                .value,
+                                        )
+                                "
                             >
-                                <option value="seconds">{{ t('recipes.stepsEditor.seconds') }}</option>
-                                <option value="minutes">{{ t('recipes.stepsEditor.minutes') }}</option>
-                                <option value="hours">{{ t('recipes.stepsEditor.hours') }}</option>
+                                <option value="seconds">
+                                    {{ t('recipes.stepsEditor.seconds') }}
+                                </option>
+                                <option value="minutes">
+                                    {{ t('recipes.stepsEditor.minutes') }}
+                                </option>
+                                <option value="hours">
+                                    {{ t('recipes.stepsEditor.hours') }}
+                                </option>
                             </select>
                         </Field>
-                        <Button type="button" variant="ghost" size="icon" class="h-9 w-9 text-destructive" @click="removeTimerFromText(step, timerIdx); removeTimer(step, timerIdx)">
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            class="h-9 w-9 text-destructive"
+                            @click="
+                                removeTimerFromText(step, timerIdx);
+                                removeTimer(step, timerIdx);
+                            "
+                        >
                             <Trash2 class="h-4 w-4" />
                         </Button>
                     </div>

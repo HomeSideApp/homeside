@@ -2,7 +2,13 @@
 import { ImagePlus, X } from '@lucide/vue';
 import { toRef } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import {
+    Card,
+    CardContent,
+    CardHeader,
+    CardTitle,
+    CardDescription,
+} from '@/components/ui/card';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -53,10 +59,16 @@ function removeImage() {
     <Card>
         <CardHeader>
             <CardTitle>{{ t('households.form.basicInfo') }}</CardTitle>
-            <CardDescription>{{ t('households.form.basicInfoDescription') }}</CardDescription>
+            <CardDescription>{{
+                t('households.form.basicInfoDescription')
+            }}</CardDescription>
         </CardHeader>
         <CardContent class="grid gap-4">
-            <Field v-if="showName !== false" :label="t('households.form.name')" :error="form.errors.name">
+            <Field
+                v-if="showName !== false"
+                :label="t('households.form.name')"
+                :error="form.errors.name"
+            >
                 <Input
                     v-model="form.name"
                     :placeholder="t('households.form.namePlaceholder')"
@@ -64,7 +76,10 @@ function removeImage() {
                 />
             </Field>
 
-            <Field :label="t('households.form.description')" :error="form.errors.description">
+            <Field
+                :label="t('households.form.description')"
+                :error="form.errors.description"
+            >
                 <Textarea
                     v-model="form.description"
                     :placeholder="t('households.form.descriptionPlaceholder')"
@@ -74,14 +89,20 @@ function removeImage() {
 
             <div>
                 <Label>{{ t('households.form.color') }}</Label>
-                <p class="text-sm text-muted-foreground mb-2">{{ t('households.form.colorHint') }}</p>
+                <p class="mb-2 text-sm text-muted-foreground">
+                    {{ t('households.form.colorHint') }}
+                </p>
                 <div class="flex flex-wrap gap-2">
                     <button
                         v-for="color in avatarFallbackColors"
                         :key="color"
                         type="button"
                         class="size-8 rounded-full border-2 transition-all hover:scale-110"
-                        :class="form.color === color ? 'border-foreground scale-110' : 'border-transparent'"
+                        :class="
+                            form.color === color
+                                ? 'scale-110 border-foreground'
+                                : 'border-transparent'
+                        "
                         :style="{ backgroundColor: color }"
                         @click="form.color = form.color === color ? '' : color"
                     />
@@ -90,14 +111,24 @@ function removeImage() {
                             type="color"
                             :value="form.color || '#3b82f6'"
                             class="absolute inset-0 size-8 cursor-pointer rounded-full border-2 border-dashed border-muted-foreground/50 opacity-0"
-                            @input="(e: Event) => form.color = (e.target as HTMLInputElement).value"
+                            @input="
+                                (e: Event) =>
+                                    (form.color = (
+                                        e.target as HTMLInputElement
+                                    ).value)
+                            "
                         />
-                        <div class="flex size-8 items-center justify-center rounded-full border-2 border-dashed border-muted-foreground/50">
+                        <div
+                            class="flex size-8 items-center justify-center rounded-full border-2 border-dashed border-muted-foreground/50"
+                        >
                             <span class="text-xs">+</span>
                         </div>
                     </div>
                 </div>
-                <p v-if="form.errors.color" class="mt-1 text-sm text-destructive">
+                <p
+                    v-if="form.errors.color"
+                    class="mt-1 text-sm text-destructive"
+                >
                     {{ form.errors.color }}
                 </p>
             </div>
@@ -117,7 +148,7 @@ function removeImage() {
                         <button
                             type="button"
                             @click="removeImage"
-                            class="absolute right-1 top-1 rounded-full bg-background/80 p-0.5 hover:bg-background"
+                            class="absolute top-1 right-1 rounded-full bg-background/80 p-0.5 hover:bg-background"
                         >
                             <X class="h-3 w-3" />
                         </button>
@@ -126,7 +157,9 @@ function removeImage() {
                         class="flex h-24 w-24 cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed text-muted-foreground hover:border-primary hover:text-primary"
                     >
                         <ImagePlus class="mb-1 h-6 w-6" />
-                        <span class="text-xs">{{ t('households.form.uploadImage') }}</span>
+                        <span class="text-xs">{{
+                            t('households.form.uploadImage')
+                        }}</span>
                         <input
                             type="file"
                             accept="image/*"
@@ -135,7 +168,10 @@ function removeImage() {
                         />
                     </label>
                 </div>
-                <p v-if="form.errors.image" class="mt-1 text-sm text-destructive">
+                <p
+                    v-if="form.errors.image"
+                    class="mt-1 text-sm text-destructive"
+                >
                     {{ form.errors.image }}
                 </p>
             </div>

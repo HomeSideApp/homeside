@@ -28,7 +28,14 @@ import {
     index as householdAiProvidersIndex,
     moduleConfig as householdAiProviderModuleConfig,
 } from '@/routes/households/ai-providers';
-import type { AiProvider, HouseholdSummary, PaginatedData, CatalogProvider, CatalogModel, CatalogPrefillData } from '@/types';
+import type {
+    AiProvider,
+    HouseholdSummary,
+    PaginatedData,
+    CatalogProvider,
+    CatalogModel,
+    CatalogPrefillData,
+} from '@/types';
 
 type ModuleConfig = {
     id?: string;
@@ -300,8 +307,19 @@ function submitUpdateModuleConfig(
 
                         <Field :label="'Preferencias adicionales'">
                             <Textarea
-                                :model-value="getModuleConfig(mod.value, agent.name)!.additional_instructions ?? ''"
-                                @update:model-value="(value: string | number) => { getModuleConfig(mod.value, agent.name)!.additional_instructions = String(value); }"
+                                :model-value="
+                                    getModuleConfig(mod.value, agent.name)!
+                                        .additional_instructions ?? ''
+                                "
+                                @update:model-value="
+                                    (value: string | number) => {
+                                        getModuleConfig(
+                                            mod.value,
+                                            agent.name,
+                                        )!.additional_instructions =
+                                            String(value);
+                                    }
+                                "
                                 rows="4"
                                 class="font-mono text-xs"
                             />

@@ -22,7 +22,10 @@ import {
     TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { vCan } from '@/directives/can';
-import { create as createRecipe, importMethod as importRecipe } from '@/routes/recipes';
+import {
+    create as createRecipe,
+    importMethod as importRecipe,
+} from '@/routes/recipes';
 import { index as collectionsIndex } from '@/routes/recipes/collections';
 import type { Paginated } from '@/types';
 
@@ -148,41 +151,78 @@ function goToPage(page: number) {
                 <div class="flex shrink-0 flex-nowrap items-center gap-2">
                     <Tooltip>
                         <TooltipTrigger as-child>
-                            <Button type="button" variant="outline" size="icon-sm" :aria-label="t('common.actions.filters')" :aria-expanded="showFilters" :aria-controls="showFilters ? 'recipe-filters' : undefined" data-test="toggle-recipe-filters" @click="showFilters = !showFilters">
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="icon-sm"
+                                :aria-label="t('common.actions.filters')"
+                                :aria-expanded="showFilters"
+                                :aria-controls="
+                                    showFilters ? 'recipe-filters' : undefined
+                                "
+                                data-test="toggle-recipe-filters"
+                                @click="showFilters = !showFilters"
+                            >
                                 <ListFilter aria-hidden="true" />
                             </Button>
                         </TooltipTrigger>
-                        <TooltipContent>{{ t('common.actions.filters') }}</TooltipContent>
+                        <TooltipContent>{{
+                            t('common.actions.filters')
+                        }}</TooltipContent>
                     </Tooltip>
                     <Tooltip>
                         <TooltipTrigger as-child>
                             <Button variant="outline" size="icon-sm" as-child>
-                                <Link :href="collectionsIndex().url" :aria-label="t('recipes.index.collections')">
+                                <Link
+                                    :href="collectionsIndex().url"
+                                    :aria-label="t('recipes.index.collections')"
+                                >
                                     <FolderCog aria-hidden="true" />
                                 </Link>
                             </Button>
                         </TooltipTrigger>
-                        <TooltipContent>{{ t('recipes.index.collections') }}</TooltipContent>
+                        <TooltipContent>{{
+                            t('recipes.index.collections')
+                        }}</TooltipContent>
                     </Tooltip>
                     <Tooltip>
                         <TooltipTrigger as-child>
-                            <Button v-can="'recipes.import'" variant="outline" size="icon-sm" as-child>
-                                <Link :href="importRecipe.url()" :aria-label="t('recipes.index.import')">
+                            <Button
+                                v-can="'recipes.import'"
+                                variant="outline"
+                                size="icon-sm"
+                                as-child
+                            >
+                                <Link
+                                    :href="importRecipe.url()"
+                                    :aria-label="t('recipes.index.import')"
+                                >
                                     <Upload aria-hidden="true" />
                                 </Link>
                             </Button>
                         </TooltipTrigger>
-                        <TooltipContent>{{ t('recipes.index.import') }}</TooltipContent>
+                        <TooltipContent>{{
+                            t('recipes.index.import')
+                        }}</TooltipContent>
                     </Tooltip>
                     <Tooltip>
                         <TooltipTrigger as-child>
-                            <Button v-can="'recipes.create'" size="icon-sm" as-child>
-                                <Link :href="createRecipe.url()" :aria-label="t('recipes.index.newRecipe')">
+                            <Button
+                                v-can="'recipes.create'"
+                                size="icon-sm"
+                                as-child
+                            >
+                                <Link
+                                    :href="createRecipe.url()"
+                                    :aria-label="t('recipes.index.newRecipe')"
+                                >
                                     <Plus aria-hidden="true" />
                                 </Link>
                             </Button>
                         </TooltipTrigger>
-                        <TooltipContent>{{ t('recipes.index.newRecipe') }}</TooltipContent>
+                        <TooltipContent>{{
+                            t('recipes.index.newRecipe')
+                        }}</TooltipContent>
                     </Tooltip>
                 </div>
             </TooltipProvider>

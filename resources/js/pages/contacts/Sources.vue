@@ -134,7 +134,7 @@ setLayoutProps({
 
 const { can } = useAuthorization();
 const googleDraftOpen = ref(Boolean(props.googleDraft));
-const googleForm = useForm({
+const googleForm = useForm('post', googleStore().url, {
     name: props.googleDraft ? `Google: ${props.googleDraft.email}` : '',
     favorite_label: 'Starred',
     selected_collections: ['all'],
@@ -149,12 +149,16 @@ function saveGoogleDraft() {
 
 const googleEditOpen = ref(false);
 const editingGoogleSource = ref<Source | null>(null);
-const googleEditForm = useForm({
-    name: '',
-    favorite_label: 'Starred',
-    enabled: true,
-    sync_enabled: true,
-});
+const googleEditForm = useForm(
+    'put',
+    () => googleUpdate(editingGoogleSource.value!.id).url,
+    {
+        name: '',
+        favorite_label: 'Starred',
+        enabled: true,
+        sync_enabled: true,
+    },
+);
 
 function openGoogleEdit(source: Source): void {
     editingGoogleSource.value = source;
@@ -193,18 +197,23 @@ const testing = ref(false);
 const availableCollections = ref<Collection[]>([]);
 const previewFingerprint = ref<string | null>(null);
 
-const form = useForm({
-    provider: 'carddav',
-    household_id: null as string | null,
-    name: '',
-    server_url: '',
-    favorite_label: 'Starred',
-    username: '',
-    app_password: '',
-    enabled: true,
-    sync_enabled: true,
-    selected_collections: [] as string[],
-});
+const form = useForm(
+    () => (editingSourceId.value ? 'put' : 'post'),
+    () =>
+        editingSourceId.value ? update(editingSourceId.value).url : store().url,
+    {
+        provider: 'carddav',
+        household_id: null as string | null,
+        name: '',
+        server_url: '',
+        favorite_label: 'Starred',
+        username: '',
+        app_password: '',
+        enabled: true,
+        sync_enabled: true,
+        selected_collections: [] as string[],
+    },
+);
 
 const previewRequest = useHttp<
     {
@@ -376,6 +385,8 @@ function toggleCollection(remoteId: string, checked: boolean): void {
     form.selected_collections = checked
         ? [...form.selected_collections, remoteId]
         : form.selected_collections.filter((id) => id !== remoteId);
+
+    form.validate('selected_collections');
 }
 
 function submit(): void {
@@ -753,6 +764,8 @@ function confirmDelete(): void {
                                 id="google-source-name"
                                 v-model="googleForm.name"
                                 required
+                                @blur="googleForm.validate('name')"
+                                @input="googleForm.validate('name')"
                             /><FieldError v-if="googleForm.errors.name">{{
                                 googleForm.errors.name
                             }}</FieldError></Field
@@ -764,6 +777,8 @@ function confirmDelete(): void {
                                 id="google-favorite-label"
                                 v-model="googleForm.favorite_label"
                                 required
+                                @blur="googleForm.validate('favorite_label')"
+                                @input="googleForm.validate('favorite_label')"
                             /><FieldError
                                 v-if="googleForm.errors.favorite_label"
                                 >{{
@@ -836,6 +851,8 @@ function confirmDelete(): void {
                                 id="google-edit-name"
                                 v-model="googleEditForm.name"
                                 required
+                                @blur="googleEditForm.validate('name')"
+                                @input="googleEditForm.validate('name')"
                             />
                             <FieldError v-if="googleEditForm.errors.name">{{
                                 googleEditForm.errors.name
@@ -849,6 +866,12 @@ function confirmDelete(): void {
                                 id="google-edit-favorite-label"
                                 v-model="googleEditForm.favorite_label"
                                 required
+                                @blur="
+                                    googleEditForm.validate('favorite_label')
+                                "
+                                @input="
+                                    googleEditForm.validate('favorite_label')
+                                "
                             />
                             <FieldDescription>
                                 El grupo Favoritos de Google se mostrará con
@@ -923,6 +946,8 @@ function confirmDelete(): void {
                                 id="source-name"
                                 v-model="form.name"
                                 required
+                                @blur="form.validate('name')"
+                                @input="form.validate('name')"
                             />
                             <FieldError v-if="form.errors.name">{{
                                 form.errors.name
@@ -932,7 +957,12 @@ function confirmDelete(): void {
                             <FieldLabel for="source-scope"
                                 >Visibilidad</FieldLabel
                             >
-                            <Select v-model="form.household_id">
+                            <Select
+                                v-model="form.household_id"
+                                @update:model-value="
+                                    form.validate('household_id')
+                                "
+                            >
                                 <SelectTrigger id="source-scope"
                                     ><SelectValue placeholder="Privado"
                                 /></SelectTrigger>
@@ -986,6 +1016,8 @@ function confirmDelete(): void {
                                 v-model="form.server_url"
                                 type="url"
                                 required
+                                @blur="form.validate('server_url')"
+                                @input="form.validate('server_url')"
                             />
                             <FieldError v-if="form.errors.server_url">{{
                                 form.errors.server_url
@@ -1000,6 +1032,8 @@ function confirmDelete(): void {
                                 v-model="form.favorite_label"
                                 maxlength="80"
                                 required
+                                @blur="form.validate('favorite_label')"
+                                @input="form.validate('favorite_label')"
                             />
                             <FieldDescription
                                 >Los contactos con esta etiqueta aparecerán en
@@ -1024,6 +1058,8 @@ function confirmDelete(): void {
                                         : undefined
                                 "
                                 :required="!editingSourceId"
+                                @blur="form.validate('username')"
+                                @input="form.validate('username')"
                             />
                             <FieldError v-if="form.errors.username">{{
                                 form.errors.username
@@ -1044,6 +1080,8 @@ function confirmDelete(): void {
                                         : undefined
                                 "
                                 :required="!editingSourceId"
+                                @blur="form.validate('app_password')"
+                                @input="form.validate('app_password')"
                             />
                             <FieldError v-if="form.errors.app_password">{{
                                 form.errors.app_password
