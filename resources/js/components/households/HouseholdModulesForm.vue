@@ -30,6 +30,8 @@ const props = defineProps<{
         modules: Record<string, boolean>;
     };
     modules: HouseholdModule[];
+    /** Precognition hook owned by the page that submits the form. */
+    validate: (field?: string) => void;
 }>();
 
 const form = toRef(props, 'form');
@@ -46,6 +48,7 @@ function getModuleIcon(icon: string) {
 
 function toggleModule(module: string, value: boolean) {
     form.value.modules = { ...form.value.modules, [module]: value };
+    props.validate(`modules.${module}`);
 }
 
 const currentWarnings = computed(() => {

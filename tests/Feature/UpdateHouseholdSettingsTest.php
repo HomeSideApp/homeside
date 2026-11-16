@@ -56,7 +56,7 @@ class UpdateHouseholdSettingsTest extends TestCase
     public function test_admin_can_update_household_name(): void
     {
         $response = $this->actingAs($this->user)
-            ->put("/households/{$this->household->id}/settings", [
+            ->post("/households/{$this->household->id}/settings", [
                 'name' => 'Mi hogar actualizado',
             ]);
 
@@ -70,7 +70,7 @@ class UpdateHouseholdSettingsTest extends TestCase
     public function test_admin_can_update_description(): void
     {
         $response = $this->actingAs($this->user)
-            ->put("/households/{$this->household->id}/settings", [
+            ->post("/households/{$this->household->id}/settings", [
                 'name' => $this->household->name,
                 'description' => 'Una descripción de prueba',
             ]);
@@ -89,7 +89,7 @@ class UpdateHouseholdSettingsTest extends TestCase
         $image = UploadedFile::fake()->image('household.jpg', 200, 200);
 
         $response = $this->actingAs($this->user)
-            ->put("/households/{$this->household->id}/settings", [
+            ->post("/households/{$this->household->id}/settings", [
                 'name' => $this->household->name,
                 'image' => $image,
             ]);
@@ -106,7 +106,7 @@ class UpdateHouseholdSettingsTest extends TestCase
         $this->household->update(['image_url' => 'households/'.$this->household->id.'/test.jpg']);
 
         $response = $this->actingAs($this->user)
-            ->put("/households/{$this->household->id}/settings", [
+            ->post("/households/{$this->household->id}/settings", [
                 'name' => $this->household->name,
                 'remove_image' => true,
             ]);
@@ -118,7 +118,7 @@ class UpdateHouseholdSettingsTest extends TestCase
     public function test_admin_can_toggle_modules(): void
     {
         $response = $this->actingAs($this->user)
-            ->put("/households/{$this->household->id}/settings", [
+            ->post("/households/{$this->household->id}/settings", [
                 'name' => $this->household->name,
                 'modules' => [
                     'shopping_lists' => true,
@@ -148,7 +148,7 @@ class UpdateHouseholdSettingsTest extends TestCase
         Tag::create(['name' => 'Pareja', 'slug' => 'pareja', 'type' => 'predefined']);
 
         $response = $this->actingAs($this->user)
-            ->put("/households/{$this->household->id}/settings", [
+            ->post("/households/{$this->household->id}/settings", [
                 'name' => $this->household->name,
                 'tags' => ['Familia', 'Pareja'],
             ]);
@@ -163,7 +163,7 @@ class UpdateHouseholdSettingsTest extends TestCase
     public function test_admin_can_create_custom_tags(): void
     {
         $response = $this->actingAs($this->user)
-            ->put("/households/{$this->household->id}/settings", [
+            ->post("/households/{$this->household->id}/settings", [
                 'name' => $this->household->name,
                 'tags' => ['Mi tag personalizado'],
             ]);
@@ -182,7 +182,7 @@ class UpdateHouseholdSettingsTest extends TestCase
         $otherUser = User::factory()->create();
 
         $response = $this->actingAs($otherUser)
-            ->put("/households/{$this->household->id}/settings", [
+            ->post("/households/{$this->household->id}/settings", [
                 'name' => 'Hogar hackeado',
             ]);
 
@@ -201,7 +201,7 @@ class UpdateHouseholdSettingsTest extends TestCase
         ]);
 
         $response = $this->actingAs($member)
-            ->put("/households/{$this->household->id}/settings", [
+            ->post("/households/{$this->household->id}/settings", [
                 'name' => 'Hogar modificado',
             ]);
 
@@ -212,7 +212,7 @@ class UpdateHouseholdSettingsTest extends TestCase
     public function test_name_is_required(): void
     {
         $response = $this->actingAs($this->user)
-            ->put("/households/{$this->household->id}/settings", [
+            ->post("/households/{$this->household->id}/settings", [
                 'name' => '',
             ]);
 
@@ -222,7 +222,7 @@ class UpdateHouseholdSettingsTest extends TestCase
     public function test_description_max_length(): void
     {
         $response = $this->actingAs($this->user)
-            ->put("/households/{$this->household->id}/settings", [
+            ->post("/households/{$this->household->id}/settings", [
                 'name' => $this->household->name,
                 'description' => str_repeat('a', 1001),
             ]);
@@ -241,7 +241,7 @@ class UpdateHouseholdSettingsTest extends TestCase
     public function test_admin_can_set_default_split_type(): void
     {
         $response = $this->actingAs($this->user)
-            ->put("/households/{$this->household->id}/settings", [
+            ->post("/households/{$this->household->id}/settings", [
                 'name' => $this->household->name,
                 'default_split_type' => 'percentage',
             ]);
@@ -256,10 +256,34 @@ class UpdateHouseholdSettingsTest extends TestCase
         $this->assertSame('percentage', $module->settings['default_split_type'] ?? null);
     }
 
+    public function test_the_settings_endpoint_is_post_only_and_validates_the_uploaded_image_precognitively(): void
+    {
+        Storage::fake('public');
+
+        $url = "/households/{$this->household->id}/settings";
+
+        // Multipart bodies are only parsed by PHP on POST, so the verb that
+        // carries the `image` upload must be POST and PUT must be gone.
+        $this->actingAs($this->user)->put($url, ['name' => 'Otro nombre'])->assertStatus(405);
+
+        // A precognitive POST does reach the rules with the file attached: a
+        // PDF is not an image, so the field is rejected and nothing persists.
+        $this->actingAs($this->user)
+            ->withPrecognition()
+            ->post($url, [
+                'name' => $this->household->name,
+                'image' => UploadedFile::fake()->create('documento.pdf', 20, 'application/pdf'),
+            ], ['Accept' => 'application/json'])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('image');
+
+        $this->assertNull($this->household->fresh()->image_url);
+    }
+
     public function test_default_split_type_rejects_unknown_values(): void
     {
         $response = $this->actingAs($this->user)
-            ->put("/households/{$this->household->id}/settings", [
+            ->post("/households/{$this->household->id}/settings", [
                 'name' => $this->household->name,
                 'default_split_type' => 'banana',
             ]);

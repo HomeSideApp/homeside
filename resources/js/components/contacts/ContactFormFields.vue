@@ -34,17 +34,21 @@ import {
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { lookup } from '@/routes/contacts';
-import type { ContactFormData } from '@/types/contacts';
+import type { ContactFormData, ContactRelation } from '@/types/contacts';
 
 const form = defineModel<ContactFormData & { errors: Record<string, string> }>({
     required: true,
 });
-defineProps<{
+const props = defineProps<{
     households?: Array<{ id: string; name: string }>;
     avatarUrl?: string | null;
     editing?: boolean;
     canRemovePhoto?: boolean;
     hidePhoto?: boolean;
+    /** Precognition hook owned by the page that submits the form. */
+    validate: (field?: string) => void;
+    /** Opts the uploaded photo into precognition: a plain `validate` cannot send it. */
+    validateFiles: () => void;
 }>();
 
 const valueSections = [
@@ -134,6 +138,9 @@ function selectContact(index: number, contact: ContactOption): void {
         relation.name = contact.display_name;
         suggestions.value[index] = [];
     }
+
+    props.validate(`relations.${index}.related_contact_id`);
+    props.validate(`relations.${index}.name`);
 }
 
 function setPhoto(event: Event): void {
@@ -142,6 +149,93 @@ function setPhoto(event: Event): void {
     if (form.value.photo) {
         form.value.remove_photo = false;
     }
+
+    props.validateFiles();
+    props.validate('photo');
+}
+
+function setRelationName(index: number, value: string): void {
+    const relation = form.value.relations[index];
+
+    if (!relation) {
+        return;
+    }
+
+    relation.name = value;
+    props.validate(`relations.${index}.name`);
+}
+
+/**
+ * One setter per discrete control, because a control cannot both bind and
+ * validate through `v-model`. Each one writes the value and then asks the page
+ * that owns the form to validate exactly that field.
+ */
+function setValueType(
+    kind: 'emails' | 'phones' | 'addresses' | 'urls',
+    index: number,
+    value: string,
+): void {
+    const entry = form.value[kind][index];
+
+    if (!entry) {
+        return;
+    }
+
+    entry.type = value;
+    props.validate(`${kind}.${index}.type`);
+}
+
+function setValuePreferred(
+    kind: 'emails' | 'phones' | 'addresses' | 'urls',
+    index: number,
+    value: boolean,
+): void {
+    const entry = form.value[kind][index];
+
+    if (!entry) {
+        return;
+    }
+
+    entry.preferred = value;
+    props.validate(`${kind}.${index}.preferred`);
+}
+
+function setDateKind(index: number, value: string): void {
+    const date = form.value.dates[index];
+
+    if (!date) {
+        return;
+    }
+
+    date.kind = value === 'anniversary' ? 'anniversary' : 'custom';
+    props.validate(`dates.${index}.kind`);
+}
+
+function setDateLabel(index: number, value: string): void {
+    const date = form.value.dates[index];
+
+    if (!date) {
+        return;
+    }
+
+    date.label = value;
+    props.validate(`dates.${index}.label`);
+}
+
+function setRelationType(index: number, value: string): void {
+    const relation = form.value.relations[index];
+
+    if (!relation) {
+        return;
+    }
+
+    relation.type = value as ContactRelation['type'];
+    props.validate(`relations.${index}.type`);
+}
+
+function setRemovePhoto(value: boolean): void {
+    form.value.remove_photo = value;
+    props.validate('remove_photo');
 }
 </script>
 
@@ -159,7 +253,10 @@ function setPhoto(event: Event): void {
                 <FieldGroup class="gap-4">
                     <Field v-if="!editing && households?.length">
                         <FieldLabel for="contact-scope">Visibilidad</FieldLabel>
-                        <Select v-model="form.household_id">
+                        <Select
+                            v-model="form.household_id"
+                            @update:model-value="validate('household_id')"
+                        >
                             <SelectTrigger id="contact-scope">
                                 <SelectValue placeholder="Privado" />
                             </SelectTrigger>
@@ -184,7 +281,10 @@ function setPhoto(event: Event): void {
                     </Field>
                     <Field>
                         <FieldLabel for="contact-type">Tipo</FieldLabel>
-                        <Select v-model="form.type">
+                        <Select
+                            v-model="form.type"
+                            @update:model-value="validate('type')"
+                        >
                             <SelectTrigger id="contact-type"
                                 ><SelectValue
                             /></SelectTrigger>
@@ -209,6 +309,7 @@ function setPhoto(event: Event): void {
                             v-model="form.display_name"
                             required
                             :aria-invalid="Boolean(form.errors.display_name)"
+                            @blur="validate('display_name')"
                         />
                         <FieldError v-if="form.errors.display_name">{{
                             form.errors.display_name
@@ -220,6 +321,7 @@ function setPhoto(event: Event): void {
                             <Input
                                 id="contact-given"
                                 v-model="form.given_name"
+                                @blur="validate('given_name')"
                             />
                         </Field>
                         <Field>
@@ -229,6 +331,7 @@ function setPhoto(event: Event): void {
                             <Input
                                 id="contact-additional"
                                 v-model="form.additional_name"
+                                @blur="validate('additional_name')"
                             />
                         </Field>
                         <Field>
@@ -238,6 +341,7 @@ function setPhoto(event: Event): void {
                             <Input
                                 id="contact-family"
                                 v-model="form.family_name"
+                                @blur="validate('family_name')"
                             />
                         </Field>
                         <Field>
@@ -247,6 +351,7 @@ function setPhoto(event: Event): void {
                             <Input
                                 id="contact-nickname"
                                 v-model="form.nickname"
+                                @blur="validate('nickname')"
                             />
                         </Field>
                     </template>
@@ -266,11 +371,19 @@ function setPhoto(event: Event): void {
                 <FieldGroup class="gap-4">
                     <Field>
                         <FieldLabel for="contact-org">Organización</FieldLabel>
-                        <Input id="contact-org" v-model="form.organization" />
+                        <Input
+                            id="contact-org"
+                            v-model="form.organization"
+                            @blur="validate('organization')"
+                        />
                     </Field>
                     <Field>
                         <FieldLabel for="contact-title">Cargo</FieldLabel>
-                        <Input id="contact-title" v-model="form.job_title" />
+                        <Input
+                            id="contact-title"
+                            v-model="form.job_title"
+                            @blur="validate('job_title')"
+                        />
                     </Field>
                 </FieldGroup>
             </div>
@@ -319,12 +432,21 @@ function setPhoto(event: Event): void {
                                     )
                                 "
                                 class="min-w-0 flex-1"
+                                @blur="
+                                    validate(
+                                        `${section.kind}.${valueIndex}.value`,
+                                    )
+                                "
                             />
                             <Input
                                 :model-value="value.type ?? ''"
                                 :aria-label="`Etiqueta del ${section.singular.toLowerCase()} ${valueIndex + 1}`"
                                 @update:model-value="
-                                    value.type = String($event)
+                                    setValueType(
+                                        section.kind,
+                                        valueIndex,
+                                        String($event),
+                                    )
                                 "
                                 class="sm:w-32"
                                 placeholder="Etiqueta"
@@ -360,7 +482,11 @@ function setPhoto(event: Event): void {
                             <Checkbox
                                 :model-value="value.preferred"
                                 @update:model-value="
-                                    value.preferred = $event === true
+                                    setValuePreferred(
+                                        section.kind,
+                                        valueIndex,
+                                        $event === true,
+                                    )
                                 "
                             />
                             Preferido
@@ -404,6 +530,7 @@ function setPhoto(event: Event): void {
                             id="contact-birthday"
                             v-model="form.birthday"
                             type="date"
+                            @blur="validate('birthday')"
                         />
                         <FieldError v-if="form.errors.birthday">{{
                             form.errors.birthday
@@ -417,7 +544,12 @@ function setPhoto(event: Event): void {
                             >Fecha {{ dateIndex + 1 }}</FieldLabel
                         >
                         <div class="flex flex-col gap-2 sm:flex-row">
-                            <Select v-model="date.kind">
+                            <Select
+                                v-model="date.kind"
+                                @update:model-value="
+                                    setDateKind(dateIndex, String($event))
+                                "
+                            >
                                 <SelectTrigger
                                     :aria-label="`Tipo de fecha ${dateIndex + 1}`"
                                     class="sm:w-40"
@@ -439,6 +571,7 @@ function setPhoto(event: Event): void {
                                 v-model="date.value"
                                 type="date"
                                 class="min-w-0 flex-1"
+                                @blur="validate(`dates.${dateIndex}.value`)"
                             />
                             <Button
                                 type="button"
@@ -454,7 +587,9 @@ function setPhoto(event: Event): void {
                             v-if="date.kind === 'custom'"
                             :model-value="date.label ?? ''"
                             :aria-label="`Nombre de la fecha ${dateIndex + 1}`"
-                            @update:model-value="date.label = String($event)"
+                            @update:model-value="
+                                setDateLabel(dateIndex, String($event))
+                            "
                             placeholder="Nombre de la fecha"
                         />
                         <FieldError
@@ -502,7 +637,15 @@ function setPhoto(event: Event): void {
                             >Relación {{ relationIndex + 1 }}</FieldLabel
                         >
                         <div class="flex flex-col gap-2 sm:flex-row">
-                            <Select v-model="relation.type">
+                            <Select
+                                v-model="relation.type"
+                                @update:model-value="
+                                    setRelationType(
+                                        relationIndex,
+                                        String($event),
+                                    )
+                                "
+                            >
                                 <SelectTrigger
                                     :aria-label="`Tipo de relación ${relationIndex + 1}`"
                                     class="sm:w-44"
@@ -541,7 +684,10 @@ function setPhoto(event: Event): void {
                                 :id="`contact-relation-${relationIndex}`"
                                 :model-value="relation.name ?? ''"
                                 @update:model-value="
-                                    relation.name = String($event)
+                                    setRelationName(
+                                        relationIndex,
+                                        String($event),
+                                    )
                                 "
                                 @input="relation.related_contact_id = null"
                                 class="min-w-0 flex-1"
@@ -642,6 +788,7 @@ function setPhoto(event: Event): void {
                         id="contact-notes"
                         v-model="form.notes"
                         rows="4"
+                        @blur="validate('notes')"
                     />
                     <FieldError v-if="form.errors.notes">{{
                         form.errors.notes
@@ -682,9 +829,7 @@ function setPhoto(event: Event): void {
                     <Checkbox
                         :model-value="form.remove_photo"
                         :disabled="form.photo !== null"
-                        @update:model-value="
-                            form.remove_photo = $event === true
-                        "
+                        @update:model-value="setRemovePhoto($event === true)"
                     />
                     Eliminar foto actual
                 </label>

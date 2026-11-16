@@ -29,7 +29,7 @@ const emit = defineEmits<{
 }>();
 
 function toggleItem(item: ListItem) {
-    router.put(
+    router.post(
         listRoutes.updateItem(props.listId, item.id),
         { is_checked: !item.is_checked },
         { preserveState: true, preserveScroll: true },

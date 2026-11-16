@@ -63,9 +63,9 @@ class HouseholdPermissionsTest extends TestCase
         $this->assertSame($name, $recipe->refresh()->name);
     }
 
-    #[TestWith(['lists.items.update'])]
-    #[TestWith(['api.v1.lists.items.update'])]
-    public function test_list_item_update_rejects_a_foreign_item_before_validating_the_payload(string $routeName): void
+    #[TestWith(['lists.items.update', 'POST'])]
+    #[TestWith(['api.v1.lists.items.update', 'PUT'])]
+    public function test_list_item_update_rejects_a_foreign_item_before_validating_the_payload(string $routeName, string $httpMethod): void
     {
         $this->seed(RolesAndPermissionsSeeder::class);
         [$user] = $this->household();
@@ -74,7 +74,7 @@ class HouseholdPermissionsTest extends TestCase
         $item = ListItem::factory()->create();
         $quantity = $item->quantity;
 
-        $this->actingAs($user)->putJson(route($routeName, [$list, $item]), ['quantity' => 'invalid'])->assertNotFound();
+        $this->actingAs($user)->json($httpMethod, route($routeName, [$list, $item]), ['quantity' => 'invalid'])->assertNotFound();
 
         $this->assertSame($quantity, $item->refresh()->quantity);
     }

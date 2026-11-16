@@ -357,6 +357,8 @@ function confirmDelete(): void {
                     <ContactFormFields
                         v-model="contactFields"
                         :households="props.households"
+                        :validate="() => {}"
+                        :validate-files="() => {}"
                     />
                 </form>
                 <DialogFooter

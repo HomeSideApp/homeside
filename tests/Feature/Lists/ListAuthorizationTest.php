@@ -201,7 +201,7 @@ class ListAuthorizationTest extends TestCase
 
         $itemInB = ListItem::factory()->create(['list_id' => $listB->id]);
 
-        $response = $this->actingAs($user)->put(route('households.lists.items.update', [$household, $listA, $itemInB]), [
+        $response = $this->actingAs($user)->post(route('households.lists.items.update', [$household, $listA, $itemInB]), [
             'is_checked' => true,
         ]);
         $response->assertNotFound();
@@ -221,7 +221,7 @@ class ListAuthorizationTest extends TestCase
         $list = ShoppingList::factory()->create(['created_by' => $owner->id, 'household_id' => null]);
         $item = ListItem::factory()->create(['list_id' => $list->id]);
 
-        $response = $this->actingAs($user)->put(route('lists.items.update', [$list, $item]), [
+        $response = $this->actingAs($user)->post(route('lists.items.update', [$list, $item]), [
             'is_checked' => true,
         ]);
         $response->assertForbidden();

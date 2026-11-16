@@ -45,6 +45,20 @@ const form = useForm('post', '/households', {
 const imagePreview = ref<string | null>(null);
 const imageRemoved = ref(false);
 
+/**
+ * Hand the form's precognition hook to the child fields, which only know the
+ * field name as a string.
+ */
+function validateField(field?: string): void {
+    if (field) {
+        form.validate(field as never);
+
+        return;
+    }
+
+    form.validate();
+}
+
 function submit() {
     form.transform((data) => {
         const payload: Record<string, any> = {
@@ -136,13 +150,23 @@ function submit() {
                 :image-preview="imagePreview"
                 :image-removed="imageRemoved"
                 :show-name="false"
+                :validate="validateField"
+                :validate-files="form.validateFiles"
                 @update:image-preview="(val) => (imagePreview = val)"
                 @update:image-removed="(val) => (imageRemoved = val)"
             />
 
-            <HouseholdModulesForm :form="form" :modules="modules" />
+            <HouseholdModulesForm
+                :form="form"
+                :modules="modules"
+                :validate="validateField"
+            />
 
-            <HouseholdTagsForm :form="form" :available-tags="available_tags" />
+            <HouseholdTagsForm
+                :form="form"
+                :available-tags="available_tags"
+                :validate="validateField"
+            />
 
             <div class="flex justify-end">
                 <Button type="submit" :disabled="form.processing">

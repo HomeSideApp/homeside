@@ -144,6 +144,32 @@ class AuthenticationBootstrapTest extends TestCase
         $this->assertNotNull($user->fresh()->two_factor_confirmed_at);
     }
 
+    public function test_the_confirm_step_requires_a_six_character_string_code(): void
+    {
+        $user = User::factory()->create();
+        $token = $this->issue($user);
+        $secret = (new Google2FA)->generateSecretKey();
+        $bootstrap = $this->active($token);
+
+        // The shape of the code is the only thing the request validates, so it
+        // is pinned here: moving the rule must not loosen or tighten it.
+        $rejectedPayloads = [
+            [],
+            ['code' => '12345'],
+            ['code' => '1234567'],
+            ['code' => ['123456']],
+        ];
+
+        foreach ($rejectedPayloads as $payload) {
+            $this->withSession([$this->secretKey($bootstrap) => $secret])
+                ->post($this->confirmUrl($token), $payload)
+                ->assertSessionHasErrors('code');
+
+            $this->assertGuest();
+            $this->assertNotNull($this->active($token));
+        }
+    }
+
     public function test_a_token_can_only_enrol_the_user_it_was_issued_for(): void
     {
         $owner = User::factory()->create();

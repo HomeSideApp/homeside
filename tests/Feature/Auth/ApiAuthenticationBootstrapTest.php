@@ -76,6 +76,34 @@ class ApiAuthenticationBootstrapTest extends TestCase
             ->assertStatus(401);
     }
 
+    public function test_the_bootstrap_exchange_payloads_are_validated_before_any_lookup(): void
+    {
+        // Both endpoints validate their own fields and nothing else; the keys
+        // and the absence of extra fields are part of the API contract.
+        $this->postJson(route('api.v1.auth.two-factor.setup'), [])
+            ->assertStatus(422)
+            ->assertJsonPath('code', 'validation_failed')
+            ->assertJsonValidationErrors(['enrolment_token']);
+
+        $this->postJson(route('api.v1.auth.two-factor.setup'), ['enrolment_token' => ['nested']])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['enrolment_token']);
+
+        $this->postJson(route('api.v1.auth.two-factor.setup.confirm'), [])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['enrolment_token', 'challenge_id', 'code']);
+
+        // `challenge_id` is only `required|string`, so a non-uuid string is not
+        // a validation error: only the code shape is rejected at this layer.
+        $this->postJson(route('api.v1.auth.two-factor.setup.confirm'), [
+            'enrolment_token' => 'not-a-token',
+            'challenge_id' => 'not-a-uuid',
+            'code' => '12345',
+        ])->assertStatus(422)
+            ->assertJsonValidationErrors(['code'])
+            ->assertJsonMissingValidationErrors(['challenge_id', 'enrolment_token']);
+    }
+
     public function test_the_setup_exchange_delivers_the_secret_only_to_the_bootstrap_holder(): void
     {
         $user = User::factory()->create();
