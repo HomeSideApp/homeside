@@ -14,6 +14,7 @@ import { h } from 'vue';
 import { useI18n } from 'vue-i18n';
 import IconAction from '@/components/admin/IconAction.vue';
 import DataTable from '@/components/DataTable.vue';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { productIconUrl } from '@/lib/product-icons';
 import { products as productsIndex } from '@/routes/admin';
@@ -26,6 +27,7 @@ interface Product {
     icon: string | null;
     is_personal: boolean;
     created_by: string;
+    users: number;
     creator?: { id: string; name: string };
     category?: { id: string; name: string } | null;
 }
@@ -124,6 +126,23 @@ const columns: ColumnDef<typeof features, Product, any>[] = [
                 creator?.name ?? '-',
             );
         },
+    }),
+    columnHelper.accessor('users', {
+        header: () => t('admin.personalProducts.users'),
+        cell: ({ row }) =>
+            h(
+                'div',
+                { class: 'flex items-center' },
+                h(
+                    Badge,
+                    {
+                        variant:
+                            row.original.users > 1 ? 'secondary' : 'outline',
+                        class: 'text-xs',
+                    },
+                    () => String(row.original.users),
+                ),
+            ),
     }),
     columnHelper.display({
         id: 'actions',

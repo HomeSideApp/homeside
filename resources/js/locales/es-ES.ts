@@ -1157,6 +1157,7 @@ export default {
             searchPlaceholder: 'Buscar productos personales...',
             name: 'Nombre',
             user: 'Usuario',
+            users: 'Usuarios',
             promote: 'Crear global',
             promoteTitle: 'Hacer Global',
             promoteDescription: 'Configura el producto global para ":name".',

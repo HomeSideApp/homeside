@@ -1139,6 +1139,7 @@ export default {
             searchPlaceholder: 'Search personal products...',
             name: 'Name',
             user: 'User',
+            users: 'Users',
             promote: 'Make global',
             promoteTitle: 'Make Global',
             promoteDescription: 'Configure the global product for ":name".',

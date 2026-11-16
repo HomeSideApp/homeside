@@ -3,10 +3,14 @@
 namespace App\Actions\Products;
 
 use App\Models\Product;
+use App\Models\User;
 use Illuminate\Support\Str;
 
 /**
  * Creates a product from just a name if it does not exist yet.
+ *
+ * The product is personal when its creator shares the personal catalog, so it
+ * reaches the admin screen that decides which personal products go global.
  */
 final class QuickCreateProduct
 {
@@ -39,7 +43,18 @@ final class QuickCreateProduct
             [
                 'name' => $name,
                 'created_by' => $userId,
+                'is_personal' => $this->sharesPersonalProducts($userId),
             ]
         );
+    }
+
+    /**
+     * Read the sharing preference once per call instead of per candidate.
+     */
+    private function sharesPersonalProducts(string $userId): bool
+    {
+        return (bool) User::query()
+            ->whereKey($userId)
+            ->value('shares_personal_products');
     }
 }
