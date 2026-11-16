@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { router } from '@inertiajs/vue3';
+import { useForm } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { Button } from '@/components/ui/button';
@@ -51,14 +51,43 @@ const emit = defineEmits<{
     saved: [];
 }>();
 
-const quantity = ref(props.item.quantity || 1);
-const unit = ref(props.item.unit || '');
-const notes = ref(props.item.notes || '');
-const storeId = ref(props.item.store?.id || '__none__');
-const selectedIcon = ref(props.item.icon || props.item.product?.icon || '');
-const selectedCategoryId = ref(
-    props.item.category?.id || props.item.product?.category?.id || '__none__',
+const form = useForm(
+    'post',
+    listRoutes.updateItem(props.listId, props.item.id),
+    {
+        quantity: props.item.quantity || 1,
+        unit: props.item.unit || '',
+        notes: props.item.notes || '',
+        store_id: props.item.store?.id || '__none__',
+        icon: props.item.icon || props.item.product?.icon || '',
+        category_id:
+            props.item.category?.id ||
+            props.item.product?.category?.id ||
+            '__none__',
+    },
 );
+
+// The image is uploaded on its own form so the field submission and the file
+// submission keep their separate payloads, and so `validateFiles()` has a file
+// field to send a precognitive request for.
+const imageForm = useForm(
+    'post',
+    listRoutes.updateItem(props.listId, props.item.id),
+    { image_url: null as File | null },
+);
+
+// `validate()` validates the transformed payload, so the transform is set once
+// here instead of per submission: otherwise a pending transform from the other
+// form would make every field validation look at the wrong data.
+form.transform((data) => ({
+    quantity: data.quantity,
+    unit: data.unit,
+    notes: data.notes,
+    store_id: data.store_id === '__none__' ? null : data.store_id,
+    icon: data.icon || null,
+    category_id: data.category_id === '__none__' ? null : data.category_id,
+}));
+
 const activeTab = ref('general');
 const imageUrl = computed(() => {
     if (previewUrl.value) {
@@ -75,7 +104,7 @@ const iconSearch = ref('');
 const isUploading = ref(false);
 const uploadProgress = ref(0);
 const previewUrl = ref('');
-const selectedIconUrl = computed(() => productIconUrl(selectedIcon.value));
+const selectedIconUrl = computed(() => productIconUrl(form.icon));
 
 const filteredIcons = computed(() => {
     if (!iconSearch.value) {
@@ -91,28 +120,19 @@ const itemName =
     props.item.product?.name || props.item.custom_name || t('lists.noName');
 
 function save() {
-    router.put(
-        listRoutes.updateItem(props.listId, props.item.id),
-        {
-            quantity: quantity.value,
-            unit: unit.value,
-            notes: notes.value,
-            store_id: storeId.value === '__none__' ? null : storeId.value,
-            icon: selectedIcon.value || null,
-            category_id:
-                selectedCategoryId.value === '__none__'
-                    ? null
-                    : selectedCategoryId.value,
+    form.submit({
+        preserveState: true,
+        preserveScroll: true,
+        onSuccess: () => {
+            emit('saved');
+            emit('close');
         },
-        {
-            preserveState: true,
-            preserveScroll: true,
-            onSuccess: () => {
-                emit('saved');
-                emit('close');
-            },
-        },
-    );
+    });
+}
+
+function setIcon(icon: string): void {
+    form.icon = icon;
+    form.validate('icon');
 }
 
 function handleImageDrop(e: DragEvent) {
@@ -138,28 +158,26 @@ function uploadImage(file: File) {
     uploadProgress.value = 0;
     previewUrl.value = URL.createObjectURL(file);
 
-    router.post(
-        listRoutes.updateItem(props.listId, props.item.id),
-        {
-            _method: 'put',
-            image_url: file,
+    imageForm.image_url = file;
+    // A plain `validate('image_url')` never sends the file, so the file has to
+    // be opted into the precognitive request first.
+    imageForm.validateFiles().validate('image_url');
+    imageForm.submit({
+        forceFormData: true,
+        preserveState: true,
+        preserveScroll: true,
+        onProgress: (progress) => {
+            uploadProgress.value = progress?.percentage ?? 0;
         },
-        {
-            forceFormData: true,
-            preserveState: true,
-            preserveScroll: true,
-            onProgress: (progress) => {
-                uploadProgress.value = progress?.percentage ?? 0;
-            },
-            onSuccess: () => {
-                emit('saved');
-            },
-            onFinish: () => {
-                isUploading.value = false;
-                uploadProgress.value = 0;
-            },
+        onSuccess: () => {
+            emit('saved');
         },
-    );
+        onFinish: () => {
+            isUploading.value = false;
+            uploadProgress.value = 0;
+            imageForm.image_url = null;
+        },
+    });
 }
 </script>
 
@@ -176,7 +194,7 @@ function uploadImage(file: File) {
             <DialogHeader>
                 <DialogTitle>{{ itemName }}</DialogTitle>
                 <DialogDescription>
-                    {{ quantity }} {{ unit }}
+                    {{ form.quantity }} {{ form.unit }}
                 </DialogDescription>
             </DialogHeader>
 
@@ -289,10 +307,11 @@ function uploadImage(file: File) {
                                         t('lists.productDetail.quantity')
                                     }}</FieldLabel>
                                     <Input
-                                        v-model="quantity"
+                                        v-model="form.quantity"
                                         type="number"
                                         min="0.01"
                                         step="0.01"
+                                        @blur="form.validate('quantity')"
                                     />
                                 </Field>
 
@@ -301,13 +320,14 @@ function uploadImage(file: File) {
                                         t('lists.productDetail.unit')
                                     }}</FieldLabel>
                                     <Input
-                                        v-model="unit"
+                                        v-model="form.unit"
                                         type="text"
                                         :placeholder="
                                             t(
                                                 'lists.productDetail.unitPlaceholder',
                                             )
                                         "
+                                        @blur="form.validate('unit')"
                                     />
                                 </Field>
 
@@ -316,13 +336,14 @@ function uploadImage(file: File) {
                                         t('lists.productDetail.notes')
                                     }}</FieldLabel>
                                     <Textarea
-                                        v-model="notes"
+                                        v-model="form.notes"
                                         rows="2"
                                         :placeholder="
                                             t(
                                                 'lists.productDetail.notesPlaceholder',
                                             )
                                         "
+                                        @blur="form.validate('notes')"
                                     />
                                 </Field>
 
@@ -352,23 +373,23 @@ function uploadImage(file: File) {
                                         t('lists.productDetail.changeIcon')
                                     }}</FieldLabel>
                                     <div
-                                        v-if="selectedIcon"
+                                        v-if="form.icon"
                                         class="mt-2 mb-2 flex items-center gap-2"
                                     >
                                         <img
                                             v-if="selectedIconUrl"
                                             :src="selectedIconUrl"
-                                            :alt="selectedIcon"
+                                            :alt="form.icon"
                                             class="size-8 object-contain"
                                         />
                                         <span
                                             class="text-sm text-muted-foreground"
-                                            >{{ selectedIcon }}</span
+                                            >{{ form.icon }}</span
                                         >
                                         <button
                                             type="button"
                                             class="text-sm text-destructive hover:underline"
-                                            @click="selectedIcon = ''"
+                                            @click="setIcon('')"
                                         >
                                             {{
                                                 t('lists.productDetail.remove')
@@ -409,11 +430,11 @@ function uploadImage(file: File) {
                                             type="button"
                                             class="flex size-10 items-center justify-center rounded-md border p-1 transition-colors hover:bg-accent"
                                             :class="
-                                                selectedIcon === icon.name
+                                                form.icon === icon.name
                                                     ? 'bg-accent ring-2 ring-primary'
                                                     : ''
                                             "
-                                            @click="selectedIcon = icon.name"
+                                            @click="setIcon(icon.name)"
                                         >
                                             <img
                                                 :src="icon.url"
@@ -430,7 +451,12 @@ function uploadImage(file: File) {
                                     <FieldLabel>{{
                                         t('lists.productDetail.changeCategory')
                                     }}</FieldLabel>
-                                    <Select v-model="selectedCategoryId">
+                                    <Select
+                                        v-model="form.category_id"
+                                        @update:model-value="
+                                            form.validate('category_id')
+                                        "
+                                    >
                                         <SelectTrigger class="w-full">
                                             <SelectValue
                                                 :placeholder="
@@ -462,7 +488,12 @@ function uploadImage(file: File) {
                                     <FieldLabel>{{
                                         t('lists.productDetail.store')
                                     }}</FieldLabel>
-                                    <Select v-model="storeId">
+                                    <Select
+                                        v-model="form.store_id"
+                                        @update:model-value="
+                                            form.validate('store_id')
+                                        "
+                                    >
                                         <SelectTrigger class="w-full">
                                             <SelectValue
                                                 :placeholder="

@@ -145,7 +145,7 @@ class ContactDeduplicationTest extends TestCase
         $user->assignRole('user');
         $source = $this->source($user, 'Nextcloud');
         $contact = $this->import($source, 'ada', 'Ada Remota', 'remote@example.com');
-        $this->actingAs($user)->put(route('contacts.update', $contact), [
+        $this->actingAs($user)->post(route('contacts.update', $contact), [
             'type' => 'person',
             'display_name' => 'Ada Local',
             'notes' => 'Nota local',
@@ -180,7 +180,7 @@ class ContactDeduplicationTest extends TestCase
             'fields' => ['unsupported'],
         ])->assertUnprocessable()->assertJsonValidationErrors('fields.0');
 
-        $this->put(route('contacts.update', $contact), [
+        $this->post(route('contacts.update', $contact), [
             'type' => 'person',
             'display_name' => 'Ada Local',
             'notes' => 'Nota local',
@@ -226,7 +226,6 @@ class ContactDeduplicationTest extends TestCase
         $contact = $import->execute($source, $parser->parse($vcard, 'ada'))->contact;
 
         $this->actingAs($user)->post(route('contacts.update', $contact), [
-            '_method' => 'put',
             'type' => 'person',
             'display_name' => 'Ada Local',
             'photo' => UploadedFile::fake()->image('local.png', 40, 40),

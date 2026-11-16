@@ -23,6 +23,8 @@ const props = defineProps<{
         tags: string[];
     };
     availableTags: HouseholdTag[];
+    /** Precognition hook owned by the page that submits the form. */
+    validate: (field?: string) => void;
 }>();
 
 const form = toRef(props, 'form');
@@ -37,10 +39,12 @@ function addTag(tagName: string) {
     }
 
     newTag.value = '';
+    props.validate('tags');
 }
 
 function removeTag(index: number) {
     form.value.tags.splice(index, 1);
+    props.validate('tags');
 }
 
 function handleTagKeydown(event: KeyboardEvent) {

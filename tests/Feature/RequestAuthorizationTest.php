@@ -52,9 +52,9 @@ class RequestAuthorizationTest extends TestCase
         $this->assertSame($name, $provider->refresh()->name);
     }
 
-    #[TestWith(['contacts.update'])]
-    #[TestWith(['api.v1.contacts.update'])]
-    public function test_foreign_contact_is_forbidden_before_invalid_fields_are_validated(string $routeName): void
+    #[TestWith(['contacts.update', 'POST'])]
+    #[TestWith(['api.v1.contacts.update', 'PUT'])]
+    public function test_foreign_contact_is_forbidden_before_invalid_fields_are_validated(string $routeName, string $httpMethod): void
     {
         $this->seed(RolesAndPermissionsSeeder::class);
         $user = User::factory()->create();
@@ -62,7 +62,7 @@ class RequestAuthorizationTest extends TestCase
         $contact = Contact::create(['user_id' => User::factory()->create()->id, 'type' => 'person', 'display_name' => 'Private']);
         $name = $contact->display_name;
 
-        $this->actingAs($user)->putJson(route($routeName, $contact), ['display_name' => []])->assertForbidden();
+        $this->actingAs($user)->json($httpMethod, route($routeName, $contact), ['display_name' => []])->assertForbidden();
 
         $this->assertSame($name, $contact->refresh()->display_name);
     }

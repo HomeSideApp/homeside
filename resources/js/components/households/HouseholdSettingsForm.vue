@@ -28,6 +28,10 @@ const props = defineProps<{
     imagePreview: string | null;
     imageRemoved: boolean;
     showName?: boolean;
+    /** Precognition hook owned by the page that submits the form. */
+    validate: (field?: string) => void;
+    /** Opts the uploaded image into precognition: a plain `validate` cannot send it. */
+    validateFiles: () => void;
 }>();
 
 const form = toRef(props, 'form');
@@ -46,12 +50,25 @@ function onImageChange(event: Event) {
         emit('update:imageRemoved', false);
         emit('update:imagePreview', URL.createObjectURL(file));
     }
+
+    props.validateFiles();
+    props.validate('image');
 }
 
 function removeImage() {
     form.value.image = null;
     emit('update:imageRemoved', true);
     emit('update:imagePreview', null);
+    props.validate('remove_image');
+}
+
+function setColor(color: string): void {
+    form.value.color = color;
+    props.validate('color');
+}
+
+function setColorFromInput(event: Event): void {
+    setColor((event.target as HTMLInputElement).value);
 }
 </script>
 
@@ -73,6 +90,7 @@ function removeImage() {
                     v-model="form.name"
                     :placeholder="t('households.form.namePlaceholder')"
                     :class="{ 'border-destructive': form.errors.name }"
+                    @blur="validate('name')"
                 />
             </Field>
 
@@ -84,6 +102,7 @@ function removeImage() {
                     v-model="form.description"
                     :placeholder="t('households.form.descriptionPlaceholder')"
                     :class="{ 'border-destructive': form.errors.description }"
+                    @blur="validate('description')"
                 />
             </Field>
 
@@ -104,19 +123,14 @@ function removeImage() {
                                 : 'border-transparent'
                         "
                         :style="{ backgroundColor: color }"
-                        @click="form.color = form.color === color ? '' : color"
+                        @click="setColor(form.color === color ? '' : color)"
                     />
                     <div class="relative size-8">
                         <input
                             type="color"
                             :value="form.color || '#3b82f6'"
                             class="absolute inset-0 size-8 cursor-pointer rounded-full border-2 border-dashed border-muted-foreground/50 opacity-0"
-                            @input="
-                                (e: Event) =>
-                                    (form.color = (
-                                        e.target as HTMLInputElement
-                                    ).value)
-                            "
+                            @input="setColorFromInput"
                         />
                         <div
                             class="flex size-8 items-center justify-center rounded-full border-2 border-dashed border-muted-foreground/50"

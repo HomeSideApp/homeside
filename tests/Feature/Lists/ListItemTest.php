@@ -116,7 +116,7 @@ class ListItemTest extends TestCase
         $list = ShoppingList::factory()->create(['created_by' => $user->id, 'household_id' => $household->id]);
         $item = ListItem::factory()->create(['list_id' => $list->id, 'is_checked' => false]);
 
-        $response = $this->actingAs($user)->put(route('households.lists.items.update', [$household, $list, $item]), [
+        $response = $this->actingAs($user)->post(route('households.lists.items.update', [$household, $list, $item]), [
             'is_checked' => true,
         ]);
 
@@ -148,7 +148,7 @@ class ListItemTest extends TestCase
 
         $image = UploadedFile::fake()->image('product.jpg', 200, 200);
 
-        $response = $this->actingAs($user)->put(route('households.lists.items.update', [$household, $list, $item]), [
+        $response = $this->actingAs($user)->post(route('households.lists.items.update', [$household, $list, $item]), [
             'image_url' => $image,
         ], ['Content-Type' => 'multipart/form-data']);
 
@@ -172,7 +172,7 @@ class ListItemTest extends TestCase
         // rejected.
         $this->assertGreaterThan(2 * 1024 * 1024, $photo->getSize());
 
-        $response = $this->actingAs($user)->put(route('households.lists.items.update', [$household, $list, $item]), [
+        $response = $this->actingAs($user)->post(route('households.lists.items.update', [$household, $list, $item]), [
             'image_url' => $photo,
         ], ['Content-Type' => 'multipart/form-data']);
 
@@ -368,7 +368,7 @@ class ListItemTest extends TestCase
 
         // Replace the image on the new item
         $newImage = UploadedFile::fake()->image('new.jpg', 200, 200);
-        $response = $this->actingAs($user)->put(route('households.lists.items.update', [$household, $list, $newItem]), [
+        $response = $this->actingAs($user)->post(route('households.lists.items.update', [$household, $list, $newItem]), [
             'image_url' => $newImage,
         ], ['Content-Type' => 'multipart/form-data']);
 
@@ -377,6 +377,34 @@ class ListItemTest extends TestCase
         // The previous item's image file must remain intact
         Storage::disk('local')->assertExists($path);
         $this->assertSame($path, $previousItem->fresh()->image_url);
+    }
+
+    public function test_the_item_update_endpoint_is_post_only_and_validates_the_uploaded_image_precognitively()
+    {
+        Storage::fake('local');
+
+        $user = $this->createUserWithRole('user', ['view lists', 'view list', 'update list items']);
+        $household = $this->createHouseholdForUser($user);
+        $list = ShoppingList::factory()->create(['created_by' => $user->id, 'household_id' => $household->id]);
+        $item = ListItem::factory()->create(['list_id' => $list->id]);
+
+        $url = route('households.lists.items.update', [$household, $list, $item]);
+
+        // Multipart bodies are only parsed by PHP on POST, so the verb that
+        // carries the `image_url` upload must be POST and PUT must be gone.
+        $this->actingAs($user)->put($url, ['is_checked' => true])->assertStatus(405);
+
+        // A precognitive POST does reach the rules with the file attached: a
+        // PDF is not an image, so the field is rejected and nothing persists.
+        $this->actingAs($user)
+            ->withPrecognition()
+            ->post($url, [
+                'image_url' => UploadedFile::fake()->create('documento.pdf', 20, 'application/pdf'),
+            ], ['Accept' => 'application/json'])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('image_url');
+
+        $this->assertNull($item->fresh()->image_url);
     }
 
     public function test_old_image_is_deleted_when_new_one_is_uploaded()
@@ -390,7 +418,7 @@ class ListItemTest extends TestCase
 
         // Upload first image
         $image1 = UploadedFile::fake()->image('product1.jpg', 200, 200);
-        $this->actingAs($user)->put(route('households.lists.items.update', [$household, $list, $item]), [
+        $this->actingAs($user)->post(route('households.lists.items.update', [$household, $list, $item]), [
             'image_url' => $image1,
         ], ['Content-Type' => 'multipart/form-data']);
 
@@ -399,7 +427,7 @@ class ListItemTest extends TestCase
 
         // Upload second image
         $image2 = UploadedFile::fake()->image('product2.jpg', 200, 200);
-        $this->actingAs($user)->put(route('households.lists.items.update', [$household, $list, $item]), [
+        $this->actingAs($user)->post(route('households.lists.items.update', [$household, $list, $item]), [
             'image_url' => $image2,
         ], ['Content-Type' => 'multipart/form-data']);
 

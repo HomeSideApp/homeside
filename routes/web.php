@@ -101,7 +101,9 @@ Route::middleware(['auth', 'verified', 'account.active'])->group(function () {
         Route::get('{contact}/edit', [ContactController::class, 'edit'])->middleware('permission:contacts.update')->name('edit');
         Route::put('{contact}/remote-fields', [ContactController::class, 'useRemoteFields'])->middleware('permission:contacts.update')->name('remote-fields.update');
         Route::get('{contact}', [ContactController::class, 'show'])->middleware('permission:contacts.view')->name('show');
-        Route::put('{contact}', [ContactController::class, 'update'])->middleware('permission:contacts.update')->name('update');
+        // POST, not PUT: PHP parses multipart bodies only on POST, and the
+        // photo has to reach parity with the fields precognition validates.
+        Route::post('{contact}', [ContactController::class, 'update'])->middleware('permission:contacts.update')->name('update');
         Route::delete('{contact}', [ContactController::class, 'destroy'])->middleware('permission:contacts.delete')->name('destroy');
     });
 
@@ -345,7 +347,9 @@ Route::middleware(['auth', 'verified', 'account.active'])->group(function () {
         Route::put('{list}', [PersonalShoppingListController::class, 'update'])->middleware('permission:households.lists.update')->name('update');
         Route::delete('{list}', [PersonalShoppingListController::class, 'destroy'])->middleware('permission:households.lists.destroy')->name('destroy');
         Route::post('{list}/items', [ListItemController::class, 'store'])->middleware('permission:households.lists.items.store')->name('items.store');
-        Route::put('{list}/items/{item}', [ListItemController::class, 'update'])->middleware('permission:households.lists.items.update')->name('items.update');
+        // POST, not PUT: the item carries an `image_url` upload, and only a POST
+        // body is parsed as multipart.
+        Route::post('{list}/items/{item}', [ListItemController::class, 'update'])->middleware('permission:households.lists.items.update')->name('items.update');
         Route::delete('{list}/items/{item}', [ListItemController::class, 'destroy'])->middleware('permission:households.lists.items.destroy')->name('items.destroy');
         Route::get('{list}/items/{item}/image', [ListItemController::class, 'image'])->name('items.image');
         Route::get('{list}/search-products', [WebProductSearchController::class, 'personalSearch'])->middleware('permission:households.lists.search-products')->name('search-products');
@@ -369,7 +373,9 @@ Route::middleware(['auth', 'verified', 'account.active'])->group(function () {
 
         // Configuración del hogar (imagen, descripción, módulos, tags)
         Route::get('households/{household}/settings/edit', [HouseholdController::class, 'editSettings'])->middleware('permission:households.edit')->name('households.settings.edit');
-        Route::put('households/{household}/settings', [HouseholdController::class, 'updateSettings'])->middleware('permission:households.update')->name('households.settings.update');
+        // POST, not PUT: the settings form uploads an `image`, and only a POST
+        // body is parsed as multipart.
+        Route::post('households/{household}/settings', [HouseholdController::class, 'updateSettings'])->middleware('permission:households.update')->name('households.settings.update');
         Route::get('households/{household}/image', [HouseholdController::class, 'image'])->middleware('auth')->name('households.image');
 
         // Wizard de creación (sin permisos restricted — es flujo de setup)
@@ -409,7 +415,9 @@ Route::middleware(['auth', 'verified', 'account.active'])->group(function () {
                 Route::put('lists/{list}', [ShoppingListController::class, 'update'])->middleware('permission:lists.update')->scopeBindings()->name('lists.update');
                 Route::delete('lists/{list}', [ShoppingListController::class, 'destroy'])->middleware('permission:lists.destroy')->scopeBindings()->name('lists.destroy');
                 Route::post('lists/{list}/items', [ListItemController::class, 'store'])->middleware('permission:lists.items.store')->name('lists.items.store');
-                Route::put('lists/{list}/items/{item}', [ListItemController::class, 'update'])->middleware('permission:lists.items.update')->name('lists.items.update');
+                // POST, not PUT: the item carries an `image_url` upload, and only
+                // a POST body is parsed as multipart.
+                Route::post('lists/{list}/items/{item}', [ListItemController::class, 'update'])->middleware('permission:lists.items.update')->name('lists.items.update');
                 Route::delete('lists/{list}/items/{item}', [ListItemController::class, 'destroy'])->middleware('permission:lists.items.destroy')->name('lists.items.destroy');
                 Route::get('lists/{list}/items/{item}/image', [ListItemController::class, 'image'])->middleware('auth')->name('lists.items.image');
 

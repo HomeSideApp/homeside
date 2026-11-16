@@ -1032,7 +1032,6 @@ class ContactModuleTest extends TestCase
         $contact = Contact::create(['user_id' => $user->id, 'type' => 'person', 'display_name' => 'Ada']);
 
         $this->actingAs($user)->post(route('contacts.update', $contact), [
-            '_method' => 'put',
             'type' => 'person',
             'display_name' => 'Ada',
             'photo' => UploadedFile::fake()->image('ada.png', 40, 40),
@@ -1040,11 +1039,40 @@ class ContactModuleTest extends TestCase
 
         $this->assertNotNull($contact->fresh()->preferred_photo_record_id);
         $this->actingAs($user)->post(route('contacts.update', $contact), [
-            '_method' => 'put',
             'type' => 'person',
             'display_name' => 'Ada',
             'remove_photo' => true,
         ])->assertRedirect(route('contacts.show', $contact));
+
+        $this->assertNull($contact->fresh()->preferred_photo_record_id);
+        $this->assertDatabaseCount('contact_record_photos', 0);
+    }
+
+    public function test_the_contact_update_endpoint_is_post_only_and_validates_the_uploaded_photo_precognitively(): void
+    {
+        Storage::fake('local');
+        $this->seed(RolesAndPermissionsSeeder::class);
+        $user = User::factory()->create();
+        $user->assignRole('user');
+        $contact = Contact::create(['user_id' => $user->id, 'type' => 'person', 'display_name' => 'Ada']);
+
+        $url = route('contacts.update', $contact);
+
+        // Multipart bodies are only parsed by PHP on POST, so the verb that
+        // carries the `photo` upload must be POST and PUT must be gone.
+        $this->actingAs($user)->put($url, ['type' => 'person', 'display_name' => 'Ada'])->assertStatus(405);
+
+        // A precognitive POST does reach the rules with the file attached: a
+        // PDF is not an image, so the field is rejected and nothing persists.
+        $this->actingAs($user)
+            ->withPrecognition()
+            ->post($url, [
+                'type' => 'person',
+                'display_name' => 'Ada',
+                'photo' => UploadedFile::fake()->create('documento.pdf', 20, 'application/pdf'),
+            ], ['Accept' => 'application/json'])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('photo');
 
         $this->assertNull($contact->fresh()->preferred_photo_record_id);
         $this->assertDatabaseCount('contact_record_photos', 0);

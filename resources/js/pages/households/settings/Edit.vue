@@ -89,7 +89,7 @@ const flashWarnings = computed(
     () => (page.props.flash as any)?.warnings as WarningData[] | undefined,
 );
 
-const form = useForm('put', `/households/${props.household.id}/settings`, {
+const form = useForm('post', `/households/${props.household.id}/settings`, {
     name: props.household.name,
     description: props.household.description || '',
     color: props.household.color || '',
@@ -105,6 +105,20 @@ const form = useForm('put', `/households/${props.household.id}/settings`, {
 
 const imagePreview = ref<string | null>(props.household.image_url);
 const imageRemoved = ref(false);
+
+/**
+ * Hand the form's precognition hook to the child fields, which only know the
+ * field name as a string.
+ */
+function validateField(field?: string): void {
+    if (field) {
+        form.validate(field as never);
+
+        return;
+    }
+
+    form.validate();
+}
 
 function submit() {
     form.transform((data) => {
@@ -125,7 +139,7 @@ function submit() {
 
         return payload;
     });
-    form.put(`/households/${props.household.id}/settings`);
+    form.submit();
 }
 
 const linkForm = useForm('post', storeInviteLink.url(props.household.id), {
@@ -202,13 +216,23 @@ function revokeLink(link: InviteLink) {
                 :form="form"
                 :image-preview="imagePreview"
                 :image-removed="imageRemoved"
+                :validate="validateField"
+                :validate-files="form.validateFiles"
                 @update:image-preview="(val) => (imagePreview = val)"
                 @update:image-removed="(val) => (imageRemoved = val)"
             />
 
-            <HouseholdModulesForm :form="form" :modules="modules" />
+            <HouseholdModulesForm
+                :form="form"
+                :modules="modules"
+                :validate="validateField"
+            />
 
-            <HouseholdTagsForm :form="form" :available-tags="available_tags" />
+            <HouseholdTagsForm
+                :form="form"
+                :available-tags="available_tags"
+                :validate="validateField"
+            />
 
             <!-- Economy module defaults -->
             <div

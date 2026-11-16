@@ -77,7 +77,7 @@ const relationTypes = [
     'emergency',
     'other',
 ];
-const form = useForm<ContactFormData>({
+const form = useForm<ContactFormData>('post', update(props.contact.id).url, {
     household_id: props.contact.household_id,
     type: props.contact.type,
     display_name: props.contact.display_name,
@@ -153,6 +153,20 @@ function choosePhoto(): void {
     photoInput.value?.click();
 }
 
+/**
+ * Hand the form's precognition hook to the child fields, which only know the
+ * field name as a string.
+ */
+function validateField(field?: string): void {
+    if (field) {
+        form.validate(field as never);
+
+        return;
+    }
+
+    form.validate();
+}
+
 function clearPhotoPreview(): void {
     if (photoPreview.value) {
         URL.revokeObjectURL(photoPreview.value);
@@ -169,6 +183,10 @@ function setPhoto(event: Event): void {
         form.remove_photo = false;
         photoPreview.value = URL.createObjectURL(file);
     }
+
+    // `validate('photo')` on its own never sends the file, so the file has to be
+    // opted in first: this is what makes the server see the photo at all.
+    form.validateFiles().validate('photo');
 }
 
 function cancelNewPhoto(): void {
@@ -182,6 +200,7 @@ function cancelNewPhoto(): void {
 
 function toggleRemovePhoto(): void {
     form.remove_photo = !form.remove_photo;
+    form.validate('remove_photo');
 }
 
 onUnmounted(clearPhotoPreview);
@@ -208,12 +227,11 @@ function save(): void {
         ...Object.fromEntries(
             Object.entries(data).filter(([key]) => key !== 'household_id'),
         ),
-        _method: 'put',
         emails: data.emails.filter((item) => item.value.trim()),
         phones: data.phones.filter((item) => item.value.trim()),
         addresses: data.addresses.filter((item) => item.value.trim()),
         urls: data.urls.filter((item) => item.value.trim()),
-    })).post(update(props.contact.id).url, { preserveScroll: true });
+    })).submit({ preserveScroll: true });
 }
 </script>
 
@@ -345,7 +363,13 @@ function save(): void {
                     Los cambios se guardan en un registro local y no modifican
                     la fuente externa.
                 </p>
-                <ContactFormFields v-model="contactFields" editing hide-photo />
+                <ContactFormFields
+                    v-model="contactFields"
+                    editing
+                    hide-photo
+                    :validate="validateField"
+                    :validate-files="form.validateFiles"
+                />
                 <div class="flex justify-end gap-2">
                     <Button type="button" variant="outline" as-child>
                         <Link :href="show(contact.id).url">Cancelar</Link>
