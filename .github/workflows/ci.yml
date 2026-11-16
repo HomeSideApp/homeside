@@ -130,6 +130,8 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build
+      - name: Lint
+        run: npm run lint:check
       - name: Typecheck
         run: npm run types:check
 
