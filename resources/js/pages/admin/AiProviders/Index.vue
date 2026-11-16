@@ -27,7 +27,7 @@ defineOptions({
     },
 });
 
-const props = defineProps<{
+defineProps<{
     providers: AiProvider[];
     global_settings: GlobalSetting[];
     available_modules: Array<{

@@ -47,6 +47,40 @@ export interface AiProvider {
     cost_cache_write: number | null;
 }
 
+/**
+ * The provider shape edited by the provider form fields component.
+ *
+ * It is intentionally a subset of `AiProvider`: the form owns the editable
+ * fields plus the nested configuration block the fields write into.
+ */
+export interface AiProviderFormFields {
+    name: string;
+    driver: string;
+    base_url: string;
+    model: string;
+    api_key: string;
+    modules: string[];
+    configuration: {
+        temperature: number | null;
+        model_capabilities: {
+            reasoning: boolean;
+            reasoning_effort: string;
+            context_tokens: number | null;
+        };
+    };
+    privacy_level: string;
+    fallback_policy: string;
+    family: string | null;
+    description: string | null;
+    attachment: boolean;
+    reasoning: boolean;
+    tool_call: boolean;
+    structured_output: boolean;
+    open_weights: boolean;
+    context_window: number | null;
+    max_output_tokens: number | null;
+}
+
 /** A provider entry from the models.dev catalog. */
 export interface CatalogProvider {
     slug: string;

@@ -1,10 +1,9 @@
 <script setup lang="ts">
-import { Link } from '@inertiajs/vue3';
+import { Link, usePage } from '@inertiajs/vue3';
 import {
     Activity,
     Bot,
     BookUser,
-    type LucideIcon,
     ClipboardList,
     ContactRound,
     CookingPot,
@@ -25,6 +24,7 @@ import {
     Users,
     Wallet,
 } from '@lucide/vue';
+import type { LucideIcon } from '@lucide/vue';
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import AppLogo from '@/components/AppLogo.vue';
@@ -59,7 +59,6 @@ import { index as householdEconomyIndex } from '@/routes/households/economy';
 import { index as jobsMonitorIndex } from '@/routes/jobs-monitor';
 import { index as recipeCollectionsIndex } from '@/routes/recipes/collections';
 import type { NavItem } from '@/types';
-import { usePage } from '@inertiajs/vue3';
 
 const { t } = useI18n();
 const { householdUrl, activeHousehold } = useHousehold();
