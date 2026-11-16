@@ -1,7 +1,7 @@
 import stylistic from '@stylistic/eslint-plugin';
 import { defineConfigWithVueTs, vueTsConfigs } from '@vue/eslint-config-typescript';
 import prettier from 'eslint-config-prettier/flat';
-import importPlugin from 'eslint-plugin-import';
+import importX from 'eslint-plugin-import-x';
 import vue from 'eslint-plugin-vue';
 
 const controlStatements = [
@@ -26,10 +26,10 @@ export default defineConfigWithVueTs(
     vueTsConfigs.recommended,
     {
         plugins: {
-            import: importPlugin,
+            'import-x': importX,
         },
         settings: {
-            'import/resolver': {
+            'import-x/resolver': {
                 typescript: {
                     alwaysTryTypes: true,
                     project: './tsconfig.json',
@@ -47,14 +47,14 @@ export default defineConfigWithVueTs(
                     fixStyle: 'separate-type-imports',
                 },
             ],
-            'import/order': [
+            'import-x/order': [
                 'error',
                 {
                     groups: ['builtin', 'external', 'internal', 'parent', 'sibling', 'index'],
                     alphabetize: { order: 'asc', caseInsensitive: true },
                 },
             ],
-            'import/consistent-type-specifier-style': [
+            'import-x/consistent-type-specifier-style': [
                 'error',
                 'prefer-top-level',
             ],
@@ -84,6 +84,11 @@ export default defineConfigWithVueTs(
             'public/**',
             'tailwind.config.js',
             'vite.config.ts',
+            // The Playwright harness is outside every TypeScript project, so the
+            // type-aware config cannot parse it. Ignore it instead of reporting a
+            // parse error for each file in it.
+            'playwright.config.ts',
+            'tests/e2e/**',
             'resources/js/actions/**',
             'resources/js/components/ui/*',
             'resources/js/routes/**',
