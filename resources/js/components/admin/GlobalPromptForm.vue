@@ -30,7 +30,7 @@ function getPromptForModule(module: string | null): string {
     return setting?.extra_prompt ?? '';
 }
 
-const globalPromptForm = useForm({
+const globalPromptForm = useForm('put', updateGlobalPrompt.url(), {
     extra_prompt: getPromptForModule(null),
 });
 
@@ -38,17 +38,17 @@ function submitGlobalPrompt() {
     globalPromptForm.put(updateGlobalPrompt.url());
 }
 
-const economyPromptForm = useForm({
+const economyPromptForm = useForm('put', updateModulePrompt.url(), {
     module: 'economy',
     extra_prompt: getPromptForModule('economy'),
 });
 
-const recipesPromptForm = useForm({
+const recipesPromptForm = useForm('put', updateModulePrompt.url(), {
     module: 'recipes',
     extra_prompt: getPromptForModule('recipes'),
 });
 
-const generalPromptForm = useForm({
+const generalPromptForm = useForm('put', updateModulePrompt.url(), {
     module: 'general',
     extra_prompt: getPromptForModule('general'),
 });
@@ -77,6 +77,7 @@ function submitModulePrompt(form: ReturnType<typeof useForm>) {
                         rows="4"
                         class="font-mono text-xs"
                         :placeholder="t('admin.globalPrompt.globalPlaceholder')"
+                        @blur="globalPromptForm.validate('extra_prompt')"
                     />
                 </Field>
                 <IconAction
@@ -115,6 +116,7 @@ function submitModulePrompt(form: ReturnType<typeof useForm>) {
                             :placeholder="
                                 t('admin.globalPrompt.economyPlaceholder')
                             "
+                            @blur="economyPromptForm.validate('extra_prompt')"
                         />
                     </Field>
                     <IconAction
@@ -145,6 +147,7 @@ function submitModulePrompt(form: ReturnType<typeof useForm>) {
                             :placeholder="
                                 t('admin.globalPrompt.recipesPlaceholder')
                             "
+                            @blur="recipesPromptForm.validate('extra_prompt')"
                         />
                     </Field>
                     <IconAction
@@ -175,6 +178,7 @@ function submitModulePrompt(form: ReturnType<typeof useForm>) {
                             :placeholder="
                                 t('admin.globalPrompt.generalPlaceholder')
                             "
+                            @blur="generalPromptForm.validate('extra_prompt')"
                         />
                     </Field>
                     <IconAction

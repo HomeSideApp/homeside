@@ -124,7 +124,7 @@ const shownPhoto = computed(
         (!form.remove_photo ? props.contact.avatar_url : null),
 );
 const labelsOpen = ref(false);
-const labelForm = useForm({
+const labelForm = useForm('put', updateLabels(props.contact.id).url, {
     label_ids: props.contact.labels
         .filter(
             (label) =>
@@ -190,6 +190,8 @@ function toggleLabel(id: string, checked: boolean): void {
     labelForm.label_ids = checked
         ? [...labelForm.label_ids, id]
         : labelForm.label_ids.filter((labelId) => labelId !== id);
+
+    labelForm.validate('label_ids');
 }
 
 function saveLabels(): void {

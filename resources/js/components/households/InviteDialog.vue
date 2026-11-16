@@ -38,7 +38,7 @@ type ContactOption = {
 
 const open = ref(false);
 
-const form = useForm({
+const form = useForm('post', invite.url(props.householdId), {
     email: '',
     access_profile: 'member' as HouseholdAccessProfile,
     module_access: { ...page.props.householdAccessDefaults.member },
@@ -78,11 +78,22 @@ function searchContacts(): void {
 }
 
 /**
- * Debounced trigger for the contact email search.
+ * Debounced trigger for the contact email search and the live email check.
  */
 function onEmailInput(): void {
     clearTimeout(searchTimeout);
-    searchTimeout = setTimeout(searchContacts, 250);
+    searchTimeout = setTimeout(() => {
+        searchContacts();
+        form.validate('email');
+    }, 250);
+}
+
+/**
+ * Close the contact suggestions and validate the typed email.
+ */
+function onEmailBlur(): void {
+    showResults.value = false;
+    form.validate('email');
 }
 
 /**
@@ -130,7 +141,7 @@ function submit() {
                         :placeholder="t('households.invite.emailPlaceholder')"
                         :class="{ 'border-destructive': form.errors.email }"
                         @input="onEmailInput"
-                        @blur="showResults = false"
+                        @blur="onEmailBlur"
                     />
                     <ul
                         v-if="showResults && results.length"

@@ -31,7 +31,7 @@ const props = defineProps<{
     available_tags: HouseholdTag[];
 }>();
 
-const form = useForm({
+const form = useForm('post', '/households', {
     name: '',
     description: '',
     color: '',
@@ -124,6 +124,8 @@ function submit() {
                                 t('households.create.householdNamePlaceholder')
                             "
                             :class="{ 'border-destructive': form.errors?.name }"
+                            @blur="form.validate('name')"
+                            @input="form.validate('name')"
                         />
                     </Field>
                 </CardContent>

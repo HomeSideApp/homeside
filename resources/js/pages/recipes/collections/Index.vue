@@ -49,8 +49,13 @@ defineProps<{ collections: RecipeCollection[] }>();
 const createOpen = ref(false);
 const editing = ref<RecipeCollection | null>(null);
 const deleting = ref<RecipeCollection | null>(null);
-const createForm = useForm({ name: '', parent_id: null as string | null });
-const editForm = useForm({ name: '' });
+const createForm = useForm('post', store.url(), {
+    name: '',
+    parent_id: null as string | null,
+});
+const editForm = useForm('put', () => update.url(editing.value!), {
+    name: '',
+});
 
 defineOptions({
     layout: {
@@ -305,6 +310,8 @@ function depth(collection: RecipeCollection): number {
                         id="collection-name"
                         v-model="createForm.name"
                         autofocus
+                        @blur="createForm.validate('name')"
+                        @input="createForm.validate('name')"
                     />
                     <InputError :message="createForm.errors.name" />
                 </Field>
@@ -316,6 +323,7 @@ function depth(collection: RecipeCollection): number {
                         id="collection-parent"
                         v-model="createForm.parent_id"
                         class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm"
+                        @change="createForm.validate('parent_id')"
                     >
                         <option :value="null">
                             {{ t('recipes.collections.root') }}
@@ -358,7 +366,12 @@ function depth(collection: RecipeCollection): number {
                     <FieldLabel for="edit-collection-name">{{
                         t('recipes.collections.name')
                     }}</FieldLabel>
-                    <Input id="edit-collection-name" v-model="editForm.name" />
+                    <Input
+                        id="edit-collection-name"
+                        v-model="editForm.name"
+                        @blur="editForm.validate('name')"
+                        @input="editForm.validate('name')"
+                    />
                     <InputError :message="editForm.errors.name" />
                 </Field>
                 <DialogFooter

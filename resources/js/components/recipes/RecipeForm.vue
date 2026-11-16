@@ -176,7 +176,9 @@ function detectBestUnit(seconds: number): 'seconds' | 'minutes' | 'hours' {
     return 'seconds';
 }
 
-const form = useForm({
+const submitMethod = props.method.toUpperCase() === 'PUT' ? 'put' : 'post';
+
+const form = useForm(submitMethod, props.action, {
     name: props.recipe?.name ?? '',
     description: props.recipe?.description ?? '',
     servings: props.recipe?.servings ?? null,
@@ -582,6 +584,8 @@ function scrollToSection(sectionId: string): void {
                                                     'recipes.form.namePlaceholder',
                                                 )
                                             "
+                                            @blur="form.validate('name')"
+                                            @input="form.validate('name')"
                                         />
                                         <InputError
                                             :message="form.errors.name"
@@ -601,6 +605,7 @@ function scrollToSection(sectionId: string): void {
                                                 )
                                             "
                                             rows="3"
+                                            @blur="form.validate('description')"
                                         />
                                         <InputError
                                             :message="form.errors.description"
@@ -628,6 +633,7 @@ function scrollToSection(sectionId: string): void {
                                                     form.servings = val
                                                         ? Number(val)
                                                         : null;
+                                                    form.validate('servings');
                                                 }
                                             "
                                         />
@@ -648,6 +654,8 @@ function scrollToSection(sectionId: string): void {
                                                     'recipes.form.yieldPlaceholder',
                                                 )
                                             "
+                                            @blur="form.validate('yield_text')"
+                                            @input="form.validate('yield_text')"
                                         />
                                         <InputError
                                             :message="form.errors.yield_text"
@@ -664,6 +672,9 @@ function scrollToSection(sectionId: string): void {
                                                 @update:checked="
                                                     (val: boolean) => {
                                                         form.is_public = val;
+                                                        form.validate(
+                                                            'is_public',
+                                                        );
                                                     }
                                                 "
                                             />
@@ -717,6 +728,9 @@ function scrollToSection(sectionId: string): void {
                                         id="collection_path"
                                         v-model="form.collection_path"
                                         class="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none"
+                                        @change="
+                                            form.validate('collection_path')
+                                        "
                                     >
                                         <option value="">
                                             {{ t('recipes.form.noCollection') }}
@@ -986,6 +1000,9 @@ function scrollToSection(sectionId: string): void {
                                                 (val: number | null) => {
                                                     form.prep_time_seconds =
                                                         val;
+                                                    form.validate(
+                                                        'prep_time_seconds',
+                                                    );
                                                 }
                                             "
                                         />
@@ -1008,6 +1025,9 @@ function scrollToSection(sectionId: string): void {
                                                 (val: number | null) => {
                                                     form.cook_time_seconds =
                                                         val;
+                                                    form.validate(
+                                                        'cook_time_seconds',
+                                                    );
                                                 }
                                             "
                                         />
@@ -1030,6 +1050,9 @@ function scrollToSection(sectionId: string): void {
                                                 (val: number | null) => {
                                                     form.total_time_seconds =
                                                         val;
+                                                    form.validate(
+                                                        'total_time_seconds',
+                                                    );
                                                 }
                                             "
                                         />
@@ -1054,6 +1077,7 @@ function scrollToSection(sectionId: string): void {
                                                         val === '__none__'
                                                             ? null
                                                             : String(val);
+                                                    form.validate('difficulty');
                                                 }
                                             "
                                         >
@@ -1109,6 +1133,8 @@ function scrollToSection(sectionId: string): void {
                                                     'recipes.form.cuisinePlaceholder',
                                                 )
                                             "
+                                            @blur="form.validate('cuisine')"
+                                            @input="form.validate('cuisine')"
                                         />
                                         <InputError
                                             :message="form.errors.cuisine"
@@ -1126,6 +1152,12 @@ function scrollToSection(sectionId: string): void {
                                                 t(
                                                     'recipes.form.cookingMethodPlaceholder',
                                                 )
+                                            "
+                                            @blur="
+                                                form.validate('cooking_method')
+                                            "
+                                            @input="
+                                                form.validate('cooking_method')
                                             "
                                         />
                                         <InputError
@@ -1147,6 +1179,12 @@ function scrollToSection(sectionId: string): void {
                                                     'recipes.form.recipeCategoryPlaceholder',
                                                 )
                                             "
+                                            @blur="
+                                                form.validate('recipe_category')
+                                            "
+                                            @input="
+                                                form.validate('recipe_category')
+                                            "
                                         />
                                         <InputError
                                             :message="
@@ -1163,6 +1201,8 @@ function scrollToSection(sectionId: string): void {
                                             id="author"
                                             v-model="form.author"
                                             placeholder="Nombre del autor original..."
+                                            @blur="form.validate('author')"
+                                            @input="form.validate('author')"
                                         />
                                         <InputError
                                             :message="form.errors.author"
@@ -1178,6 +1218,8 @@ function scrollToSection(sectionId: string): void {
                                             v-model="form.source_url"
                                             type="url"
                                             placeholder="https://..."
+                                            @blur="form.validate('source_url')"
+                                            @input="form.validate('source_url')"
                                         />
                                         <InputError
                                             :message="form.errors.source_url"
@@ -1192,6 +1234,10 @@ function scrollToSection(sectionId: string): void {
                                             id="source_name"
                                             v-model="form.source_name"
                                             placeholder="Ej: Libro de cocina..."
+                                            @blur="form.validate('source_name')"
+                                            @input="
+                                                form.validate('source_name')
+                                            "
                                         />
                                         <InputError
                                             :message="form.errors.source_name"
@@ -1207,6 +1253,7 @@ function scrollToSection(sectionId: string): void {
                                             v-model="form.notes"
                                             placeholder="Notas adicionales..."
                                             rows="3"
+                                            @blur="form.validate('notes')"
                                         />
                                         <InputError
                                             :message="form.errors.notes"
