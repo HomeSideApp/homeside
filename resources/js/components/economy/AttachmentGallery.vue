@@ -104,7 +104,7 @@ function confirmDelete(): void {
                     v-if="!readonly && attachment.is_mine"
                     variant="destructive"
                     size="icon-sm"
-                    class="absolute right-1 top-1"
+                    class="absolute top-1 right-1"
                     :aria-label="t('economy.attachments.remove')"
                     @click.stop="pendingDelete = attachment"
                 >
@@ -130,7 +130,10 @@ function confirmDelete(): void {
                             size="sm"
                             @click="input?.click()"
                         >
-                            <ImagePlus data-icon="inline-start" aria-hidden="true" />
+                            <ImagePlus
+                                data-icon="inline-start"
+                                aria-hidden="true"
+                            />
                             {{ t('economy.attachments.add') }}
                         </Button>
                     </TooltipTrigger>
@@ -162,7 +165,9 @@ function confirmDelete(): void {
                     }}</AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
-                    <AlertDialogCancel>{{ t('economy.ui.cancel') }}</AlertDialogCancel>
+                    <AlertDialogCancel>{{
+                        t('economy.ui.cancel')
+                    }}</AlertDialogCancel>
                     <AlertDialogAction @click="confirmDelete">{{
                         t('economy.attachments.remove')
                     }}</AlertDialogAction>
@@ -180,7 +185,7 @@ function confirmDelete(): void {
             <Button
                 variant="secondary"
                 size="icon-sm"
-                class="absolute right-6 top-6"
+                class="absolute top-6 right-6"
                 :aria-label="t('economy.ui.close')"
                 @click="lightbox = null"
             >

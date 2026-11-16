@@ -87,12 +87,23 @@ import RecipeIngredientsEditor from '@/components/recipes/RecipeIngredientsEdito
 import RecipeSectionEditor from '@/components/recipes/RecipeSectionEditor.vue';
 import RecipeStepsEditor from '@/components/recipes/RecipeStepsEditor.vue';
 import TimeInput from '@/components/recipes/TimeInput.vue';
-import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui/accordion';
+import {
+    Accordion,
+    AccordionItem,
+    AccordionTrigger,
+    AccordionContent,
+} from '@/components/ui/accordion';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { vCan } from '@/directives/can';
 import { index as collectionsIndex } from '@/routes/recipes/collections';
@@ -120,25 +131,32 @@ interface RecipeCookwareRow {
     order: number | null;
 }
 
-const props = withDefaults(defineProps<{
-    action: string;
-    method: string;
-    recipe?: RecipeData;
-    products: Product[];
-    cookware?: Cookware[];
-    hasAiProvider?: boolean;
-    aiExtraPrompt?: string | null;
-    submitPermission?: string;
-    referenceRecipes?: Array<{ id: string; name: string; collection_path: string | null }>;
-    collections?: Array<{ id: string; path: string }>;
-}>(), {
-    cookware: () => [],
-    hasAiProvider: false,
-    aiExtraPrompt: null,
-    submitPermission: '',
-    referenceRecipes: () => [],
-    collections: () => [],
-});
+const props = withDefaults(
+    defineProps<{
+        action: string;
+        method: string;
+        recipe?: RecipeData;
+        products: Product[];
+        cookware?: Cookware[];
+        hasAiProvider?: boolean;
+        aiExtraPrompt?: string | null;
+        submitPermission?: string;
+        referenceRecipes?: Array<{
+            id: string;
+            name: string;
+            collection_path: string | null;
+        }>;
+        collections?: Array<{ id: string; path: string }>;
+    }>(),
+    {
+        cookware: () => [],
+        hasAiProvider: false,
+        aiExtraPrompt: null,
+        submitPermission: '',
+        referenceRecipes: () => [],
+        collections: () => [],
+    },
+);
 
 const { t } = useI18n();
 
@@ -148,12 +166,12 @@ function generateClientId(): string {
 
 function detectBestUnit(seconds: number): 'seconds' | 'minutes' | 'hours' {
     if (seconds >= 3600 && seconds % 3600 === 0) {
-return 'hours';
-}
+        return 'hours';
+    }
 
     if (seconds >= 60 && seconds % 60 === 0) {
-return 'minutes';
-}
+        return 'minutes';
+    }
 
     return 'seconds';
 }
@@ -178,59 +196,66 @@ const form = useForm({
     source_url: props.recipe?.source_url ?? '',
     source_name: props.recipe?.source_name ?? '',
     notes: props.recipe?.notes ?? '',
-    sections: props.recipe?.sections?.map((s) => ({
-        client_id: s.client_id || generateClientId(),
-        id: s.id,
-        name: s.name,
-        order: s.order,
-    })) ?? [],
-    ingredients: props.recipe?.ingredients?.map((i) => ({
-        client_id: i.client_id || generateClientId(),
-        id: i.id,
-        name: i.name,
-        product_id: i.product_id,
-        quantity: i.quantity,
-        quantity_text: i.quantity_text,
-        unit: i.unit,
-        preparation: i.preparation,
-        notes: i.notes,
-        optional: i.optional ?? false,
-        order: i.order,
-        section_id: i.section_id,
-    })) ?? [],
-    steps: props.recipe?.steps?.map((s) => ({
-        client_id: s.client_id || generateClientId(),
-        id: s.id,
-        description: s.description,
-        image_path: s.image_path ?? null,
-        image_url: s.image_url ?? null,
-        image: null as File | null,
-        section_id: s.section_id,
-        order: s.order,
-        ingredients: s.ingredients ?? [],
-        cookware: s.cookware ?? [],
-        reference_recipe_ids: (s as any).reference_recipe_ids ?? [],
-        timers: s.timers?.map((t) => ({
-            client_id: t.client_id || generateClientId(),
-            id: t.id,
-            name: t.name,
-            duration_seconds: t.duration_seconds,
-            duration_unit: detectBestUnit(t.duration_seconds ?? 0),
-            order: t.order,
+    sections:
+        props.recipe?.sections?.map((s) => ({
+            client_id: s.client_id || generateClientId(),
+            id: s.id,
+            name: s.name,
+            order: s.order,
         })) ?? [],
-    })) ?? [],
-    cookware: props.recipe?.cookware?.map((c): RecipeCookwareRow => ({
-        client_id: c.client_id || generateClientId(),
-        id: c.id,
-        name: c.name,
-        type: c.type ?? 'tool',
-        quantity: c.quantity,
-        quantity_text: c.quantity_text,
-        unit: c.unit,
-        section_id: c.section_id,
-        order: c.order,
-    })) ?? [],
-    tags: (props.recipe?.tags ?? []).map((t: any) => typeof t === 'string' ? t : t.name ?? ''),
+    ingredients:
+        props.recipe?.ingredients?.map((i) => ({
+            client_id: i.client_id || generateClientId(),
+            id: i.id,
+            name: i.name,
+            product_id: i.product_id,
+            quantity: i.quantity,
+            quantity_text: i.quantity_text,
+            unit: i.unit,
+            preparation: i.preparation,
+            notes: i.notes,
+            optional: i.optional ?? false,
+            order: i.order,
+            section_id: i.section_id,
+        })) ?? [],
+    steps:
+        props.recipe?.steps?.map((s) => ({
+            client_id: s.client_id || generateClientId(),
+            id: s.id,
+            description: s.description,
+            image_path: s.image_path ?? null,
+            image_url: s.image_url ?? null,
+            image: null as File | null,
+            section_id: s.section_id,
+            order: s.order,
+            ingredients: s.ingredients ?? [],
+            cookware: s.cookware ?? [],
+            reference_recipe_ids: (s as any).reference_recipe_ids ?? [],
+            timers:
+                s.timers?.map((t) => ({
+                    client_id: t.client_id || generateClientId(),
+                    id: t.id,
+                    name: t.name,
+                    duration_seconds: t.duration_seconds,
+                    duration_unit: detectBestUnit(t.duration_seconds ?? 0),
+                    order: t.order,
+                })) ?? [],
+        })) ?? [],
+    cookware:
+        props.recipe?.cookware?.map((c): RecipeCookwareRow => ({
+            client_id: c.client_id || generateClientId(),
+            id: c.id,
+            name: c.name,
+            type: c.type ?? 'tool',
+            quantity: c.quantity,
+            quantity_text: c.quantity_text,
+            unit: c.unit,
+            section_id: c.section_id,
+            order: c.order,
+        })) ?? [],
+    tags: (props.recipe?.tags ?? []).map((t: any) =>
+        typeof t === 'string' ? t : (t.name ?? ''),
+    ),
     cover_image: null as File | null,
 });
 
@@ -253,13 +278,21 @@ if (form.sections.length > 0) {
     }
 
     for (const ingredient of form.ingredients) {
-        if (ingredient.section_id && sectionIdToClientId.has(ingredient.section_id)) {
-            ingredient.section_id = sectionIdToClientId.get(ingredient.section_id)!;
+        if (
+            ingredient.section_id &&
+            sectionIdToClientId.has(ingredient.section_id)
+        ) {
+            ingredient.section_id = sectionIdToClientId.get(
+                ingredient.section_id,
+            )!;
         }
     }
 
     for (const cookware of form.cookware) {
-        if (cookware.section_id && sectionIdToClientId.has(cookware.section_id)) {
+        if (
+            cookware.section_id &&
+            sectionIdToClientId.has(cookware.section_id)
+        ) {
             cookware.section_id = sectionIdToClientId.get(cookware.section_id)!;
         }
     }
@@ -269,9 +302,7 @@ const sections = computed(() => form.sections);
 
 function cleanErrorMessage(message: string): string {
     // Strip Laravel's default field path prefix from messages like "The field steps.0.ingredients.0 ..."
-    return message
-        .replace(/^(El campo |The )\S+ (field )?/i, '')
-        .trim();
+    return message.replace(/^(El campo |The )\S+ (field )?/i, '').trim();
 }
 
 function addTag(tag: string) {
@@ -404,7 +435,13 @@ const formSections = [
     { id: 'metadata', label: t('recipes.form.metadata') },
 ];
 
-const defaultOpenSections = ['cover_image', 'basic_data', 'organization', 'ingredients', 'steps'];
+const defaultOpenSections = [
+    'cover_image',
+    'basic_data',
+    'organization',
+    'ingredients',
+    'steps',
+];
 
 const activeAccordionItems = ref<string[]>(defaultOpenSections);
 
@@ -417,7 +454,9 @@ function scrollToSection(sectionId: string): void {
     }
 
     nextTick(() => {
-        const element = document.getElementById(`accordion-trigger-${sectionId}`);
+        const element = document.getElementById(
+            `accordion-trigger-${sectionId}`,
+        );
         element?.scrollIntoView({ behavior: 'smooth', block: 'start' });
         activeSection.value = sectionId;
     });
@@ -425,18 +464,35 @@ function scrollToSection(sectionId: string): void {
 </script>
 
 <template>
-    <form id="recipe-form" method="POST" :action="props.action" @submit.prevent="handleSubmit" class="space-y-8">
+    <form
+        id="recipe-form"
+        method="POST"
+        :action="props.action"
+        @submit.prevent="handleSubmit"
+        class="space-y-8"
+    >
         <!-- Errores de validación -->
-        <div v-if="form.hasErrors" class="rounded-md border border-destructive/50 bg-destructive/10 p-4">
-            <p class="text-sm font-medium text-destructive mb-2">{{ t('recipes.form.errors') }}</p>
-            <ul class="list-disc list-inside text-sm text-destructive space-y-1">
-                <li v-for="(message, key) in form.errors" :key="key">{{ cleanErrorMessage(message ?? '') }}</li>
+        <div
+            v-if="form.hasErrors"
+            class="rounded-md border border-destructive/50 bg-destructive/10 p-4"
+        >
+            <p class="mb-2 text-sm font-medium text-destructive">
+                {{ t('recipes.form.errors') }}
+            </p>
+            <ul
+                class="list-inside list-disc space-y-1 text-sm text-destructive"
+            >
+                <li v-for="(message, key) in form.errors" :key="key">
+                    {{ cleanErrorMessage(message ?? '') }}
+                </li>
             </ul>
         </div>
 
-        <div class="flex flex-col lg:flex-row lg:items-start gap-8">
+        <div class="flex flex-col gap-8 lg:flex-row lg:items-start">
             <!-- Sidebar -->
-            <div class="hidden lg:flex lg:flex-col lg:w-48 lg:shrink-0 lg:sticky lg:top-6">
+            <div
+                class="hidden lg:sticky lg:top-6 lg:flex lg:w-48 lg:shrink-0 lg:flex-col"
+            >
                 <RecipeFormSidebar
                     :active-section="activeSection"
                     :sections="formSections"
@@ -448,17 +504,33 @@ function scrollToSection(sectionId: string): void {
                         :extra-prompt="props.aiExtraPrompt"
                         @generated="handleAiGenerated"
                     />
-                    <Button type="submit" form="recipe-form" class="w-full" v-can="props.submitPermission ?? ''">
-                        {{ props.method.toUpperCase() === 'POST' ? t('recipes.form.create') : t('recipes.form.save') }}
+                    <Button
+                        type="submit"
+                        form="recipe-form"
+                        class="w-full"
+                        v-can="props.submitPermission ?? ''"
+                    >
+                        {{
+                            props.method.toUpperCase() === 'POST'
+                                ? t('recipes.form.create')
+                                : t('recipes.form.save')
+                        }}
                     </Button>
                     <Button variant="outline" class="w-full" as-child>
-                        <Link :href="props.method.toUpperCase() === 'POST' ? '/recipes' : '#'">{{ t('common.actions.cancel') }}</Link>
+                        <Link
+                            :href="
+                                props.method.toUpperCase() === 'POST'
+                                    ? '/recipes'
+                                    : '#'
+                            "
+                            >{{ t('common.actions.cancel') }}</Link
+                        >
                     </Button>
                 </div>
             </div>
 
             <!-- Contenido principal -->
-            <div class="flex-1 min-w-0 space-y-0">
+            <div class="min-w-0 flex-1 space-y-0">
                 <Accordion
                     v-model="activeAccordionItems"
                     type="multiple"
@@ -466,76 +538,142 @@ function scrollToSection(sectionId: string): void {
                 >
                     <!-- Imagen de portada -->
                     <AccordionItem value="cover_image">
-                        <AccordionTrigger :id="'accordion-trigger-cover_image'">{{ t('recipes.form.imageCover') }}</AccordionTrigger>
+                        <AccordionTrigger
+                            :id="'accordion-trigger-cover_image'"
+                            >{{
+                                t('recipes.form.imageCover')
+                            }}</AccordionTrigger
+                        >
                         <AccordionContent>
                             <RecipeImageUploader
                                 :model-value="form.cover_image"
                                 :current-url="recipe?.cover_image_url"
                                 :error="form.errors.cover_image"
-                                @update:model-value="(val: File | null) => { form.cover_image = val; }"
+                                @update:model-value="
+                                    (val: File | null) => {
+                                        form.cover_image = val;
+                                    }
+                                "
                             />
                         </AccordionContent>
                     </AccordionItem>
 
                     <!-- Datos básicos -->
                     <AccordionItem value="basic_data">
-                        <AccordionTrigger :id="'accordion-trigger-basic_data'">{{ t('recipes.form.basicData') }}</AccordionTrigger>
+                        <AccordionTrigger
+                            :id="'accordion-trigger-basic_data'"
+                            >{{ t('recipes.form.basicData') }}</AccordionTrigger
+                        >
                         <AccordionContent>
                             <FieldGroup>
-                                <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                                <div
+                                    class="grid grid-cols-1 gap-4 sm:grid-cols-2"
+                                >
                                     <Field class="sm:col-span-2">
-                                        <FieldLabel for="name">{{ t('recipes.form.name') }}</FieldLabel>
+                                        <FieldLabel for="name">{{
+                                            t('recipes.form.name')
+                                        }}</FieldLabel>
                                         <Input
                                             id="name"
                                             v-model="form.name"
                                             required
-                                            :placeholder="t('recipes.form.namePlaceholder')"
+                                            :placeholder="
+                                                t(
+                                                    'recipes.form.namePlaceholder',
+                                                )
+                                            "
                                         />
-                                        <InputError :message="form.errors.name" />
+                                        <InputError
+                                            :message="form.errors.name"
+                                        />
                                     </Field>
 
                                     <Field class="sm:col-span-2">
-                                        <FieldLabel for="description">{{ t('recipes.form.description') }}</FieldLabel>
+                                        <FieldLabel for="description">{{
+                                            t('recipes.form.description')
+                                        }}</FieldLabel>
                                         <Textarea
                                             id="description"
                                             v-model="form.description"
-                                            :placeholder="t('recipes.form.descriptionPlaceholder')"
+                                            :placeholder="
+                                                t(
+                                                    'recipes.form.descriptionPlaceholder',
+                                                )
+                                            "
                                             rows="3"
                                         />
-                                        <InputError :message="form.errors.description" />
+                                        <InputError
+                                            :message="form.errors.description"
+                                        />
                                     </Field>
 
                                     <Field>
-                                        <FieldLabel for="servings">{{ t('recipes.form.servings') }}</FieldLabel>
+                                        <FieldLabel for="servings">{{
+                                            t('recipes.form.servings')
+                                        }}</FieldLabel>
                                         <Input
                                             id="servings"
-                                            :model-value="form.servings ?? undefined"
+                                            :model-value="
+                                                form.servings ?? undefined
+                                            "
                                             type="number"
                                             min="1"
-                                            :placeholder="t('recipes.form.servingsPlaceholder')"
-                                            @update:model-value="(val: string | number) => { form.servings = val ? Number(val) : null; }"
+                                            :placeholder="
+                                                t(
+                                                    'recipes.form.servingsPlaceholder',
+                                                )
+                                            "
+                                            @update:model-value="
+                                                (val: string | number) => {
+                                                    form.servings = val
+                                                        ? Number(val)
+                                                        : null;
+                                                }
+                                            "
                                         />
-                                        <InputError :message="form.errors.servings" />
+                                        <InputError
+                                            :message="form.errors.servings"
+                                        />
                                     </Field>
 
                                     <Field>
-                                        <FieldLabel for="yield_text">{{ t('recipes.form.yieldText') }}</FieldLabel>
+                                        <FieldLabel for="yield_text">{{
+                                            t('recipes.form.yieldText')
+                                        }}</FieldLabel>
                                         <Input
                                             id="yield_text"
                                             v-model="form.yield_text"
-                                            :placeholder="t('recipes.form.yieldPlaceholder')"
+                                            :placeholder="
+                                                t(
+                                                    'recipes.form.yieldPlaceholder',
+                                                )
+                                            "
                                         />
-                                        <InputError :message="form.errors.yield_text" />
+                                        <InputError
+                                            :message="form.errors.yield_text"
+                                        />
                                     </Field>
 
                                     <Field>
-                                        <div class="flex items-center gap-2 pt-6">
+                                        <div
+                                            class="flex items-center gap-2 pt-6"
+                                        >
                                             <Checkbox
                                                 id="is_public"
                                                 :checked="form.is_public"
-                                                @update:checked="(val: boolean) => { form.is_public = val; }"
+                                                @update:checked="
+                                                    (val: boolean) => {
+                                                        form.is_public = val;
+                                                    }
+                                                "
                                             />
-                                            <label for="is_public" class="text-sm">{{ t('recipes.form.public') }}</label>
+                                            <label
+                                                for="is_public"
+                                                class="text-sm"
+                                                >{{
+                                                    t('recipes.form.public')
+                                                }}</label
+                                            >
                                         </div>
                                     </Field>
                                 </div>
@@ -545,48 +683,117 @@ function scrollToSection(sectionId: string): void {
 
                     <!-- Organización y dependencias -->
                     <AccordionItem value="organization">
-                        <AccordionTrigger :id="'accordion-trigger-organization'">{{ t('recipes.form.organization') }}</AccordionTrigger>
+                        <AccordionTrigger
+                            :id="'accordion-trigger-organization'"
+                            >{{
+                                t('recipes.form.organization')
+                            }}</AccordionTrigger
+                        >
                         <AccordionContent>
-                            <div class="grid gap-5 rounded-lg border bg-muted/20 p-4">
+                            <div
+                                class="grid gap-5 rounded-lg border bg-muted/20 p-4"
+                            >
                                 <Field>
-                                    <div class="flex items-center justify-between gap-2">
-                                        <FieldLabel for="collection_path" class="flex items-center gap-2">
-                                            <FolderTree class="h-4 w-4" />{{ t('recipes.form.collection') }}
+                                    <div
+                                        class="flex items-center justify-between gap-2"
+                                    >
+                                        <FieldLabel
+                                            for="collection_path"
+                                            class="flex items-center gap-2"
+                                        >
+                                            <FolderTree class="h-4 w-4" />{{
+                                                t('recipes.form.collection')
+                                            }}
                                         </FieldLabel>
-                                        <Link :href="collectionsIndex().url" class="text-xs font-medium text-primary hover:underline">{{ t('recipes.form.manageFolders') }}</Link>
+                                        <Link
+                                            :href="collectionsIndex().url"
+                                            class="text-xs font-medium text-primary hover:underline"
+                                            >{{
+                                                t('recipes.form.manageFolders')
+                                            }}</Link
+                                        >
                                     </div>
                                     <select
                                         id="collection_path"
                                         v-model="form.collection_path"
-                                        class="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                                        class="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none"
                                     >
-                                        <option value="">{{ t('recipes.form.noCollection') }}</option>
-                                        <option v-for="collection in props.collections" :key="collection.id" :value="collection.path">{{ collection.path }}</option>
+                                        <option value="">
+                                            {{ t('recipes.form.noCollection') }}
+                                        </option>
+                                        <option
+                                            v-for="collection in props.collections"
+                                            :key="collection.id"
+                                            :value="collection.path"
+                                        >
+                                            {{ collection.path }}
+                                        </option>
                                     </select>
-                                    <InputError :message="form.errors.collection_path" />
+                                    <InputError
+                                        :message="form.errors.collection_path"
+                                    />
                                 </Field>
 
-                                <div class="flex gap-3 rounded-md border border-primary/20 bg-primary/5 p-3 text-sm">
-                                    <BookOpen class="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                                <div
+                                    class="flex gap-3 rounded-md border border-primary/20 bg-primary/5 p-3 text-sm"
+                                >
+                                    <BookOpen
+                                        class="mt-0.5 h-4 w-4 shrink-0 text-primary"
+                                    />
                                     <div class="grid gap-1">
-                                        <p class="font-medium">{{ t('recipes.form.dependentRecipes') }}</p>
+                                        <p class="font-medium">
+                                            {{
+                                                t(
+                                                    'recipes.form.dependentRecipes',
+                                                )
+                                            }}
+                                        </p>
                                         <p class="text-muted-foreground">
-                                            {{ t('recipes.form.dependentDescription') }}
+                                            {{
+                                                t(
+                                                    'recipes.form.dependentDescription',
+                                                )
+                                            }}
                                         </p>
-                                        <p v-if="props.referenceRecipes.length === 0" class="text-amber-700 dark:text-amber-400">
-                                            {{ t('recipes.form.noReferenceRecipes') }}
+                                        <p
+                                            v-if="
+                                                props.referenceRecipes
+                                                    .length === 0
+                                            "
+                                            class="text-amber-700 dark:text-amber-400"
+                                        >
+                                            {{
+                                                t(
+                                                    'recipes.form.noReferenceRecipes',
+                                                )
+                                            }}
                                         </p>
-                                        <p v-else class="text-muted-foreground">{{ t('recipes.form.availableRecipes', { count: props.referenceRecipes.length }) }}</p>
+                                        <p v-else class="text-muted-foreground">
+                                            {{
+                                                t(
+                                                    'recipes.form.availableRecipes',
+                                                    {
+                                                        count: props
+                                                            .referenceRecipes
+                                                            .length,
+                                                    },
+                                                )
+                                            }}
+                                        </p>
                                     </div>
                                 </div>
-
                             </div>
                         </AccordionContent>
                     </AccordionItem>
 
                     <!-- Ingredientes -->
                     <AccordionItem value="ingredients">
-                        <AccordionTrigger :id="'accordion-trigger-ingredients'">{{ t('recipes.form.ingredients') }}</AccordionTrigger>
+                        <AccordionTrigger
+                            :id="'accordion-trigger-ingredients'"
+                            >{{
+                                t('recipes.form.ingredients')
+                            }}</AccordionTrigger
+                        >
                         <AccordionContent>
                             <RecipeIngredientsEditor
                                 :ingredients="form.ingredients"
@@ -600,7 +807,9 @@ function scrollToSection(sectionId: string): void {
 
                     <!-- Pasos -->
                     <AccordionItem value="steps">
-                        <AccordionTrigger :id="'accordion-trigger-steps'">{{ t('recipes.form.steps') }}</AccordionTrigger>
+                        <AccordionTrigger :id="'accordion-trigger-steps'">{{
+                            t('recipes.form.steps')
+                        }}</AccordionTrigger>
                         <AccordionContent>
                             <RecipeStepsEditor
                                 :steps="form.steps"
@@ -616,43 +825,87 @@ function scrollToSection(sectionId: string): void {
 
                     <!-- Utensilios -->
                     <AccordionItem value="cookware">
-                        <AccordionTrigger :id="'accordion-trigger-cookware'">{{ t('recipes.form.cookware') }}</AccordionTrigger>
+                        <AccordionTrigger :id="'accordion-trigger-cookware'">{{
+                            t('recipes.form.cookware')
+                        }}</AccordionTrigger>
                         <AccordionContent>
-                            <div class="flex items-center justify-between mb-4">
-                                <h3 class="text-sm font-medium">{{ t('recipes.form.cookware') }}</h3>
-                                <Button type="button" variant="outline" size="sm" @click="addCookware">
+                            <div class="mb-4 flex items-center justify-between">
+                                <h3 class="text-sm font-medium">
+                                    {{ t('recipes.form.cookware') }}
+                                </h3>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    @click="addCookware"
+                                >
                                     <Plus class="mr-2 h-4 w-4" />
                                     {{ t('recipes.form.addCookware') }}
                                 </Button>
                             </div>
 
-                            <div v-if="form.cookware.length === 0" class="rounded-md border border-dashed p-4 text-center text-sm text-muted-foreground">
+                            <div
+                                v-if="form.cookware.length === 0"
+                                class="rounded-md border border-dashed p-4 text-center text-sm text-muted-foreground"
+                            >
                                 {{ t('recipes.form.noCookware') }}
                             </div>
 
-                            <div v-for="(item, index) in form.cookware" :key="item.client_id" class="flex items-end gap-2">
+                            <div
+                                v-for="(item, index) in form.cookware"
+                                :key="item.client_id"
+                                class="flex items-end gap-2"
+                            >
                                 <Field class="flex-1">
-                                    <FieldLabel :for="`cookware-name-${index}`">{{ t('recipes.form.cookwareName') }}</FieldLabel>
+                                    <FieldLabel
+                                        :for="`cookware-name-${index}`"
+                                        >{{
+                                            t('recipes.form.cookwareName')
+                                        }}</FieldLabel
+                                    >
                                     <Input
                                         :id="`cookware-name-${index}`"
                                         v-model="item.name"
-                                        :placeholder="t('recipes.form.cookwareNamePlaceholder')"
+                                        :placeholder="
+                                            t(
+                                                'recipes.form.cookwareNamePlaceholder',
+                                            )
+                                        "
                                     />
-                                    <InputError :message="form.errors[`cookware.${index}.name`]" />
+                                    <InputError
+                                        :message="
+                                            form.errors[
+                                                `cookware.${index}.name`
+                                            ]
+                                        "
+                                    />
                                 </Field>
                                 <Field class="w-32">
-                                    <FieldLabel :for="`cookware-type-${index}`">{{ t('recipes.form.cookwareType') }}</FieldLabel>
+                                    <FieldLabel
+                                        :for="`cookware-type-${index}`"
+                                        >{{
+                                            t('recipes.form.cookwareType')
+                                        }}</FieldLabel
+                                    >
                                     <Select v-model="item.type">
                                         <SelectTrigger>
                                             <SelectValue />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="tool">{{ t('recipes.form.tool') }}</SelectItem>
-                                            <SelectItem value="supply">{{ t('recipes.form.supply') }}</SelectItem>
+                                            <SelectItem value="tool">{{
+                                                t('recipes.form.tool')
+                                            }}</SelectItem>
+                                            <SelectItem value="supply">{{
+                                                t('recipes.form.supply')
+                                            }}</SelectItem>
                                         </SelectContent>
                                     </Select>
                                 </Field>
-                                <button type="button" class="mb-1 text-destructive hover:text-destructive/80" @click="removeCookware(index)">
+                                <button
+                                    type="button"
+                                    class="mb-1 text-destructive hover:text-destructive/80"
+                                    @click="removeCookware(index)"
+                                >
                                     ×
                                 </button>
                             </div>
@@ -661,7 +914,10 @@ function scrollToSection(sectionId: string): void {
 
                     <!-- Secciones -->
                     <AccordionItem value="recipe_sections">
-                        <AccordionTrigger :id="'accordion-trigger-recipe_sections'">{{ t('recipes.form.sections') }}</AccordionTrigger>
+                        <AccordionTrigger
+                            :id="'accordion-trigger-recipe_sections'"
+                            >{{ t('recipes.form.sections') }}</AccordionTrigger
+                        >
                         <AccordionContent>
                             <RecipeSectionEditor
                                 :sections="sections"
@@ -673,22 +929,33 @@ function scrollToSection(sectionId: string): void {
 
                     <!-- Etiquetas -->
                     <AccordionItem value="tags">
-                        <AccordionTrigger :id="'accordion-trigger-tags'">{{ t('recipes.form.tags') }}</AccordionTrigger>
+                        <AccordionTrigger :id="'accordion-trigger-tags'">{{
+                            t('recipes.form.tags')
+                        }}</AccordionTrigger>
                         <AccordionContent>
                             <Field>
                                 <Input
-                                    :placeholder="t('recipes.form.tagPlaceholder')"
+                                    :placeholder="
+                                        t('recipes.form.tagPlaceholder')
+                                    "
                                     @keydown="handleTagKeydown"
                                 />
                             </Field>
-                            <div v-if="form.tags.length > 0" class="flex flex-wrap gap-2 mt-2">
+                            <div
+                                v-if="form.tags.length > 0"
+                                class="mt-2 flex flex-wrap gap-2"
+                            >
                                 <span
                                     v-for="(tag, idx) in form.tags"
                                     :key="idx"
                                     class="inline-flex items-center gap-1 rounded-full bg-secondary px-3 py-1 text-xs font-medium"
                                 >
                                     {{ tag }}
-                                    <button type="button" class="ml-1 text-muted-foreground hover:text-foreground" @click="removeTag(idx)">
+                                    <button
+                                        type="button"
+                                        class="ml-1 text-muted-foreground hover:text-foreground"
+                                        @click="removeTag(idx)"
+                                    >
                                         ×
                                     </button>
                                 </span>
@@ -699,124 +966,251 @@ function scrollToSection(sectionId: string): void {
 
                     <!-- Metadata -->
                     <AccordionItem value="metadata">
-                        <AccordionTrigger :id="'accordion-trigger-metadata'">{{ t('recipes.form.metadata') }}</AccordionTrigger>
+                        <AccordionTrigger :id="'accordion-trigger-metadata'">{{
+                            t('recipes.form.metadata')
+                        }}</AccordionTrigger>
                         <AccordionContent>
                             <FieldGroup>
-                                <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                                <div
+                                    class="grid grid-cols-1 gap-4 sm:grid-cols-2"
+                                >
                                     <Field>
-                                        <FieldLabel for="prep_time_seconds">{{ t('recipes.form.prepTime') }}</FieldLabel>
+                                        <FieldLabel for="prep_time_seconds">{{
+                                            t('recipes.form.prepTime')
+                                        }}</FieldLabel>
                                         <TimeInput
-                                            :model-value="form.prep_time_seconds"
-                                            @update:model-value="(val: number | null) => { form.prep_time_seconds = val; }"
+                                            :model-value="
+                                                form.prep_time_seconds
+                                            "
+                                            @update:model-value="
+                                                (val: number | null) => {
+                                                    form.prep_time_seconds =
+                                                        val;
+                                                }
+                                            "
                                         />
-                                        <InputError :message="form.errors.prep_time_seconds" />
+                                        <InputError
+                                            :message="
+                                                form.errors.prep_time_seconds
+                                            "
+                                        />
                                     </Field>
 
                                     <Field>
-                                        <FieldLabel for="cook_time_seconds">{{ t('recipes.form.cookTime') }}</FieldLabel>
+                                        <FieldLabel for="cook_time_seconds">{{
+                                            t('recipes.form.cookTime')
+                                        }}</FieldLabel>
                                         <TimeInput
-                                            :model-value="form.cook_time_seconds"
-                                            @update:model-value="(val: number | null) => { form.cook_time_seconds = val; }"
+                                            :model-value="
+                                                form.cook_time_seconds
+                                            "
+                                            @update:model-value="
+                                                (val: number | null) => {
+                                                    form.cook_time_seconds =
+                                                        val;
+                                                }
+                                            "
                                         />
-                                        <InputError :message="form.errors.cook_time_seconds" />
+                                        <InputError
+                                            :message="
+                                                form.errors.cook_time_seconds
+                                            "
+                                        />
                                     </Field>
 
                                     <Field>
-                                        <FieldLabel for="total_time_seconds">{{ t('recipes.form.totalTime') }}</FieldLabel>
+                                        <FieldLabel for="total_time_seconds">{{
+                                            t('recipes.form.totalTime')
+                                        }}</FieldLabel>
                                         <TimeInput
-                                            :model-value="form.total_time_seconds"
-                                            @update:model-value="(val: number | null) => { form.total_time_seconds = val; }"
+                                            :model-value="
+                                                form.total_time_seconds
+                                            "
+                                            @update:model-value="
+                                                (val: number | null) => {
+                                                    form.total_time_seconds =
+                                                        val;
+                                                }
+                                            "
                                         />
-                                        <InputError :message="form.errors.total_time_seconds" />
+                                        <InputError
+                                            :message="
+                                                form.errors.total_time_seconds
+                                            "
+                                        />
                                     </Field>
 
                                     <Field>
-                                        <FieldLabel for="difficulty">{{ t('recipes.form.difficulty') }}</FieldLabel>
-                                        <Select :model-value="form.difficulty ?? '__none__'" @update:model-value="(val: AcceptableValue) => { form.difficulty = val === '__none__' ? null : String(val); }">
+                                        <FieldLabel for="difficulty">{{
+                                            t('recipes.form.difficulty')
+                                        }}</FieldLabel>
+                                        <Select
+                                            :model-value="
+                                                form.difficulty ?? '__none__'
+                                            "
+                                            @update:model-value="
+                                                (val: AcceptableValue) => {
+                                                    form.difficulty =
+                                                        val === '__none__'
+                                                            ? null
+                                                            : String(val);
+                                                }
+                                            "
+                                        >
                                             <SelectTrigger>
-                                                <SelectValue :placeholder="t('recipes.form.select')" />
+                                                <SelectValue
+                                                    :placeholder="
+                                                        t('recipes.form.select')
+                                                    "
+                                                />
                                             </SelectTrigger>
                                             <SelectContent>
-                                                <SelectItem value="__none__">{{ t('recipes.form.noSpecified') }}</SelectItem>
-                                                <SelectItem value="easy">{{ t('recipes.householdIndex.difficulty.easy') }}</SelectItem>
-                                                <SelectItem value="medium">{{ t('recipes.householdIndex.difficulty.medium') }}</SelectItem>
-                                                <SelectItem value="hard">{{ t('recipes.householdIndex.difficulty.hard') }}</SelectItem>
-                                                <SelectItem value="expert">{{ t('recipes.householdIndex.difficulty.expert') }}</SelectItem>
+                                                <SelectItem value="__none__">{{
+                                                    t(
+                                                        'recipes.form.noSpecified',
+                                                    )
+                                                }}</SelectItem>
+                                                <SelectItem value="easy">{{
+                                                    t(
+                                                        'recipes.householdIndex.difficulty.easy',
+                                                    )
+                                                }}</SelectItem>
+                                                <SelectItem value="medium">{{
+                                                    t(
+                                                        'recipes.householdIndex.difficulty.medium',
+                                                    )
+                                                }}</SelectItem>
+                                                <SelectItem value="hard">{{
+                                                    t(
+                                                        'recipes.householdIndex.difficulty.hard',
+                                                    )
+                                                }}</SelectItem>
+                                                <SelectItem value="expert">{{
+                                                    t(
+                                                        'recipes.householdIndex.difficulty.expert',
+                                                    )
+                                                }}</SelectItem>
                                             </SelectContent>
                                         </Select>
-                                        <InputError :message="form.errors.difficulty" />
+                                        <InputError
+                                            :message="form.errors.difficulty"
+                                        />
                                     </Field>
 
                                     <Field>
-                                        <FieldLabel for="cuisine">{{ t('recipes.form.cuisine') }}</FieldLabel>
+                                        <FieldLabel for="cuisine">{{
+                                            t('recipes.form.cuisine')
+                                        }}</FieldLabel>
                                         <Input
                                             id="cuisine"
                                             v-model="form.cuisine"
-                                            :placeholder="t('recipes.form.cuisinePlaceholder')"
+                                            :placeholder="
+                                                t(
+                                                    'recipes.form.cuisinePlaceholder',
+                                                )
+                                            "
                                         />
-                                        <InputError :message="form.errors.cuisine" />
+                                        <InputError
+                                            :message="form.errors.cuisine"
+                                        />
                                     </Field>
 
                                     <Field>
-                                        <FieldLabel for="cooking_method">{{ t('recipes.form.cookingMethod') }}</FieldLabel>
+                                        <FieldLabel for="cooking_method">{{
+                                            t('recipes.form.cookingMethod')
+                                        }}</FieldLabel>
                                         <Input
                                             id="cooking_method"
                                             v-model="form.cooking_method"
-                                            :placeholder="t('recipes.form.cookingMethodPlaceholder')"
+                                            :placeholder="
+                                                t(
+                                                    'recipes.form.cookingMethodPlaceholder',
+                                                )
+                                            "
                                         />
-                                        <InputError :message="form.errors.cooking_method" />
+                                        <InputError
+                                            :message="
+                                                form.errors.cooking_method
+                                            "
+                                        />
                                     </Field>
 
                                     <Field>
-                                        <FieldLabel for="recipe_category">{{ t('recipes.form.recipeCategory') }}</FieldLabel>
+                                        <FieldLabel for="recipe_category">{{
+                                            t('recipes.form.recipeCategory')
+                                        }}</FieldLabel>
                                         <Input
                                             id="recipe_category"
                                             v-model="form.recipe_category"
-                                            :placeholder="t('recipes.form.recipeCategoryPlaceholder')"
+                                            :placeholder="
+                                                t(
+                                                    'recipes.form.recipeCategoryPlaceholder',
+                                                )
+                                            "
                                         />
-                                        <InputError :message="form.errors.recipe_category" />
+                                        <InputError
+                                            :message="
+                                                form.errors.recipe_category
+                                            "
+                                        />
                                     </Field>
 
                                     <Field>
-                                        <FieldLabel for="author">Autor</FieldLabel>
+                                        <FieldLabel for="author"
+                                            >Autor</FieldLabel
+                                        >
                                         <Input
                                             id="author"
                                             v-model="form.author"
                                             placeholder="Nombre del autor original..."
                                         />
-                                        <InputError :message="form.errors.author" />
+                                        <InputError
+                                            :message="form.errors.author"
+                                        />
                                     </Field>
 
                                     <Field>
-                                        <FieldLabel for="source_url">URL de origen</FieldLabel>
+                                        <FieldLabel for="source_url"
+                                            >URL de origen</FieldLabel
+                                        >
                                         <Input
                                             id="source_url"
                                             v-model="form.source_url"
                                             type="url"
                                             placeholder="https://..."
                                         />
-                                        <InputError :message="form.errors.source_url" />
+                                        <InputError
+                                            :message="form.errors.source_url"
+                                        />
                                     </Field>
 
                                     <Field>
-                                        <FieldLabel for="source_name">Fuente</FieldLabel>
+                                        <FieldLabel for="source_name"
+                                            >Fuente</FieldLabel
+                                        >
                                         <Input
                                             id="source_name"
                                             v-model="form.source_name"
                                             placeholder="Ej: Libro de cocina..."
                                         />
-                                        <InputError :message="form.errors.source_name" />
+                                        <InputError
+                                            :message="form.errors.source_name"
+                                        />
                                     </Field>
 
                                     <Field class="sm:col-span-2">
-                                        <FieldLabel for="notes">Notas</FieldLabel>
+                                        <FieldLabel for="notes"
+                                            >Notas</FieldLabel
+                                        >
                                         <Textarea
                                             id="notes"
                                             v-model="form.notes"
                                             placeholder="Notas adicionales..."
                                             rows="3"
                                         />
-                                        <InputError :message="form.errors.notes" />
+                                        <InputError
+                                            :message="form.errors.notes"
+                                        />
                                     </Field>
                                 </div>
                             </FieldGroup>

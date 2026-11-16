@@ -15,7 +15,10 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { jobs as jobsMonitorJobs, show as showJob } from '@/routes/jobs-monitor';
+import {
+    jobs as jobsMonitorJobs,
+    show as showJob,
+} from '@/routes/jobs-monitor';
 import type { Paginated } from '@/types';
 
 interface JobRow {
@@ -57,7 +60,9 @@ defineOptions({
     },
 });
 
-function statusVariant(status: string): 'default' | 'secondary' | 'destructive' | 'outline' {
+function statusVariant(
+    status: string,
+): 'default' | 'secondary' | 'destructive' | 'outline' {
     if (status === 'processed') {
         return 'default';
     }
@@ -81,7 +86,10 @@ const columns: ColumnDef<any, JobRow, any>[] = [
         cell: ({ row }) =>
             h(
                 Badge,
-                { variant: statusVariant(row.getValue('status')), class: 'text-xs' },
+                {
+                    variant: statusVariant(row.getValue('status')),
+                    class: 'text-xs',
+                },
                 () => row.getValue('status'),
             ),
     }),
@@ -118,7 +126,10 @@ const columns: ColumnDef<any, JobRow, any>[] = [
     columnHelper.accessor('user', {
         header: 'Usuario',
         cell: ({ row }) => {
-            const user = row.getValue('user') as { id: string; name: string } | null;
+            const user = row.getValue('user') as {
+                id: string;
+                name: string;
+            } | null;
 
             return h(
                 'div',
@@ -170,12 +181,16 @@ function applyFilters(patch: Record<string, string | null | undefined>): void {
         }
     }
 
-    router.get(jobsMonitorJobs.url({ query }), {}, {
-        only: ['jobs', 'filters'],
-        preserveState: true,
-        preserveScroll: true,
-        replace: true,
-    });
+    router.get(
+        jobsMonitorJobs.url({ query }),
+        {},
+        {
+            only: ['jobs', 'filters'],
+            preserveState: true,
+            preserveScroll: true,
+            replace: true,
+        },
+    );
 }
 </script>
 
@@ -184,7 +199,9 @@ function applyFilters(patch: Record<string, string | null | undefined>): void {
 
     <div class="flex flex-col gap-6">
         <div>
-            <h1 class="text-2xl font-bold tracking-tight">Ejecuciones de jobs</h1>
+            <h1 class="text-2xl font-bold tracking-tight">
+                Ejecuciones de jobs
+            </h1>
             <p class="text-sm text-muted-foreground">
                 Listado de trabajos ejecutados por los workers de cola.
             </p>
@@ -257,7 +274,9 @@ function applyFilters(patch: Record<string, string | null | undefined>): void {
                 v-if="filters.status || filters.queue || filters.job_class"
                 variant="ghost"
                 size="sm"
-                @click="applyFilters({ status: null, queue: null, job_class: null })"
+                @click="
+                    applyFilters({ status: null, queue: null, job_class: null })
+                "
             >
                 Limpiar filtros
             </Button>

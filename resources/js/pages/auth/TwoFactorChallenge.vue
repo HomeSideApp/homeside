@@ -85,7 +85,9 @@ const toggleRecoveryMode = (clearErrors: () => void): void => {
                 <Button type="submit" class="w-full" :disabled="processing"
                     >Continue</Button
                 >
-                <div class="text-center text-sm text-muted-foreground space-y-1">
+                <div
+                    class="space-y-1 text-center text-sm text-muted-foreground"
+                >
                     <div>
                         <span>or you can </span>
                         <button
@@ -97,7 +99,10 @@ const toggleRecoveryMode = (clearErrors: () => void): void => {
                         </button>
                     </div>
                     <div>
-                        <a href="/forgot-otp" class="text-foreground underline decoration-neutral-300 underline-offset-4 transition-colors duration-300 ease-out hover:decoration-current! dark:decoration-neutral-500">
+                        <a
+                            href="/forgot-otp"
+                            class="text-foreground underline decoration-neutral-300 underline-offset-4 transition-colors duration-300 ease-out hover:decoration-current! dark:decoration-neutral-500"
+                        >
                             Reset OTP
                         </a>
                     </div>

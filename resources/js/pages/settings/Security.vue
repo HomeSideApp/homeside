@@ -59,7 +59,9 @@ watchEffect(() => {
             v-slot="{ errors, processing, hasErrors, validate }"
         >
             <div class="grid gap-2">
-                <Label for="current_password">{{ t('settings.security.currentPassword') }}</Label>
+                <Label for="current_password">{{
+                    t('settings.security.currentPassword')
+                }}</Label>
                 <PasswordInput
                     id="current_password"
                     name="current_password"
@@ -72,7 +74,9 @@ watchEffect(() => {
             </div>
 
             <div class="grid gap-2">
-                <Label for="password">{{ t('settings.security.newPassword') }}</Label>
+                <Label for="password">{{
+                    t('settings.security.newPassword')
+                }}</Label>
                 <PasswordInput
                     id="password"
                     name="password"
@@ -86,7 +90,9 @@ watchEffect(() => {
             </div>
 
             <div class="grid gap-2">
-                <Label for="password_confirmation">{{ t('settings.security.confirmPassword') }}</Label>
+                <Label for="password_confirmation">{{
+                    t('settings.security.confirmPassword')
+                }}</Label>
                 <PasswordInput
                     id="password_confirmation"
                     name="password_confirmation"
@@ -111,5 +117,4 @@ watchEffect(() => {
     </div>
 
     <TwoFactorStatus :twoFactorEnabled="props.twoFactorEnabled" />
-
 </template>

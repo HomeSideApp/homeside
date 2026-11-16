@@ -11,7 +11,14 @@ import Heading from '@/components/Heading.vue';
 import AiProvidersForm from '@/components/households/AiProvidersForm.vue';
 import { Button } from '@/components/ui/button';
 import { index as householdAiProvidersIndex } from '@/routes/households/ai-providers';
-import type { AiProvider, HouseholdSummary, PaginatedData, CatalogProvider, CatalogModel, CatalogPrefillData } from '@/types';
+import type {
+    AiProvider,
+    HouseholdSummary,
+    PaginatedData,
+    CatalogProvider,
+    CatalogModel,
+    CatalogPrefillData,
+} from '@/types';
 
 const { t } = useI18n();
 

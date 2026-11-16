@@ -61,14 +61,19 @@ function triggerUpload() {
                 type="button"
                 variant="destructive"
                 size="icon"
-                class="absolute -right-2 -top-2 h-6 w-6 rounded-full"
+                class="absolute -top-2 -right-2 h-6 w-6 rounded-full"
                 @click="removeImage"
             >
                 <X class="h-3 w-3" />
             </Button>
         </div>
 
-        <Button type="button" variant="outline" size="sm" @click="triggerUpload">
+        <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            @click="triggerUpload"
+        >
             <Upload class="mr-2 h-4 w-4" />
             {{ previewUrl ? 'Cambiar imagen' : 'Subir imagen' }}
         </Button>

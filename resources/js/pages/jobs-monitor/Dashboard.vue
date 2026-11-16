@@ -1,10 +1,20 @@
 <script setup lang="ts">
 import { Head, router, usePoll } from '@inertiajs/vue3';
-import { ArrowRight, Activity, CheckCircle2, XCircle, Loader2, Server } from '@lucide/vue';
+import {
+    ArrowRight,
+    Activity,
+    CheckCircle2,
+    XCircle,
+    Loader2,
+    Server,
+} from '@lucide/vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { index as jobsMonitorIndex, show as showJob } from '@/routes/jobs-monitor';
+import {
+    index as jobsMonitorIndex,
+    show as showJob,
+} from '@/routes/jobs-monitor';
 import type { Paginated } from '@/types';
 
 interface Statistics {
@@ -57,17 +67,31 @@ defineOptions({
 const periods = ['1h', '6h', '24h', '7d', '30d'];
 
 // Refresca las métricas sin salir de la página (solo props seleccionados).
-usePoll(5000, { only: ['statistics', 'queueDepths', 'recentJobs', 'topFailingJobs'] });
+usePoll(5000, {
+    only: ['statistics', 'queueDepths', 'recentJobs', 'topFailingJobs'],
+});
 
 function changePeriod(period: string): void {
-    router.get(jobsMonitorIndex.url({ query: { period } }), {}, {
-        only: ['statistics', 'queueDepths', 'recentJobs', 'topFailingJobs', 'filters'],
-        preserveState: true,
-        preserveScroll: true,
-    });
+    router.get(
+        jobsMonitorIndex.url({ query: { period } }),
+        {},
+        {
+            only: [
+                'statistics',
+                'queueDepths',
+                'recentJobs',
+                'topFailingJobs',
+                'filters',
+            ],
+            preserveState: true,
+            preserveScroll: true,
+        },
+    );
 }
 
-function statusVariant(status: string): 'default' | 'secondary' | 'destructive' | 'outline' {
+function statusVariant(
+    status: string,
+): 'default' | 'secondary' | 'destructive' | 'outline' {
     if (status === 'processed') {
         return 'default';
     }
@@ -83,7 +107,9 @@ function statusVariant(status: string): 'default' | 'secondary' | 'destructive' 
     return 'outline';
 }
 
-function depthVariant(status: string): 'default' | 'secondary' | 'destructive' | 'outline' {
+function depthVariant(
+    status: string,
+): 'default' | 'secondary' | 'destructive' | 'outline' {
     if (status === 'critical' || status === 'warning') {
         return 'destructive';
     }
@@ -102,7 +128,9 @@ function depthVariant(status: string): 'default' | 'secondary' | 'destructive' |
     <div class="flex flex-col gap-6">
         <div class="flex flex-wrap items-center justify-between gap-3">
             <div>
-                <h1 class="text-2xl font-bold tracking-tight">Job Monitoring</h1>
+                <h1 class="text-2xl font-bold tracking-tight">
+                    Job Monitoring
+                </h1>
                 <p class="text-sm text-muted-foreground">
                     Estado de los workers de cola y ejecuciones de jobs.
                 </p>
@@ -124,9 +152,14 @@ function depthVariant(status: string): 'default' | 'secondary' | 'destructive' |
         <!-- Estadísticas -->
         <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <Card>
-                <CardHeader class="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardHeader
+                    class="flex flex-row items-center justify-between space-y-0 pb-2"
+                >
                     <CardTitle class="text-sm font-medium">Total</CardTitle>
-                    <Activity class="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+                    <Activity
+                        class="h-4 w-4 text-muted-foreground"
+                        aria-hidden="true"
+                    />
                 </CardHeader>
                 <CardContent>
                     <div class="text-2xl font-bold">{{ statistics.total }}</div>
@@ -137,35 +170,64 @@ function depthVariant(status: string): 'default' | 'secondary' | 'destructive' |
             </Card>
 
             <Card>
-                <CardHeader class="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle class="text-sm font-medium">Procesados</CardTitle>
-                    <CheckCircle2 class="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+                <CardHeader
+                    class="flex flex-row items-center justify-between space-y-0 pb-2"
+                >
+                    <CardTitle class="text-sm font-medium"
+                        >Procesados</CardTitle
+                    >
+                    <CheckCircle2
+                        class="h-4 w-4 text-muted-foreground"
+                        aria-hidden="true"
+                    />
                 </CardHeader>
                 <CardContent>
-                    <div class="text-2xl font-bold">{{ statistics.processed }}</div>
-                    <p class="text-xs text-muted-foreground">Jobs completados</p>
+                    <div class="text-2xl font-bold">
+                        {{ statistics.processed }}
+                    </div>
+                    <p class="text-xs text-muted-foreground">
+                        Jobs completados
+                    </p>
                 </CardContent>
             </Card>
 
             <Card>
-                <CardHeader class="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardHeader
+                    class="flex flex-row items-center justify-between space-y-0 pb-2"
+                >
                     <CardTitle class="text-sm font-medium">Fallidos</CardTitle>
-                    <XCircle class="h-4 w-4 text-destructive" aria-hidden="true" />
+                    <XCircle
+                        class="h-4 w-4 text-destructive"
+                        aria-hidden="true"
+                    />
                 </CardHeader>
                 <CardContent>
-                    <div class="text-2xl font-bold">{{ statistics.failed }}</div>
-                    <p class="text-xs text-muted-foreground">Requieren revisión</p>
+                    <div class="text-2xl font-bold">
+                        {{ statistics.failed }}
+                    </div>
+                    <p class="text-xs text-muted-foreground">
+                        Requieren revisión
+                    </p>
                 </CardContent>
             </Card>
 
             <Card>
-                <CardHeader class="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardHeader
+                    class="flex flex-row items-center justify-between space-y-0 pb-2"
+                >
                     <CardTitle class="text-sm font-medium">En curso</CardTitle>
-                    <Loader2 class="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+                    <Loader2
+                        class="h-4 w-4 text-muted-foreground"
+                        aria-hidden="true"
+                    />
                 </CardHeader>
                 <CardContent>
-                    <div class="text-2xl font-bold">{{ statistics.processing }}</div>
-                    <p class="text-xs text-muted-foreground">Siendo ejecutados</p>
+                    <div class="text-2xl font-bold">
+                        {{ statistics.processing }}
+                    </div>
+                    <p class="text-xs text-muted-foreground">
+                        Siendo ejecutados
+                    </p>
                 </CardContent>
             </Card>
         </div>
@@ -186,16 +248,15 @@ function depthVariant(status: string): 'default' | 'secondary' | 'destructive' |
                     >
                         No hay jobs pendientes en ninguna cola.
                     </p>
-                    <ul
-                        v-else
-                        class="flex flex-col gap-2"
-                    >
+                    <ul v-else class="flex flex-col gap-2">
                         <li
                             v-for="depth in queueDepths"
                             :key="depth.queue"
                             class="flex items-center justify-between rounded-md border px-3 py-2"
                         >
-                            <span class="text-sm font-medium">{{ depth.queue }}</span>
+                            <span class="text-sm font-medium">{{
+                                depth.queue
+                            }}</span>
                             <span class="flex items-center gap-2">
                                 <span class="text-sm text-muted-foreground">
                                     {{ depth.count }} pendientes
@@ -224,10 +285,7 @@ function depthVariant(status: string): 'default' | 'secondary' | 'destructive' |
                     >
                         Sin fallos en el periodo seleccionado.
                     </p>
-                    <ul
-                        v-else
-                        class="flex flex-col gap-2"
-                    >
+                    <ul v-else class="flex flex-col gap-2">
                         <li
                             v-for="job in topFailingJobs"
                             :key="job.full_class"
@@ -263,17 +321,17 @@ function depthVariant(status: string): 'default' | 'secondary' | 'destructive' |
                 >
                     No se ha ejecutado ningún job en el periodo seleccionado.
                 </p>
-                <ul
-                    v-else
-                    class="flex flex-col gap-2"
-                >
+                <ul v-else class="flex flex-col gap-2">
                     <li
                         v-for="job in recentJobs.data"
                         :key="job.id"
                         class="flex flex-wrap items-center justify-between gap-2 rounded-md border px-3 py-2"
                     >
                         <div class="flex items-center gap-2">
-                            <Badge :variant="statusVariant(job.status)" class="text-xs">
+                            <Badge
+                                :variant="statusVariant(job.status)"
+                                class="text-xs"
+                            >
                                 {{ job.status }}
                             </Badge>
                             <a
@@ -286,7 +344,9 @@ function depthVariant(status: string): 'default' | 'secondary' | 'destructive' |
                                 {{ job.queue }}
                             </span>
                         </div>
-                        <div class="flex items-center gap-3 text-xs text-muted-foreground">
+                        <div
+                            class="flex items-center gap-3 text-xs text-muted-foreground"
+                        >
                             <span>{{ job.duration }}</span>
                             <span>{{ job.created_at_human }}</span>
                         </div>

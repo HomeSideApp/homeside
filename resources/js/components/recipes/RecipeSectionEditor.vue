@@ -49,19 +49,34 @@ function getSectionError(index: number, field: string): string | undefined {
     <div class="space-y-4">
         <div class="flex items-center justify-between">
             <h3 class="text-sm font-medium">Secciones</h3>
-            <Button type="button" variant="outline" size="sm" @click="addSection">
+            <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                @click="addSection"
+            >
                 <Plus class="mr-2 h-4 w-4" />
                 {{ t('recipes.sectionEditor.add') }}
             </Button>
         </div>
 
-        <div v-if="sections.length === 0" class="rounded-md border border-dashed p-4 text-center text-sm text-muted-foreground">
-            No hay secciones. Puedes organizar ingredientes y pasos en secciones.
+        <div
+            v-if="sections.length === 0"
+            class="rounded-md border border-dashed p-4 text-center text-sm text-muted-foreground"
+        >
+            No hay secciones. Puedes organizar ingredientes y pasos en
+            secciones.
         </div>
 
-        <div v-for="(section, index) in sections" :key="section.client_id" class="flex items-end gap-2">
+        <div
+            v-for="(section, index) in sections"
+            :key="section.client_id"
+            class="flex items-end gap-2"
+        >
             <Field class="flex-1">
-                <FieldLabel :for="`section-name-${index}`">{{ t('recipes.sectionEditor.name') }}</FieldLabel>
+                <FieldLabel :for="`section-name-${index}`">{{
+                    t('recipes.sectionEditor.name')
+                }}</FieldLabel>
                 <Input
                     :id="`section-name-${index}`"
                     v-model="section.name"
@@ -71,7 +86,13 @@ function getSectionError(index: number, field: string): string | undefined {
                 />
                 <InputError :message="getSectionError(index, 'name')" />
             </Field>
-            <Button type="button" variant="ghost" size="icon" class="h-9 w-9 text-destructive" @click="removeSection(index)">
+            <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                class="h-9 w-9 text-destructive"
+                @click="removeSection(index)"
+            >
                 <Trash2 class="h-4 w-4" />
             </Button>
         </div>

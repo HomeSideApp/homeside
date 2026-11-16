@@ -48,7 +48,9 @@ defineProps<{
             </div>
 
             <div class="grid gap-2">
-                <Label for="password_confirmation">{{ t('auth.confirmPassword') }}</Label>
+                <Label for="password_confirmation">{{
+                    t('auth.confirmPassword')
+                }}</Label>
                 <PasswordInput
                     id="password_confirmation"
                     name="password_confirmation"
@@ -60,11 +62,7 @@ defineProps<{
                 <InputError :message="errors.password_confirmation" />
             </div>
 
-            <Button
-                type="submit"
-                class="mt-4 w-full"
-                :disabled="processing"
-            >
+            <Button type="submit" class="mt-4 w-full" :disabled="processing">
                 <Spinner v-if="processing" />
                 {{ t('auth.resetPassword.submit') }}
             </Button>

@@ -20,7 +20,10 @@ import {
     TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { vCan } from '@/directives/can';
-import { edit as accountsEdit, index as accountsIndex } from '@/routes/economy/me/accounts';
+import {
+    edit as accountsEdit,
+    index as accountsIndex,
+} from '@/routes/economy/me/accounts';
 import type { PaginationMeta } from '@/types';
 
 const { t } = useI18n();
@@ -67,9 +70,7 @@ watchEffect(() => {
             <Heading
                 variant="small"
                 :title="account.name"
-                :description="
-                    `${methodNames.join(', ') || '—'} · ${account.currency}`
-                "
+                :description="`${methodNames.join(', ') || '—'} · ${account.currency}`"
             />
             <TooltipProvider>
                 <div class="flex shrink-0 items-center gap-2">

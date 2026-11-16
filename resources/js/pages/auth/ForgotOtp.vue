@@ -51,10 +51,7 @@ defineProps<{
             </div>
 
             <div class="my-6 flex items-center justify-start">
-                <Button
-                    class="w-full"
-                    :disabled="processing"
-                >
+                <Button class="w-full" :disabled="processing">
                     <Spinner v-if="processing" />
                     {{ t('auth.forgotOtp.submit') }}
                 </Button>
@@ -63,7 +60,9 @@ defineProps<{
 
         <div class="space-x-1 text-center text-sm text-muted-foreground">
             <span>{{ t('auth.forgotPassword.return') }}</span>
-            <TextLink :href="login()">{{ t('auth.forgotPassword.login') }}</TextLink>
+            <TextLink :href="login()">{{
+                t('auth.forgotPassword.login')
+            }}</TextLink>
         </div>
     </div>
 </template>

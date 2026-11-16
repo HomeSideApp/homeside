@@ -34,14 +34,18 @@ const { t } = useI18n();
             class="space-y-4 rounded-lg border border-destructive/20 bg-destructive/5 p-4"
         >
             <div class="relative space-y-0.5 text-destructive">
-                <p class="font-medium">{{ t('settings.deleteAccount.warning') }}</p>
+                <p class="font-medium">
+                    {{ t('settings.deleteAccount.warning') }}
+                </p>
                 <p class="text-sm">
                     {{ t('settings.deleteAccount.caution') }}
                 </p>
             </div>
             <Dialog>
                 <DialogTrigger as-child>
-                    <Button variant="destructive" data-test="delete-user-button"
+                    <Button
+                        variant="destructive"
+                        data-test="delete-user-button"
                         >{{ t('settings.deleteAccount.title') }}</Button
                     >
                 </DialogTrigger>
@@ -57,18 +61,22 @@ const { t } = useI18n();
                         v-slot="{ errors, processing, reset, clearErrors }"
                     >
                         <DialogHeader class="space-y-3">
-                            <DialogTitle
-                                >{{ t('settings.deleteAccount.confirmationTitle') }}</DialogTitle
-                            >
+                            <DialogTitle>{{
+                                t('settings.deleteAccount.confirmationTitle')
+                            }}</DialogTitle>
                             <DialogDescription>
-                                {{ t('settings.deleteAccount.confirmationDescription') }}
+                                {{
+                                    t(
+                                        'settings.deleteAccount.confirmationDescription',
+                                    )
+                                }}
                             </DialogDescription>
                         </DialogHeader>
 
                         <div class="grid gap-2">
-                            <Label for="password" class="sr-only"
-                                >{{ t('auth.password') }}</Label
-                            >
+                            <Label for="password" class="sr-only">{{
+                                t('auth.password')
+                            }}</Label>
                             <PasswordInput
                                 id="password"
                                 name="password"

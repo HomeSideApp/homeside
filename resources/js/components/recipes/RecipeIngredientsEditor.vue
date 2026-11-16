@@ -17,7 +17,13 @@ import {
 } from '@/components/ui/combobox';
 import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import { useHousehold } from '@/composables/useHousehold';
 
 interface Product {
@@ -61,9 +67,14 @@ const page = usePage();
 
 // Watch for new products arriving via flash data
 watch(
-    () => (page.props.flash as Record<string, unknown>)?.newProduct as Product | undefined,
+    () =>
+        (page.props.flash as Record<string, unknown>)?.newProduct as
+            Product | undefined,
     (newProduct) => {
-        if (newProduct && !allProducts.value.find((p) => p.id === newProduct.id)) {
+        if (
+            newProduct &&
+            !allProducts.value.find((p) => p.id === newProduct.id)
+        ) {
             allProducts.value.push(newProduct);
         }
     },
@@ -105,7 +116,9 @@ function filteredProducts(clientId: string): Product[] {
         return allProducts.value;
     }
 
-    return allProducts.value.filter((p) => p.name.toLowerCase().includes(query));
+    return allProducts.value.filter((p) =>
+        p.name.toLowerCase().includes(query),
+    );
 }
 
 /** Handle product selection from combobox */
@@ -117,7 +130,9 @@ function selectProduct(ingredient: RecipeIngredient, product: Product | null) {
         searchQueries.value[ingredient.client_id] = product.name;
     }
 
-    props.validate(`ingredients.${props.ingredients.indexOf(ingredient)}.product_id`);
+    props.validate(
+        `ingredients.${props.ingredients.indexOf(ingredient)}.product_id`,
+    );
     props.validate(`ingredients.${props.ingredients.indexOf(ingredient)}.name`);
 }
 
@@ -160,21 +175,45 @@ function getProductDisplayName(productId: string | null): string {
 <template>
     <div class="space-y-4">
         <div class="flex items-center justify-between">
-            <h3 class="text-sm font-medium">{{ t('recipes.ingredientsEditor.title') }}</h3>
-            <Button type="button" variant="outline" size="sm" @click="addIngredient">
+            <h3 class="text-sm font-medium">
+                {{ t('recipes.ingredientsEditor.title') }}
+            </h3>
+            <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                @click="addIngredient"
+            >
                 <Plus class="mr-2 h-4 w-4" />
                 {{ t('recipes.ingredientsEditor.add') }}
             </Button>
         </div>
 
-        <div v-if="ingredients.length === 0" class="rounded-md border border-dashed p-4 text-center text-sm text-muted-foreground">
+        <div
+            v-if="ingredients.length === 0"
+            class="rounded-md border border-dashed p-4 text-center text-sm text-muted-foreground"
+        >
             {{ t('recipes.ingredientsEditor.empty') }}
         </div>
 
-        <div v-for="(ingredient, index) in ingredients" :key="ingredient.client_id" class="rounded-md border p-4 space-y-3">
+        <div
+            v-for="(ingredient, index) in ingredients"
+            :key="ingredient.client_id"
+            class="space-y-3 rounded-md border p-4"
+        >
             <div class="flex items-center justify-between">
-                <span class="text-xs font-medium text-muted-foreground">{{ t('recipes.ingredientsEditor.ingredientN', { index: index + 1 }) }}</span>
-                <Button type="button" variant="ghost" size="icon" class="h-7 w-7 text-destructive" @click="removeIngredient(index)">
+                <span class="text-xs font-medium text-muted-foreground">{{
+                    t('recipes.ingredientsEditor.ingredientN', {
+                        index: index + 1,
+                    })
+                }}</span>
+                <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    class="h-7 w-7 text-destructive"
+                    @click="removeIngredient(index)"
+                >
                     <Trash2 class="h-4 w-4" />
                 </Button>
             </div>
@@ -182,124 +221,278 @@ function getProductDisplayName(productId: string | null): string {
             <FieldGroup>
                 <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <Field>
-                        <FieldLabel :for="`ingredient-name-${index}`">{{ t('recipes.ingredientsEditor.name') }}</FieldLabel>
+                        <FieldLabel :for="`ingredient-name-${index}`">{{
+                            t('recipes.ingredientsEditor.name')
+                        }}</FieldLabel>
                         <Input
                             :id="`ingredient-name-${index}`"
                             v-model="ingredient.name"
-                            :placeholder="t('recipes.ingredientsEditor.namePlaceholder')"
+                            :placeholder="
+                                t('recipes.ingredientsEditor.namePlaceholder')
+                            "
                             @blur="validate(`ingredients.${index}.name`)"
                             @input="validate(`ingredients.${index}.name`)"
                         />
-                        <InputError :message="getIngredientError(index, 'name')" />
+                        <InputError
+                            :message="getIngredientError(index, 'name')"
+                        />
                     </Field>
 
                     <Field>
-                        <FieldLabel :for="`ingredient-product-${index}`">{{ t('recipes.ingredientsEditor.product') }}</FieldLabel>
-                        <Combobox :model-value="ingredient.product_id ?? undefined" @update:model-value="(val: AcceptableValue) => {
-                            const product = allProducts.find(p => p.id === val);
-                            selectProduct(ingredient, product ?? null);
-                        }">
-                            <ComboboxAnchor class="flex h-9 w-full items-center justify-between rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50">
+                        <FieldLabel :for="`ingredient-product-${index}`">{{
+                            t('recipes.ingredientsEditor.product')
+                        }}</FieldLabel>
+                        <Combobox
+                            :model-value="ingredient.product_id ?? undefined"
+                            @update:model-value="
+                                (val: AcceptableValue) => {
+                                    const product = allProducts.find(
+                                        (p) => p.id === val,
+                                    );
+                                    selectProduct(ingredient, product ?? null);
+                                }
+                            "
+                        >
+                            <ComboboxAnchor
+                                class="flex h-9 w-full items-center justify-between rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus:ring-1 focus:ring-ring focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                            >
                                 <ComboboxInput
-                                    :placeholder="t('recipes.ingredientsEditor.selectProduct')"
-                                    :model-value="searchQueries[ingredient.client_id] ?? (ingredient.product_id ? getProductDisplayName(ingredient.product_id) : '')"
-                                    @input="(e: Event) => { const target = e.target as HTMLInputElement; searchQueries[ingredient.client_id] = target.value; }"
+                                    :placeholder="
+                                        t(
+                                            'recipes.ingredientsEditor.selectProduct',
+                                        )
+                                    "
+                                    :model-value="
+                                        searchQueries[ingredient.client_id] ??
+                                        (ingredient.product_id
+                                            ? getProductDisplayName(
+                                                  ingredient.product_id,
+                                              )
+                                            : '')
+                                    "
+                                    @input="
+                                        (e: Event) => {
+                                            const target =
+                                                e.target as HTMLInputElement;
+                                            searchQueries[
+                                                ingredient.client_id
+                                            ] = target.value;
+                                        }
+                                    "
                                     class="w-full bg-transparent outline-none placeholder:text-muted-foreground"
                                 />
                             </ComboboxAnchor>
-                            <ComboboxList class="w-[var(--reka-combobox-trigger-width)]">
+                            <ComboboxList
+                                class="w-[var(--reka-combobox-trigger-width)]"
+                            >
                                 <ComboboxEmpty>
-                                    <div class="flex flex-col items-start gap-2 p-2">
-                                        <span class="text-sm text-muted-foreground">
-                                            {{ t('recipes.ingredientsEditor.noProductsFound') }}
+                                    <div
+                                        class="flex flex-col items-start gap-2 p-2"
+                                    >
+                                        <span
+                                            class="text-sm text-muted-foreground"
+                                        >
+                                            {{
+                                                t(
+                                                    'recipes.ingredientsEditor.noProductsFound',
+                                                )
+                                            }}
                                         </span>
                                         <Button
                                             type="button"
                                             variant="outline"
                                             size="sm"
-                                            :disabled="creatingProducts[ingredient.client_id] || !(searchQueries[ingredient.client_id]?.length > 0)"
-                                            @click="createPersonalProduct(ingredient)"
+                                            :disabled="
+                                                creatingProducts[
+                                                    ingredient.client_id
+                                                ] ||
+                                                !(
+                                                    searchQueries[
+                                                        ingredient.client_id
+                                                    ]?.length > 0
+                                                )
+                                            "
+                                            @click="
+                                                createPersonalProduct(
+                                                    ingredient,
+                                                )
+                                            "
                                         >
                                             <Plus class="mr-1 h-3 w-3" />
-                                            {{ t('recipes.ingredientsEditor.createPersonalProduct', { name: searchQueries[ingredient.client_id] }) }}
+                                            {{
+                                                t(
+                                                    'recipes.ingredientsEditor.createPersonalProduct',
+                                                    {
+                                                        name: searchQueries[
+                                                            ingredient.client_id
+                                                        ],
+                                                    },
+                                                )
+                                            }}
                                         </Button>
                                     </div>
                                 </ComboboxEmpty>
                                 <ComboboxItem
-                                    v-for="product in filteredProducts(ingredient.client_id)"
+                                    v-for="product in filteredProducts(
+                                        ingredient.client_id,
+                                    )"
                                     :key="product.id"
                                     :value="product.id"
                                     class="text-left"
                                 >
-                                    <Check v-if="ingredient.product_id === product.id" class="mr-2 h-4 w-4 shrink-0" />
-                                    <span class="flex-1">{{ product.name }}</span>
-                                    <span v-if="product.is_personal" class="text-xs text-muted-foreground">(personal)</span>
+                                    <Check
+                                        v-if="
+                                            ingredient.product_id === product.id
+                                        "
+                                        class="mr-2 h-4 w-4 shrink-0"
+                                    />
+                                    <span class="flex-1">{{
+                                        product.name
+                                    }}</span>
+                                    <span
+                                        v-if="product.is_personal"
+                                        class="text-xs text-muted-foreground"
+                                        >(personal)</span
+                                    >
                                 </ComboboxItem>
                             </ComboboxList>
                         </Combobox>
-                        <InputError :message="getIngredientError(index, 'product_id')" />
+                        <InputError
+                            :message="getIngredientError(index, 'product_id')"
+                        />
                     </Field>
 
                     <Field>
-                        <FieldLabel :for="`ingredient-quantity-${index}`">{{ t('recipes.ingredientsEditor.quantity') }}</FieldLabel>
+                        <FieldLabel :for="`ingredient-quantity-${index}`">{{
+                            t('recipes.ingredientsEditor.quantity')
+                        }}</FieldLabel>
                         <Input
                             :id="`ingredient-quantity-${index}`"
                             :model-value="ingredient.quantity ?? undefined"
-                            @update:model-value="(val: string | number) => { ingredient.quantity = val ? Number(val) : null; validate(`ingredients.${index}.quantity`); }"
+                            @update:model-value="
+                                (val: string | number) => {
+                                    ingredient.quantity = val
+                                        ? Number(val)
+                                        : null;
+                                    validate(`ingredients.${index}.quantity`);
+                                }
+                            "
                             type="number"
                             min="0"
                             step="0.01"
                             placeholder="0"
                             @blur="validate(`ingredients.${index}.quantity`)"
                         />
-                        <InputError :message="getIngredientError(index, 'quantity')" />
+                        <InputError
+                            :message="getIngredientError(index, 'quantity')"
+                        />
                     </Field>
 
                     <Field>
-                        <FieldLabel :for="`ingredient-unit-${index}`">{{ t('recipes.ingredientsEditor.unit') }}</FieldLabel>
+                        <FieldLabel :for="`ingredient-unit-${index}`">{{
+                            t('recipes.ingredientsEditor.unit')
+                        }}</FieldLabel>
                         <Input
                             :id="`ingredient-unit-${index}`"
                             :model-value="ingredient.unit ?? undefined"
-                            :placeholder="t('recipes.ingredientsEditor.unitPlaceholder')"
-                            @update:model-value="(val: string | number) => { ingredient.unit = val ? String(val) : null; validate(`ingredients.${index}.unit`); }"
+                            :placeholder="
+                                t('recipes.ingredientsEditor.unitPlaceholder')
+                            "
+                            @update:model-value="
+                                (val: string | number) => {
+                                    ingredient.unit = val ? String(val) : null;
+                                    validate(`ingredients.${index}.unit`);
+                                }
+                            "
                             @blur="validate(`ingredients.${index}.unit`)"
                         />
-                        <InputError :message="getIngredientError(index, 'unit')" />
+                        <InputError
+                            :message="getIngredientError(index, 'unit')"
+                        />
                     </Field>
 
                     <Field>
-                        <FieldLabel :for="`ingredient-preparation-${index}`">{{ t('recipes.ingredientsEditor.preparation') }}</FieldLabel>
+                        <FieldLabel :for="`ingredient-preparation-${index}`">{{
+                            t('recipes.ingredientsEditor.preparation')
+                        }}</FieldLabel>
                         <Input
                             :id="`ingredient-preparation-${index}`"
                             :model-value="ingredient.preparation ?? undefined"
-                            :placeholder="t('recipes.ingredientsEditor.preparationPlaceholder')"
-                            @update:model-value="(val: string | number) => { ingredient.preparation = val ? String(val) : null; validate(`ingredients.${index}.preparation`); }"
+                            :placeholder="
+                                t(
+                                    'recipes.ingredientsEditor.preparationPlaceholder',
+                                )
+                            "
+                            @update:model-value="
+                                (val: string | number) => {
+                                    ingredient.preparation = val
+                                        ? String(val)
+                                        : null;
+                                    validate(
+                                        `ingredients.${index}.preparation`,
+                                    );
+                                }
+                            "
                             @blur="validate(`ingredients.${index}.preparation`)"
                         />
-                        <InputError :message="getIngredientError(index, 'preparation')" />
+                        <InputError
+                            :message="getIngredientError(index, 'preparation')"
+                        />
                     </Field>
 
                     <Field>
-                        <FieldLabel :for="`ingredient-notes-${index}`">{{ t('recipes.ingredientsEditor.notes') }}</FieldLabel>
+                        <FieldLabel :for="`ingredient-notes-${index}`">{{
+                            t('recipes.ingredientsEditor.notes')
+                        }}</FieldLabel>
                         <Input
                             :id="`ingredient-notes-${index}`"
                             :model-value="ingredient.notes ?? undefined"
-                            :placeholder="t('recipes.ingredientsEditor.notesPlaceholder')"
-                            @update:model-value="(val: string | number) => { ingredient.notes = val ? String(val) : null; validate(`ingredients.${index}.notes`); }"
+                            :placeholder="
+                                t('recipes.ingredientsEditor.notesPlaceholder')
+                            "
+                            @update:model-value="
+                                (val: string | number) => {
+                                    ingredient.notes = val ? String(val) : null;
+                                    validate(`ingredients.${index}.notes`);
+                                }
+                            "
                             @blur="validate(`ingredients.${index}.notes`)"
                         />
-                        <InputError :message="getIngredientError(index, 'notes')" />
+                        <InputError
+                            :message="getIngredientError(index, 'notes')"
+                        />
                     </Field>
 
                     <Field v-if="sections.length > 0">
-                        <FieldLabel :for="`ingredient-section-${index}`">{{ t('recipes.ingredientsEditor.section') }}</FieldLabel>
-                        <Select :model-value="ingredient.section_id ?? '__none__'" @update:model-value="(val: AcceptableValue) => { ingredient.section_id = val === '__none__' ? null : String(val); validate(`ingredients.${index}.section_id`); }">
+                        <FieldLabel :for="`ingredient-section-${index}`">{{
+                            t('recipes.ingredientsEditor.section')
+                        }}</FieldLabel>
+                        <Select
+                            :model-value="ingredient.section_id ?? '__none__'"
+                            @update:model-value="
+                                (val: AcceptableValue) => {
+                                    ingredient.section_id =
+                                        val === '__none__' ? null : String(val);
+                                    validate(`ingredients.${index}.section_id`);
+                                }
+                            "
+                        >
                             <SelectTrigger>
-                                <SelectValue :placeholder="t('recipes.ingredientsEditor.noSection')" />
+                                <SelectValue
+                                    :placeholder="
+                                        t('recipes.ingredientsEditor.noSection')
+                                    "
+                                />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="__none__">{{ t('recipes.ingredientsEditor.noSection') }}</SelectItem>
-                                <SelectItem v-for="section in sections" :key="section.client_id" :value="section.client_id">
+                                <SelectItem value="__none__">{{
+                                    t('recipes.ingredientsEditor.noSection')
+                                }}</SelectItem>
+                                <SelectItem
+                                    v-for="section in sections"
+                                    :key="section.client_id"
+                                    :value="section.client_id"
+                                >
                                     {{ section.name }}
                                 </SelectItem>
                             </SelectContent>
@@ -311,9 +504,22 @@ function getProductDisplayName(productId: string | null): string {
                             <Checkbox
                                 :id="`ingredient-optional-${index}`"
                                 :checked="ingredient.optional"
-                                @update:checked="(val: boolean) => { ingredient.optional = val; validate(`ingredients.${index}.optional`); }"
+                                @update:checked="
+                                    (val: boolean) => {
+                                        ingredient.optional = val;
+                                        validate(
+                                            `ingredients.${index}.optional`,
+                                        );
+                                    }
+                                "
                             />
-                            <label :for="`ingredient-optional-${index}`" class="text-sm">{{ t('recipes.ingredientsEditor.optional') }}</label>
+                            <label
+                                :for="`ingredient-optional-${index}`"
+                                class="text-sm"
+                                >{{
+                                    t('recipes.ingredientsEditor.optional')
+                                }}</label
+                            >
                         </div>
                     </Field>
                 </div>

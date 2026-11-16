@@ -65,7 +65,9 @@ defineProps<{
 
         <div class="space-x-1 text-center text-sm text-muted-foreground">
             <span>{{ t('auth.forgotPassword.return') }}</span>
-            <TextLink :href="login()">{{ t('auth.forgotPassword.login') }}</TextLink>
+            <TextLink :href="login()">{{
+                t('auth.forgotPassword.login')
+            }}</TextLink>
         </div>
     </div>
 </template>

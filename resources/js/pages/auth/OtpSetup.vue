@@ -15,7 +15,10 @@ defineProps<{
 
 const { t } = useI18n();
 watchEffect(() => {
-    setLayoutProps({ title: t('auth.otp.setupTitle'), description: t('auth.otp.setupDescription') });
+    setLayoutProps({
+        title: t('auth.otp.setupTitle'),
+        description: t('auth.otp.setupDescription'),
+    });
 });
 </script>
 
@@ -23,26 +26,35 @@ watchEffect(() => {
     <Head :title="t('auth.otp.setupTitle')" />
 
     <div class="flex flex-col gap-6">
-        <div class="text-center space-y-2">
+        <div class="space-y-2 text-center">
             <p class="text-sm text-muted-foreground">
                 {{ t('auth.otp.scan') }}
             </p>
         </div>
 
         <div class="flex justify-center">
-            <div class="bg-white p-4 rounded-lg border">
-                <img :src="`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrCodeUrl)}`"
-                     alt="QR Code OTP"
-                     class="w-48 h-48" />
+            <div class="rounded-lg border bg-white p-4">
+                <img
+                    :src="`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrCodeUrl)}`"
+                    alt="QR Code OTP"
+                    class="h-48 w-48"
+                />
             </div>
         </div>
 
-        <div class="bg-muted p-3 rounded-lg">
-            <p class="text-xs text-muted-foreground mb-1">{{ t('auth.otp.manual') }}</p>
-            <code class="text-sm font-mono break-all">{{ secret }}</code>
+        <div class="rounded-lg bg-muted p-3">
+            <p class="mb-1 text-xs text-muted-foreground">
+                {{ t('auth.otp.manual') }}
+            </p>
+            <code class="font-mono text-sm break-all">{{ secret }}</code>
         </div>
 
-        <Form :action="confirmUrl" method="POST" v-slot="{ errors, processing }" class="flex flex-col gap-4">
+        <Form
+            :action="confirmUrl"
+            method="POST"
+            v-slot="{ errors, processing }"
+            class="flex flex-col gap-4"
+        >
             <div class="grid gap-2">
                 <Label for="code">{{ t('auth.otp.verificationCode') }}</Label>
                 <Input
@@ -61,7 +73,11 @@ watchEffect(() => {
             </div>
 
             <Button type="submit" class="w-full" :disabled="processing">
-                {{ processing ? t('auth.otp.verifying') : t('auth.otp.activate') }}
+                {{
+                    processing
+                        ? t('auth.otp.verifying')
+                        : t('auth.otp.activate')
+                }}
             </Button>
         </Form>
     </div>

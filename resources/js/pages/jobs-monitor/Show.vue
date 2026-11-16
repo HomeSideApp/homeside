@@ -38,7 +38,12 @@ interface JobDetail {
     finished_at: string | null;
     created_at: string;
     original_job_run: { id: string; status: string; created_at: string } | null;
-    retries: Array<{ id: string; status: string; duration_ms: number | null; created_at: string }>;
+    retries: Array<{
+        id: string;
+        status: string;
+        duration_ms: number | null;
+        created_at: string;
+    }>;
 }
 
 const props = defineProps<{ job: JobDetail }>();
@@ -73,7 +78,9 @@ function retry(): void {
     });
 }
 
-function statusVariant(status: string): 'default' | 'secondary' | 'destructive' | 'outline' {
+function statusVariant(
+    status: string,
+): 'default' | 'secondary' | 'destructive' | 'outline' {
     if (status === 'processed') {
         return 'default';
     }
@@ -100,16 +107,14 @@ function statusVariant(status: string): 'default' | 'secondary' | 'destructive' 
                     <h1 class="text-2xl font-bold tracking-tight">
                         {{ job.short_job_class }}
                     </h1>
-                    <Badge :variant="statusVariant(job.status)">{{ job.status }}</Badge>
+                    <Badge :variant="statusVariant(job.status)">{{
+                        job.status
+                    }}</Badge>
                 </div>
                 <p class="text-sm text-muted-foreground">{{ job.job_class }}</p>
             </div>
 
-            <Button
-                v-if="canRetry"
-                :disabled="form.processing"
-                @click="retry"
-            >
+            <Button v-if="canRetry" :disabled="form.processing" @click="retry">
                 {{ form.processing ? 'Reintentando…' : 'Reintentar job' }}
             </Button>
         </div>
@@ -182,12 +187,18 @@ function statusVariant(status: string): 'default' | 'secondary' | 'destructive' 
                             <dd>{{ job.finished_at ?? '—' }}</dd>
                         </div>
                         <div class="flex justify-between gap-4">
-                            <dt class="text-muted-foreground">CPU (usuario / sistema)</dt>
+                            <dt class="text-muted-foreground">
+                                CPU (usuario / sistema)
+                            </dt>
                             <dd>
-                                {{ job.cpu_user ?? '—' }} / {{ job.cpu_system ?? '—' }}
+                                {{ job.cpu_user ?? '—' }} /
+                                {{ job.cpu_system ?? '—' }}
                             </dd>
                         </div>
-                        <div v-if="job.tags && job.tags.length" class="flex justify-between gap-4">
+                        <div
+                            v-if="job.tags && job.tags.length"
+                            class="flex justify-between gap-4"
+                        >
                             <dt class="text-muted-foreground">Tags</dt>
                             <dd class="flex flex-wrap justify-end gap-1">
                                 <Badge
@@ -196,11 +207,16 @@ function statusVariant(status: string): 'default' | 'secondary' | 'destructive' 
                                     variant="secondary"
                                     class="text-xs"
                                 >
-                                    {{ typeof tag === 'string' ? tag : tag.tag }}
+                                    {{
+                                        typeof tag === 'string' ? tag : tag.tag
+                                    }}
                                 </Badge>
                             </dd>
                         </div>
-                        <div v-if="job.original_job_run" class="flex justify-between gap-4">
+                        <div
+                            v-if="job.original_job_run"
+                            class="flex justify-between gap-4"
+                        >
                             <dt class="text-muted-foreground">Job original</dt>
                             <dd>
                                 <a
@@ -211,7 +227,10 @@ function statusVariant(status: string): 'default' | 'secondary' | 'destructive' 
                                 </a>
                             </dd>
                         </div>
-                        <div v-if="job.retries.length" class="flex justify-between gap-4">
+                        <div
+                            v-if="job.retries.length"
+                            class="flex justify-between gap-4"
+                        >
                             <dt class="text-muted-foreground">Reintentos</dt>
                             <dd class="flex flex-wrap justify-end gap-1">
                                 <a
@@ -239,7 +258,7 @@ function statusVariant(status: string): 'default' | 'secondary' | 'destructive' 
                 <CardContent>
                     <pre
                         class="max-h-80 overflow-auto rounded-md bg-muted p-3 text-xs"
-                    >{{ job.stack_trace }}</pre>
+                        >{{ job.stack_trace }}</pre>
                 </CardContent>
             </Card>
 
@@ -252,9 +271,9 @@ function statusVariant(status: string): 'default' | 'secondary' | 'destructive' 
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <pre class="max-h-80 overflow-auto rounded-md bg-muted p-3 text-xs">{{
-                        JSON.stringify(job.payload, null, 2)
-                    }}</pre>
+                    <pre
+                        class="max-h-80 overflow-auto rounded-md bg-muted p-3 text-xs"
+                        >{{ JSON.stringify(job.payload, null, 2) }}</pre>
                 </CardContent>
             </Card>
         </div>

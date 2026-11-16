@@ -5,10 +5,16 @@ export function useHousehold() {
     const page = usePage();
 
     // householdContext es la key compartida por HandleInertiaRequests
-    const householdContext = computed(() => (page.props as any).householdContext as any);
-    const activeHousehold = computed(() => householdContext.value?.active || null);
+    const householdContext = computed(
+        () => (page.props as any).householdContext as any,
+    );
+    const activeHousehold = computed(
+        () => householdContext.value?.active || null,
+    );
     const households = computed(() => householdContext.value?.households || []);
-    const enabledModules = computed(() => (householdContext.value?.enabledModules as string[]) || []);
+    const enabledModules = computed(
+        () => (householdContext.value?.enabledModules as string[]) || [],
+    );
 
     // ID del hogar actual (de la URL o del default)
     const currentHouseholdId = computed(() => {
@@ -27,8 +33,8 @@ export function useHousehold() {
         const id = householdId || currentHouseholdId.value;
 
         if (!id) {
-return path;
-}
+            return path;
+        }
 
         // Si la path ya empieza con /households/, reemplazar el ID
         if (path.startsWith('/households/')) {
@@ -40,10 +46,14 @@ return path;
 
     // Navegar manteniendo el contexto de hogar
     function navigateTo(path: string, options?: { preserveScroll?: boolean }) {
-        router.get(householdUrl(path), {}, {
-            preserveState: true,
-            ...options,
-        });
+        router.get(
+            householdUrl(path),
+            {},
+            {
+                preserveState: true,
+                ...options,
+            },
+        );
     }
 
     // Cambiar de hogar

@@ -54,15 +54,7 @@ interface EditorSnapshot {
 
 type DragMode = 'create' | 'move' | 'resize';
 
-type ResizeHandle =
-    | 'nw'
-    | 'n'
-    | 'ne'
-    | 'e'
-    | 'se'
-    | 's'
-    | 'sw'
-    | 'w';
+type ResizeHandle = 'nw' | 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w';
 
 const { t } = useI18n();
 
@@ -138,9 +130,7 @@ function pushHistory(): void {
 }
 
 const canUndo = computed(() => historyIndex.value > 0);
-const canRedo = computed(
-    () => historyIndex.value < history.value.length - 1,
-);
+const canRedo = computed(() => historyIndex.value < history.value.length - 1);
 
 function undo(): void {
     if (!canUndo.value) {
@@ -304,10 +294,7 @@ function resizeRect(
  */
 function endDrag(): void {
     if (dragMode.value === 'create' && draft.value) {
-        if (
-            draft.value.width < MIN_CROP ||
-            draft.value.height < MIN_CROP
-        ) {
+        if (draft.value.width < MIN_CROP || draft.value.height < MIN_CROP) {
             draft.value = null;
         }
     }
@@ -466,11 +453,7 @@ async function bakeRotation(): Promise<void> {
 
     context.translate(width / 2, height / 2);
     context.rotate((degrees * Math.PI) / 180);
-    context.drawImage(
-        image,
-        -image.naturalWidth / 2,
-        -image.naturalHeight / 2,
-    );
+    context.drawImage(image, -image.naturalWidth / 2, -image.naturalHeight / 2);
 
     rotatedUrl.value = canvas.toDataURL('image/jpeg', 0.92);
 }
@@ -588,10 +571,8 @@ const handlePosition = (handle: ResizeHandle): string => {
         : handle.includes('e')
           ? 'right-0'
           : 'left-1/2';
-    const translateY =
-        vertical === 'top-1/2' ? '-translate-y-1/2' : '';
-    const translateX =
-        horizontal === 'left-1/2' ? '-translate-x-1/2' : '';
+    const translateY = vertical === 'top-1/2' ? '-translate-y-1/2' : '';
+    const translateX = horizontal === 'left-1/2' ? '-translate-x-1/2' : '';
 
     return `${vertical} ${horizontal} ${translateX} ${translateY}`;
 };
@@ -673,10 +654,12 @@ onUnmounted(() => {
                 }}</DialogDescription>
             </DialogHeader>
 
-            <div class="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto pr-1">
+            <div
+                class="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto pr-1"
+            >
                 <div
                     ref="stage"
-                    class="relative mx-auto w-full max-w-2xl shrink-0 cursor-crosshair touch-none select-none overflow-hidden rounded-lg border bg-muted"
+                    class="relative mx-auto w-full max-w-2xl shrink-0 cursor-crosshair touch-none overflow-hidden rounded-lg border bg-muted select-none"
                     :style="stageStyle"
                     @pointerdown="startCreate"
                 >
@@ -701,9 +684,7 @@ onUnmounted(() => {
                             class="absolute size-3 rounded-sm border border-primary bg-background"
                             :class="handlePosition(handle)"
                             :style="{ cursor: resizeCursor(handle) }"
-                            @pointerdown.stop="
-                                startResize($event, handle)
-                            "
+                            @pointerdown.stop="startResize($event, handle)"
                         />
                     </div>
                 </div>
@@ -721,9 +702,7 @@ onUnmounted(() => {
                                     size="icon-sm"
                                     :disabled="!canUndo"
                                     :aria-label="
-                                        t(
-                                            'economy.import.processing.undo',
-                                        )
+                                        t('economy.import.processing.undo')
                                     "
                                     @click="undo"
                                 >
@@ -731,9 +710,7 @@ onUnmounted(() => {
                                 </Button>
                             </TooltipTrigger>
                             <TooltipContent>
-                                {{
-                                    t('economy.import.processing.undo')
-                                }}
+                                {{ t('economy.import.processing.undo') }}
                                 (Ctrl+Z)
                             </TooltipContent>
                         </Tooltip>
@@ -744,9 +721,7 @@ onUnmounted(() => {
                                     size="icon-sm"
                                     :disabled="!canRedo"
                                     :aria-label="
-                                        t(
-                                            'economy.import.processing.redo',
-                                        )
+                                        t('economy.import.processing.redo')
                                     "
                                     @click="redo"
                                 >
@@ -754,9 +729,7 @@ onUnmounted(() => {
                                 </Button>
                             </TooltipTrigger>
                             <TooltipContent>
-                                {{
-                                    t('economy.import.processing.redo')
-                                }}
+                                {{ t('economy.import.processing.redo') }}
                                 (Ctrl+Shift+Z)
                             </TooltipContent>
                         </Tooltip>

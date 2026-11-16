@@ -34,12 +34,21 @@ defineProps<{
     hasAiProvider: boolean;
     aiExtraPrompt: string | null;
     draft?: RecipeDraft | null;
-    referenceRecipes: Array<{ id: string; name: string; collection_path: string | null }>;
+    referenceRecipes: Array<{
+        id: string;
+        name: string;
+        collection_path: string | null;
+    }>;
     collections: Array<{ id: string; path: string }>;
 }>();
 
 defineOptions({
-    layout: { breadcrumbs: [{ title: 'Recetas', href: '/recipes' }, { title: 'Crear', href: '#' }] },
+    layout: {
+        breadcrumbs: [
+            { title: 'Recetas', href: '/recipes' },
+            { title: 'Crear', href: '#' },
+        ],
+    },
 });
 </script>
 
@@ -47,7 +56,11 @@ defineOptions({
     <Head title="Crear Receta" />
 
     <div class="flex flex-col gap-6 px-8 py-6">
-        <Heading variant="small" title="Crear Receta" description="Crea una nueva receta de cocina" />
+        <Heading
+            variant="small"
+            title="Crear Receta"
+            description="Crea una nueva receta de cocina"
+        />
 
         <RecipeForm
             action="/recipes"

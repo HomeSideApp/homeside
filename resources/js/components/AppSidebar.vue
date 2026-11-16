@@ -49,7 +49,10 @@ import {
     roles as adminRolesIndex,
 } from '@/routes/admin';
 import { translations as adminTranslationsIndex } from '@/routes/admin';
-import { settings as adminRegistrationSettingsIndex, index as adminRegistrationsIndex } from '@/routes/admin/registrations';
+import {
+    settings as adminRegistrationSettingsIndex,
+    index as adminRegistrationsIndex,
+} from '@/routes/admin/registrations';
 import { index as contactsIndex } from '@/routes/contacts';
 import { index as contactSourcesIndex } from '@/routes/contacts/sources';
 import { index as personalEconomyIndex } from '@/routes/economy/me';
@@ -113,14 +116,12 @@ function toSaasNavItems(items: SaasNavItemProp[] | undefined): NavItem[] {
         return [];
     }
 
-    return items.map(
-        (item): NavItem => ({
-            title: item.title ?? '',
-            href: item.href ?? '#',
-            icon: (item.icon ? saasIconMap[item.icon] : undefined) ?? Activity,
-            ...(item.permission ? { permission: item.permission } : {}),
-        }),
-    );
+    return items.map((item): NavItem => ({
+        title: item.title ?? '',
+        href: item.href ?? '#',
+        icon: (item.icon ? saasIconMap[item.icon] : undefined) ?? Activity,
+        ...(item.permission ? { permission: item.permission } : {}),
+    }));
 }
 
 const saasNavItems = computed<NavItem[]>(() =>

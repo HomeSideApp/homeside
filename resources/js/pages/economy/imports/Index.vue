@@ -220,9 +220,7 @@ function statusLabel(statusValue: string): string {
 
         <Empty v-if="imports.data.length === 0">
             <EmptyHeader>
-                <EmptyTitle>{{
-                    t('economy.import.index.empty')
-                }}</EmptyTitle>
+                <EmptyTitle>{{ t('economy.import.index.empty') }}</EmptyTitle>
             </EmptyHeader>
         </Empty>
 
@@ -289,6 +287,5 @@ function statusLabel(statusValue: string): string {
                 </CardContent>
             </Card>
         </div>
-
     </div>
 </template>

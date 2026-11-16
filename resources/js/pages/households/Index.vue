@@ -40,7 +40,11 @@ function getInitial(name: string): string {
 
     <div class="flex flex-col gap-6 px-8 py-6">
         <div class="flex items-center justify-between">
-            <Heading variant="small" :title="t('households.index.title')" :description="t('households.index.description')" />
+            <Heading
+                variant="small"
+                :title="t('households.index.title')"
+                :description="t('households.index.description')"
+            />
             <Button v-can="'households.create'" as-child>
                 <Link href="/households/create">
                     <Plus class="mr-2 size-4" />
@@ -52,7 +56,10 @@ function getInitial(name: string): string {
         <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <Card v-for="h in households" :key="h.id" class="overflow-hidden">
                 <!-- Image or Color + Initial -->
-                <div v-if="h.image_url" class="aspect-video w-full overflow-hidden">
+                <div
+                    v-if="h.image_url"
+                    class="aspect-video w-full overflow-hidden"
+                >
                     <img
                         :src="h.image_url"
                         :alt="h.name"
@@ -61,26 +68,41 @@ function getInitial(name: string): string {
                 </div>
                 <div
                     v-else
-                    class="flex aspect-video w-full items-center justify-center text-white text-5xl font-bold"
-                    :style="{ backgroundColor: h.color || getFallbackColor(h.id) }"
+                    class="flex aspect-video w-full items-center justify-center text-5xl font-bold text-white"
+                    :style="{
+                        backgroundColor: h.color || getFallbackColor(h.id),
+                    }"
                 >
                     {{ getInitial(h.name) }}
                 </div>
                 <CardHeader class="pb-2">
-                    <CardTitle class="flex items-center justify-between text-base">
+                    <CardTitle
+                        class="flex items-center justify-between text-base"
+                    >
                         <span>{{ h.name }}</span>
                         <Badge variant="secondary" class="ml-2 shrink-0">
-                            {{ t('households.index.membersCount', { count: h.members_count }) }}
+                            {{
+                                t('households.index.membersCount', {
+                                    count: h.members_count,
+                                })
+                            }}
                         </Badge>
                     </CardTitle>
                 </CardHeader>
                 <CardContent>
                     <div class="flex gap-2">
-                        <Button variant="outline" size="sm" class="flex-1" @click="enterHousehold(h.id)">
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            class="flex-1"
+                            @click="enterHousehold(h.id)"
+                        >
                             {{ t('households.index.enter') }}
                         </Button>
                         <Button variant="ghost" size="sm" as-child>
-                            <Link :href="`/households/${h.id}`">{{ t('households.index.details') }}</Link>
+                            <Link :href="`/households/${h.id}`">{{
+                                t('households.index.details')
+                            }}</Link>
                         </Button>
                     </div>
                 </CardContent>

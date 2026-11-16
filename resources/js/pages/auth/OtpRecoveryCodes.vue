@@ -19,12 +19,16 @@ defineOptions({
     <Head title="Códigos de Recuperación" />
 
     <div class="flex flex-col gap-6">
-        <div class="bg-amber-50 border border-amber-200 rounded-lg p-4 dark:bg-amber-950 dark:border-amber-800">
-            <p class="text-sm text-amber-800 dark:text-amber-200 font-medium">
+        <div
+            class="rounded-lg border border-amber-200 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-950"
+        >
+            <p class="text-sm font-medium text-amber-800 dark:text-amber-200">
                 Importante: Guarda estos códigos en un lugar seguro.
             </p>
-            <p class="text-sm text-amber-700 dark:text-amber-300 mt-1">
-                Cada código solo se puede usar una vez. Si pierdes acceso a tu app de autenticación, necesitarás estos códigos para acceder a tu cuenta.
+            <p class="mt-1 text-sm text-amber-700 dark:text-amber-300">
+                Cada código solo se puede usar una vez. Si pierdes acceso a tu
+                app de autenticación, necesitarás estos códigos para acceder a
+                tu cuenta.
             </p>
         </div>
 
@@ -34,8 +38,11 @@ defineOptions({
             </CardHeader>
             <CardContent>
                 <div class="grid grid-cols-2 gap-2">
-                    <div v-for="(code, index) in recoveryCodes" :key="index"
-                         class="bg-muted p-2 rounded text-center font-mono text-sm">
+                    <div
+                        v-for="(code, index) in recoveryCodes"
+                        :key="index"
+                        class="rounded bg-muted p-2 text-center font-mono text-sm"
+                    >
                         {{ code }}
                     </div>
                 </div>

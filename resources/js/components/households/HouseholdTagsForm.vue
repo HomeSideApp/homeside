@@ -4,7 +4,13 @@ import { ref, toRef } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import {
+    Card,
+    CardContent,
+    CardHeader,
+    CardTitle,
+    CardDescription,
+} from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
@@ -49,7 +55,9 @@ function handleTagKeydown(event: KeyboardEvent) {
     <Card>
         <CardHeader>
             <CardTitle>{{ t('households.tags.title') }}</CardTitle>
-            <CardDescription>{{ t('households.tags.description') }}</CardDescription>
+            <CardDescription>{{
+                t('households.tags.description')
+            }}</CardDescription>
         </CardHeader>
         <CardContent class="grid gap-4">
             <!-- Assigned tags -->
@@ -80,7 +88,9 @@ function handleTagKeydown(event: KeyboardEvent) {
 
             <!-- Available predefined tags -->
             <div v-if="availableTags.length > 0">
-                <Label class="mb-2 block">{{ t('households.tags.available') }}</Label>
+                <Label class="mb-2 block">{{
+                    t('households.tags.available')
+                }}</Label>
                 <div class="flex flex-wrap gap-2">
                     <Badge
                         v-for="tag in availableTags"
@@ -97,7 +107,9 @@ function handleTagKeydown(event: KeyboardEvent) {
 
             <!-- Custom tag input -->
             <div>
-                <Label for="new-tag" class="mb-2 block">{{ t('households.tags.create') }}</Label>
+                <Label for="new-tag" class="mb-2 block">{{
+                    t('households.tags.create')
+                }}</Label>
                 <div class="flex gap-2">
                     <Input
                         id="new-tag"

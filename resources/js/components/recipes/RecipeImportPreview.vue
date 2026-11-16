@@ -122,7 +122,10 @@ const emit = defineEmits<{
 
 /** Map ingredient name → match candidate for inline display */
 const ingredientMatches = computed(() => {
-    const map = new Map<string, { status: string; product_name: string | null; score: number }>();
+    const map = new Map<
+        string,
+        { status: string; product_name: string | null; score: number }
+    >();
 
     for (const m of props.matches) {
         if (typeof m === 'object' && 'ingredient' in m) {
@@ -137,7 +140,11 @@ function getIngredientMatch(name: string) {
     return ingredientMatches.value.get(name) ?? null;
 }
 
-function matchLabel(match: { status: string; product_name: string | null; score: number }): string {
+function matchLabel(match: {
+    status: string;
+    product_name: string | null;
+    score: number;
+}): string {
     if (match.status === 'MATCHED') {
         return `✅ ${match.product_name ?? ''} (${Math.round(match.score * 100)}%)`;
     }
@@ -150,37 +157,83 @@ const sectionNames = computed(() => {
 
     for (const section of props.recipe.sections) {
         if (section.id) {
-names.set(section.id, section.name);
-}
+            names.set(section.id, section.name);
+        }
 
         if (section.client_id) {
-names.set(section.client_id, section.name);
-}
+            names.set(section.client_id, section.name);
+        }
     }
 
     return names;
 });
 
-const metadata = computed(() => [
-    { label: t('recipes.importPreview.servings'), value: props.recipe.servings },
-    { label: t('recipes.importPreview.yield'), value: props.recipe.yield_text },
-    { label: t('recipes.importPreview.difficulty'), value: props.recipe.difficulty },
-    { label: t('recipes.importPreview.cuisine'), value: props.recipe.cuisine },
-    { label: t('recipes.importPreview.language'), value: props.recipe.locale },
-    { label: t('recipes.importPreview.method'), value: props.recipe.cooking_method },
-    { label: t('recipes.importPreview.category'), value: props.recipe.recipe_category },
-    { label: t('recipes.importPreview.author'), value: props.recipe.author },
-    { label: t('recipes.importPreview.source'), value: props.recipe.source_name },
-    { label: t('recipes.importPreview.sourceFormat'), value: props.recipe.source_type },
-    { label: t('recipes.importPreview.preparation'), value: formatTime(props.recipe.prep_time_seconds) },
-    { label: t('recipes.importPreview.cooking'), value: formatTime(props.recipe.cook_time_seconds) },
-    { label: t('recipes.importPreview.totalTime'), value: formatTime(props.recipe.total_time_seconds) },
-].filter((item) => item.value !== null && item.value !== undefined && item.value !== ''));
+const metadata = computed(() =>
+    [
+        {
+            label: t('recipes.importPreview.servings'),
+            value: props.recipe.servings,
+        },
+        {
+            label: t('recipes.importPreview.yield'),
+            value: props.recipe.yield_text,
+        },
+        {
+            label: t('recipes.importPreview.difficulty'),
+            value: props.recipe.difficulty,
+        },
+        {
+            label: t('recipes.importPreview.cuisine'),
+            value: props.recipe.cuisine,
+        },
+        {
+            label: t('recipes.importPreview.language'),
+            value: props.recipe.locale,
+        },
+        {
+            label: t('recipes.importPreview.method'),
+            value: props.recipe.cooking_method,
+        },
+        {
+            label: t('recipes.importPreview.category'),
+            value: props.recipe.recipe_category,
+        },
+        {
+            label: t('recipes.importPreview.author'),
+            value: props.recipe.author,
+        },
+        {
+            label: t('recipes.importPreview.source'),
+            value: props.recipe.source_name,
+        },
+        {
+            label: t('recipes.importPreview.sourceFormat'),
+            value: props.recipe.source_type,
+        },
+        {
+            label: t('recipes.importPreview.preparation'),
+            value: formatTime(props.recipe.prep_time_seconds),
+        },
+        {
+            label: t('recipes.importPreview.cooking'),
+            value: formatTime(props.recipe.cook_time_seconds),
+        },
+        {
+            label: t('recipes.importPreview.totalTime'),
+            value: formatTime(props.recipe.total_time_seconds),
+        },
+    ].filter(
+        (item) =>
+            item.value !== null &&
+            item.value !== undefined &&
+            item.value !== '',
+    ),
+);
 
 function formatTime(seconds: number | null): string | null {
     if (seconds === null) {
-return null;
-}
+        return null;
+    }
 
     const hours = Math.floor(seconds / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
@@ -188,23 +241,30 @@ return null;
     const parts: string[] = [];
 
     if (hours > 0) {
-parts.push(`${hours}h`);
-}
+        parts.push(`${hours}h`);
+    }
 
     if (minutes > 0) {
-parts.push(`${minutes}min`);
-}
+        parts.push(`${minutes}min`);
+    }
 
     if (remainingSeconds > 0 || parts.length === 0) {
-parts.push(`${remainingSeconds}s`);
-}
+        parts.push(`${remainingSeconds}s`);
+    }
 
     return parts.join(' ');
 }
 
-function formatQuantity(item: { quantity: number | null; quantity_text: string | null; unit: string | null; name?: string }): string {
+function formatQuantity(item: {
+    quantity: number | null;
+    quantity_text: string | null;
+    unit: string | null;
+    name?: string;
+}): string {
     if (item.quantity !== null) {
-        return item.unit ? `${item.quantity} ${item.unit}` : String(item.quantity);
+        return item.unit
+            ? `${item.quantity} ${item.unit}`
+            : String(item.quantity);
     }
 
     if (item.quantity_text && item.quantity_text !== item.name) {
@@ -215,7 +275,7 @@ function formatQuantity(item: { quantity: number | null; quantity_text: string |
 }
 
 function sectionName(sectionId: string | null): string | null {
-    return sectionId ? sectionNames.value.get(sectionId) ?? null : null;
+    return sectionId ? (sectionNames.value.get(sectionId) ?? null) : null;
 }
 
 function warningMessage(warning: ImportWarning | string): string {
@@ -241,10 +301,16 @@ function dietName(diet: string): string {
 
 <template>
     <div class="space-y-6">
-        <div class="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
-            <h3 class="text-lg font-medium">Vista previa de la receta importada</h3>
+        <div
+            class="flex flex-col justify-between gap-3 sm:flex-row sm:items-center"
+        >
+            <h3 class="text-lg font-medium">
+                Vista previa de la receta importada
+            </h3>
             <div class="flex gap-2">
-                <Button variant="outline" @click="emit('cancel')">Cancelar</Button>
+                <Button variant="outline" @click="emit('cancel')"
+                    >Cancelar</Button
+                >
                 <Button v-can="'recipes.store'" @click="emit('confirm')">
                     <CheckCircle class="mr-2 h-4 w-4" />
                     {{ t('recipes.importPreview.confirmImport') }}
@@ -258,7 +324,9 @@ function dietName(diet: string): string {
                 :key="index"
                 class="flex items-start gap-2 rounded-md border border-yellow-200 bg-yellow-50 p-3 text-sm dark:border-yellow-800 dark:bg-yellow-950"
             >
-                <AlertCircle class="mt-0.5 h-4 w-4 shrink-0 text-yellow-600 dark:text-yellow-400" />
+                <AlertCircle
+                    class="mt-0.5 h-4 w-4 shrink-0 text-yellow-600 dark:text-yellow-400"
+                />
                 <span>{{ warningMessage(warning) }}</span>
             </div>
         </div>
@@ -266,7 +334,11 @@ function dietName(diet: string): string {
         <div v-if="matches.length > 0" class="space-y-2">
             <h4 class="text-sm font-medium">Coincidencias de productos</h4>
             <div class="flex flex-wrap gap-2">
-                <Badge v-for="(match, index) in matches" :key="index" variant="secondary">
+                <Badge
+                    v-for="(match, index) in matches"
+                    :key="index"
+                    variant="secondary"
+                >
                     {{ matchName(match) }}
                 </Badge>
             </div>
@@ -285,47 +357,83 @@ function dietName(diet: string): string {
                     />
                     <div class="min-w-0 space-y-2">
                         <CardTitle>{{ recipe.name }}</CardTitle>
-                        <p v-if="recipe.description" class="text-sm text-muted-foreground">{{ recipe.description }}</p>
+                        <p
+                            v-if="recipe.description"
+                            class="text-sm text-muted-foreground"
+                        >
+                            {{ recipe.description }}
+                        </p>
                     </div>
                 </div>
             </CardHeader>
 
             <CardContent class="space-y-6">
-                <section v-if="metadata.length > 0" class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                    <div v-for="item in metadata" :key="item.label" class="rounded-md border bg-muted/20 p-3">
-                        <p class="text-xs text-muted-foreground">{{ item.label }}</p>
+                <section
+                    v-if="metadata.length > 0"
+                    class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4"
+                >
+                    <div
+                        v-for="item in metadata"
+                        :key="item.label"
+                        class="rounded-md border bg-muted/20 p-3"
+                    >
+                        <p class="text-xs text-muted-foreground">
+                            {{ item.label }}
+                        </p>
                         <p class="mt-1 text-sm font-medium">{{ item.value }}</p>
                     </div>
                 </section>
 
                 <section v-if="recipe.source_url" class="space-y-1">
                     <h4 class="text-sm font-medium">URL de origen</h4>
-                    <p class="break-all text-sm text-muted-foreground">{{ recipe.source_url }}</p>
+                    <p class="text-sm break-all text-muted-foreground">
+                        {{ recipe.source_url }}
+                    </p>
                 </section>
 
                 <section v-if="recipe.tags.length > 0" class="space-y-2">
-                    <h4 class="text-sm font-medium">Tags ({{ recipe.tags.length }})</h4>
+                    <h4 class="text-sm font-medium">
+                        Tags ({{ recipe.tags.length }})
+                    </h4>
                     <div class="flex flex-wrap gap-2">
-                        <Badge v-for="tag in recipe.tags" :key="tag" variant="secondary" class="gap-1">
+                        <Badge
+                            v-for="tag in recipe.tags"
+                            :key="tag"
+                            variant="secondary"
+                            class="gap-1"
+                        >
                             <Tag class="h-3 w-3" />
                             {{ tag }}
                         </Badge>
                     </div>
                 </section>
 
-                <section v-if="recipe.suitable_for_diet?.length" class="space-y-2">
+                <section
+                    v-if="recipe.suitable_for_diet?.length"
+                    class="space-y-2"
+                >
                     <h4 class="text-sm font-medium">Dietas compatibles</h4>
                     <div class="flex flex-wrap gap-2">
-                        <Badge v-for="diet in recipe.suitable_for_diet" :key="diet" variant="outline">
+                        <Badge
+                            v-for="diet in recipe.suitable_for_diet"
+                            :key="diet"
+                            variant="outline"
+                        >
                             {{ dietName(diet) }}
                         </Badge>
                     </div>
                 </section>
 
                 <section v-if="recipe.sections.length > 0" class="space-y-2">
-                    <h4 class="text-sm font-medium">Secciones ({{ recipe.sections.length }})</h4>
+                    <h4 class="text-sm font-medium">
+                        Secciones ({{ recipe.sections.length }})
+                    </h4>
                     <div class="flex flex-wrap gap-2">
-                        <Badge v-for="section in recipe.sections" :key="section.client_id ?? section.name" variant="outline">
+                        <Badge
+                            v-for="section in recipe.sections"
+                            :key="section.client_id ?? section.name"
+                            variant="outline"
+                        >
                             {{ section.name }}
                         </Badge>
                     </div>
@@ -334,7 +442,9 @@ function dietName(diet: string): string {
                 <Separator />
 
                 <section v-if="recipe.ingredients.length > 0" class="space-y-3">
-                    <h4 class="text-sm font-medium">Ingredientes ({{ recipe.ingredients.length }})</h4>
+                    <h4 class="text-sm font-medium">
+                        Ingredientes ({{ recipe.ingredients.length }})
+                    </h4>
                     <div class="grid gap-2 md:grid-cols-2">
                         <div
                             v-for="ingredient in recipe.ingredients"
@@ -342,30 +452,74 @@ function dietName(diet: string): string {
                             class="rounded-md border p-3 text-sm"
                         >
                             <div class="flex flex-wrap items-center gap-2">
-                                <span class="font-medium">{{ ingredient.name }}</span>
-                                <Badge v-if="ingredient.optional" variant="outline">Opcional</Badge>
-                                <Badge v-if="sectionName(ingredient.section_id)" variant="secondary">
+                                <span class="font-medium">{{
+                                    ingredient.name
+                                }}</span>
+                                <Badge
+                                    v-if="ingredient.optional"
+                                    variant="outline"
+                                    >Opcional</Badge
+                                >
+                                <Badge
+                                    v-if="sectionName(ingredient.section_id)"
+                                    variant="secondary"
+                                >
                                     {{ sectionName(ingredient.section_id) }}
                                 </Badge>
                             </div>
-                            <p v-if="formatQuantity(ingredient)" class="mt-1 text-muted-foreground">
+                            <p
+                                v-if="formatQuantity(ingredient)"
+                                class="mt-1 text-muted-foreground"
+                            >
                                 Cantidad: {{ formatQuantity(ingredient) }}
                             </p>
-                            <p v-if="ingredient.preparation" class="text-muted-foreground">
-                                {{ t('recipes.importPreview.preparationLabel', { value: ingredient.preparation }) }}
+                            <p
+                                v-if="ingredient.preparation"
+                                class="text-muted-foreground"
+                            >
+                                {{
+                                    t(
+                                        'recipes.importPreview.preparationLabel',
+                                        { value: ingredient.preparation },
+                                    )
+                                }}
                             </p>
-                            <p v-if="getIngredientMatch(ingredient.name)" class="mt-1">
-                                <Badge :variant="getIngredientMatch(ingredient.name)!.status === 'MATCHED' ? 'default' : 'secondary'" class="text-xs">
-                                    {{ matchLabel(getIngredientMatch(ingredient.name)!) }}
+                            <p
+                                v-if="getIngredientMatch(ingredient.name)"
+                                class="mt-1"
+                            >
+                                <Badge
+                                    :variant="
+                                        getIngredientMatch(ingredient.name)!
+                                            .status === 'MATCHED'
+                                            ? 'default'
+                                            : 'secondary'
+                                    "
+                                    class="text-xs"
+                                >
+                                    {{
+                                        matchLabel(
+                                            getIngredientMatch(
+                                                ingredient.name,
+                                            )!,
+                                        )
+                                    }}
                                 </Badge>
                             </p>
-                            <p v-if="ingredient.notes" class="text-muted-foreground">Notas: {{ ingredient.notes }}</p>
+                            <p
+                                v-if="ingredient.notes"
+                                class="text-muted-foreground"
+                            >
+                                Notas: {{ ingredient.notes }}
+                            </p>
                         </div>
                     </div>
                 </section>
 
                 <section v-if="recipe.cookware.length > 0" class="space-y-3">
-                    <h4 class="text-sm font-medium">Utensilios ({{ recipe.cookware.length }})</h4>
+                    <h4 class="text-sm font-medium">
+                        Utensilios ({{ recipe.cookware.length }})
+                    </h4>
                     <div class="flex flex-wrap gap-2">
                         <Badge
                             v-for="item in recipe.cookware"
@@ -375,10 +529,16 @@ function dietName(diet: string): string {
                         >
                             <CookingPot class="h-3 w-3" />
                             {{ item.name }}
-                            <span v-if="formatQuantity(item)" class="font-normal text-muted-foreground">
+                            <span
+                                v-if="formatQuantity(item)"
+                                class="font-normal text-muted-foreground"
+                            >
                                 {{ formatQuantity(item) }}
                             </span>
-                            <span v-if="sectionName(item.section_id)" class="font-normal text-muted-foreground">
+                            <span
+                                v-if="sectionName(item.section_id)"
+                                class="font-normal text-muted-foreground"
+                            >
                                 · {{ sectionName(item.section_id) }}
                             </span>
                         </Badge>
@@ -386,16 +546,25 @@ function dietName(diet: string): string {
                 </section>
 
                 <section v-if="recipe.supplies.length > 0" class="space-y-2">
-                    <h4 class="text-sm font-medium">Suministros ({{ recipe.supplies.length }})</h4>
+                    <h4 class="text-sm font-medium">
+                        Suministros ({{ recipe.supplies.length }})
+                    </h4>
                     <div class="flex flex-wrap gap-2">
-                        <Badge v-for="supply in recipe.supplies" :key="supply" variant="outline">{{ supply }}</Badge>
+                        <Badge
+                            v-for="supply in recipe.supplies"
+                            :key="supply"
+                            variant="outline"
+                            >{{ supply }}</Badge
+                        >
                     </div>
                 </section>
 
                 <Separator />
 
                 <section v-if="recipe.steps.length > 0" class="space-y-3">
-                    <h4 class="text-sm font-medium">Pasos ({{ recipe.steps.length }})</h4>
+                    <h4 class="text-sm font-medium">
+                        Pasos ({{ recipe.steps.length }})
+                    </h4>
                     <ol class="space-y-3">
                         <li
                             v-for="(step, index) in recipe.steps"
@@ -404,14 +573,20 @@ function dietName(diet: string): string {
                         >
                             <div class="mb-3 flex flex-wrap items-center gap-2">
                                 <Badge>{{ index + 1 }}</Badge>
-                                <span v-if="sectionName(step.section_id)" class="text-sm font-medium">
+                                <span
+                                    v-if="sectionName(step.section_id)"
+                                    class="text-sm font-medium"
+                                >
                                     {{ sectionName(step.section_id) }}
                                 </span>
                             </div>
 
                             <img
                                 v-if="step.image_url || step.image_path"
-                                :src="(step.image_url || step.image_path) ?? undefined"
+                                :src="
+                                    (step.image_url || step.image_path) ??
+                                    undefined
+                                "
                                 :alt="`Paso ${index + 1}`"
                                 class="mb-3 max-h-72 w-full rounded-md object-cover sm:w-80"
                             />
@@ -420,12 +595,24 @@ function dietName(diet: string): string {
                                 v-if="recipe.source_type === 'cooklang'"
                                 :text="step.description"
                             />
-                            <p v-else class="whitespace-pre-line text-sm">{{ step.description }}</p>
+                            <p v-else class="text-sm whitespace-pre-line">
+                                {{ step.description }}
+                            </p>
 
-                            <div v-if="step.timers.length > 0" class="mt-3 flex flex-wrap gap-2">
-                                <Badge v-for="timer in step.timers" :key="timer.client_id ?? timer.order" variant="outline" class="gap-1">
+                            <div
+                                v-if="step.timers.length > 0"
+                                class="mt-3 flex flex-wrap gap-2"
+                            >
+                                <Badge
+                                    v-for="timer in step.timers"
+                                    :key="timer.client_id ?? timer.order"
+                                    variant="outline"
+                                    class="gap-1"
+                                >
                                     <Clock class="h-3 w-3" />
-                                    <span v-if="timer.name">{{ timer.name }}:</span>
+                                    <span v-if="timer.name"
+                                        >{{ timer.name }}:</span
+                                    >
                                     {{ formatTime(timer.duration_seconds) }}
                                 </Badge>
                             </div>
@@ -436,7 +623,11 @@ function dietName(diet: string): string {
                 <section v-if="recipe.notes" class="space-y-2">
                     <Separator />
                     <h4 class="text-sm font-medium">Notas</h4>
-                    <p class="whitespace-pre-line text-sm text-muted-foreground">{{ recipe.notes }}</p>
+                    <p
+                        class="text-sm whitespace-pre-line text-muted-foreground"
+                    >
+                        {{ recipe.notes }}
+                    </p>
                 </section>
             </CardContent>
         </Card>

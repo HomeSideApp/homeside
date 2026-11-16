@@ -6,15 +6,23 @@ import { useI18n } from 'vue-i18n';
 import AppLogoIcon from '@/components/AppLogoIcon.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+    Card,
+    CardContent,
+    CardFooter,
+    CardHeader,
+    CardTitle,
+} from '@/components/ui/card';
 import { getFallbackColor } from '@/lib/avatarFallbackColors';
 import { create, switchMethod } from '@/routes/households';
 import { accept, cancel } from '@/routes/households/invitations';
 
 const page = usePage();
 const household = computed(() => page.props.householdContext as any);
-const households = computed(() => household.value?.households as any[] || []);
-const pendingInvitations = computed(() => (page.props.pendingInvitations as any[]) || []);
+const households = computed(() => (household.value?.households as any[]) || []);
+const pendingInvitations = computed(
+    () => (page.props.pendingInvitations as any[]) || [],
+);
 const { t } = useI18n();
 
 function getInitial(name: string): string {
@@ -37,19 +45,30 @@ function cancelInvitation(invitationId: string) {
 <template>
     <Head :title="t('households.select.head')" />
 
-    <div class="flex min-h-screen items-center justify-center bg-background p-4">
+    <div
+        class="flex min-h-screen items-center justify-center bg-background p-4"
+    >
         <div class="w-full max-w-3xl space-y-8">
             <div class="text-center">
                 <div class="mx-auto mb-4 flex items-center justify-center">
                     <AppLogoIcon class="size-32 object-contain" />
                 </div>
-                <h1 class="text-2xl font-bold">{{ t('households.select.welcome', { name: page.props.name }) }}</h1>
+                <h1 class="text-2xl font-bold">
+                    {{
+                        t('households.select.welcome', {
+                            name: page.props.name,
+                        })
+                    }}
+                </h1>
                 <p class="mt-2 text-muted-foreground">
                     {{ t('households.select.description') }}
                 </p>
             </div>
 
-            <div v-if="households.length > 0" class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div
+                v-if="households.length > 0"
+                class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
+            >
                 <Card
                     v-for="h in households"
                     :key="h.id"
@@ -57,7 +76,10 @@ function cancelInvitation(invitationId: string) {
                     @click="selectHousehold(h.id)"
                 >
                     <!-- Image or Color + Initial -->
-                    <div v-if="h.image_url" class="aspect-video w-full overflow-hidden">
+                    <div
+                        v-if="h.image_url"
+                        class="aspect-video w-full overflow-hidden"
+                    >
                         <img
                             :src="h.image_url"
                             :alt="h.name"
@@ -66,25 +88,50 @@ function cancelInvitation(invitationId: string) {
                     </div>
                     <div
                         v-else
-                        class="flex aspect-video w-full items-center justify-center text-white text-5xl font-bold"
-                        :style="{ backgroundColor: h.color || getFallbackColor(h.id) }"
+                        class="flex aspect-video w-full items-center justify-center text-5xl font-bold text-white"
+                        :style="{
+                            backgroundColor: h.color || getFallbackColor(h.id),
+                        }"
                     >
                         {{ getInitial(h.name) }}
                     </div>
                     <CardHeader class="pb-2">
-                        <CardTitle class="flex items-center justify-between text-base">
+                        <CardTitle
+                            class="flex items-center justify-between text-base"
+                        >
                             <span>{{ h.name }}</span>
                             <Badge
-                                :variant="h.members?.find((m: any) => m.user?.id === page.props.auth.user?.id)?.role === 'admin' ? 'default' : 'secondary'"
+                                :variant="
+                                    h.members?.find(
+                                        (m: any) =>
+                                            m.user?.id ===
+                                            page.props.auth.user?.id,
+                                    )?.role === 'admin'
+                                        ? 'default'
+                                        : 'secondary'
+                                "
                                 class="ml-2 shrink-0"
                             >
-                                {{ h.members?.find((m: any) => m.user?.id === page.props.auth.user?.id)?.role === 'admin' ? t('households.select.administrator') : t('households.select.member') }}
+                                {{
+                                    h.members?.find(
+                                        (m: any) =>
+                                            m.user?.id ===
+                                            page.props.auth.user?.id,
+                                    )?.role === 'admin'
+                                        ? t('households.select.administrator')
+                                        : t('households.select.member')
+                                }}
                             </Badge>
                         </CardTitle>
                     </CardHeader>
                     <CardContent>
                         <p class="text-sm text-muted-foreground">
-                            {{ t('households.select.memberCount', h.members_count) }}
+                            {{
+                                t(
+                                    'households.select.memberCount',
+                                    h.members_count,
+                                )
+                            }}
                         </p>
                     </CardContent>
                     <CardFooter>
@@ -96,7 +143,9 @@ function cancelInvitation(invitationId: string) {
             </div>
 
             <div v-if="pendingInvitations.length > 0" class="space-y-4">
-                <h2 class="text-lg font-semibold text-muted-foreground">{{ t('households.select.pendingInvitations') }}</h2>
+                <h2 class="text-lg font-semibold text-muted-foreground">
+                    {{ t('households.select.pendingInvitations') }}
+                </h2>
                 <div class="grid gap-4 sm:grid-cols-2">
                     <Card
                         v-for="invitation in pendingInvitations"
@@ -110,10 +159,17 @@ function cancelInvitation(invitationId: string) {
                             </CardTitle>
                         </CardHeader>
                         <CardFooter class="flex gap-2">
-                            <Button size="sm" @click="acceptInvitation(invitation.id)">
+                            <Button
+                                size="sm"
+                                @click="acceptInvitation(invitation.id)"
+                            >
                                 {{ t('households.select.acceptInvitation') }}
                             </Button>
-                            <Button variant="outline" size="sm" @click="cancelInvitation(invitation.id)">
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                @click="cancelInvitation(invitation.id)"
+                            >
                                 <X class="mr-1 size-4" />
                                 {{ t('households.select.rejectInvitation') }}
                             </Button>

@@ -222,13 +222,13 @@ watchEffect(() => {
                             size="sm"
                             @click="processingOpen = true"
                         >
-                            <Sliders data-icon="inline-start" aria-hidden="true" />
+                            <Sliders
+                                data-icon="inline-start"
+                                aria-hidden="true"
+                            />
                             {{ t('economy.import.processing.adjust') }}
                         </Button>
-                        <Badge
-                            v-if="form.image_processing"
-                            variant="secondary"
-                        >
+                        <Badge v-if="form.image_processing" variant="secondary">
                             {{ t('economy.import.processing.applied') }}
                         </Badge>
                         <Button

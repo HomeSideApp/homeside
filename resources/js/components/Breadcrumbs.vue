@@ -29,11 +29,15 @@ const resolveTitle = (title: string): string => (te(title) ? t(title) : title);
             <template v-for="(item, index) in breadcrumbs" :key="index">
                 <BreadcrumbItem>
                     <template v-if="index === breadcrumbs.length - 1">
-                        <BreadcrumbPage>{{ resolveTitle(item.title) }}</BreadcrumbPage>
+                        <BreadcrumbPage>{{
+                            resolveTitle(item.title)
+                        }}</BreadcrumbPage>
                     </template>
                     <template v-else>
                         <BreadcrumbLink as-child>
-                            <Link :href="item.href">{{ resolveTitle(item.title) }}</Link>
+                            <Link :href="item.href">{{
+                                resolveTitle(item.title)
+                            }}</Link>
                         </BreadcrumbLink>
                     </template>
                 </BreadcrumbItem>

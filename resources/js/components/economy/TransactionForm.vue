@@ -506,10 +506,10 @@ watch(
                             </Select>
                             <FieldDescription>{{
                                 t('economy.account.help')
-                            }}</FieldDescription
-                            ><FieldError v-if="form.errors.account_id">{{
-                                form.errors.account_id
-                            }}</FieldError></Field
+                            }}</FieldDescription><FieldError
+                                v-if="form.errors.account_id"
+                                >{{ form.errors.account_id }}</FieldError
+                            ></Field
                         >
                         <Field
                             ><FieldLabel for="place">{{

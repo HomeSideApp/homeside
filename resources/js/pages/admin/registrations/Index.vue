@@ -142,15 +142,19 @@ function channelLabel(value: string | null): string {
     }
 
     return (
-        props.options.channels.find((option) => option.value === value)?.label ??
-        value
+        props.options.channels.find((option) => option.value === value)
+            ?.label ?? value
     );
 }
 
 const rejectTarget = ref<PendingRegistration | null>(null);
 
 function approve(target: PendingRegistration): void {
-    router.post(approveRegistration(target.id).url, {}, { preserveScroll: true });
+    router.post(
+        approveRegistration(target.id).url,
+        {},
+        { preserveScroll: true },
+    );
 }
 
 function confirmReject(): void {
@@ -193,7 +197,10 @@ function releaseBlock(block: RegistrationBlockRow): void {
                     <Label for="status-filter">
                         {{ t('admin.registrations.panel.filters.status') }}
                     </Label>
-                    <Select v-model="activeTab" @update:model-value="applyFilters">
+                    <Select
+                        v-model="activeTab"
+                        @update:model-value="applyFilters"
+                    >
                         <SelectTrigger id="status-filter" class="w-44">
                             <SelectValue />
                         </SelectTrigger>
@@ -216,13 +223,20 @@ function releaseBlock(block: RegistrationBlockRow): void {
                     <Label for="channel-filter">
                         {{ t('admin.registrations.panel.filters.channel') }}
                     </Label>
-                    <Select v-model="channel" @update:model-value="applyFilters">
+                    <Select
+                        v-model="channel"
+                        @update:model-value="applyFilters"
+                    >
                         <SelectTrigger id="channel-filter" class="w-52">
                             <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
                             <SelectItem value="all">
-                                {{ t('admin.registrations.panel.filters.allChannels') }}
+                                {{
+                                    t(
+                                        'admin.registrations.panel.filters.allChannels',
+                                    )
+                                }}
                             </SelectItem>
                             <SelectItem
                                 v-for="option in options.channels"
@@ -249,15 +263,21 @@ function releaseBlock(block: RegistrationBlockRow): void {
             <TabsList>
                 <TabsTrigger value="pending">
                     {{ t('admin.registrations.panel.tabs.pending') }}
-                    <Badge variant="secondary" class="ms-2">{{ pending.length }}</Badge>
+                    <Badge variant="secondary" class="ms-2">{{
+                        pending.length
+                    }}</Badge>
                 </TabsTrigger>
                 <TabsTrigger value="rejected">
                     {{ t('admin.registrations.panel.tabs.rejected') }}
-                    <Badge variant="secondary" class="ms-2">{{ rejected.length }}</Badge>
+                    <Badge variant="secondary" class="ms-2">{{
+                        rejected.length
+                    }}</Badge>
                 </TabsTrigger>
                 <TabsTrigger value="blocked">
                     {{ t('admin.registrations.panel.tabs.blocked') }}
-                    <Badge variant="secondary" class="ms-2">{{ blocks.length }}</Badge>
+                    <Badge variant="secondary" class="ms-2">{{
+                        blocks.length
+                    }}</Badge>
                 </TabsTrigger>
             </TabsList>
 
@@ -268,7 +288,11 @@ function releaseBlock(block: RegistrationBlockRow): void {
                             {{ t('admin.registrations.panel.pending.title') }}
                         </CardTitle>
                         <CardDescription>
-                            {{ t('admin.registrations.panel.pending.description') }}
+                            {{
+                                t(
+                                    'admin.registrations.panel.pending.description',
+                                )
+                            }}
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
@@ -276,30 +300,39 @@ function releaseBlock(block: RegistrationBlockRow): void {
                             <TableHeader>
                                 <TableRow>
                                     <TableHead>{{
-                                        t('admin.registrations.panel.columns.name')
+                                        t(
+                                            'admin.registrations.panel.columns.name',
+                                        )
                                     }}</TableHead>
                                     <TableHead>{{
-                                        t('admin.registrations.panel.columns.email')
+                                        t(
+                                            'admin.registrations.panel.columns.email',
+                                        )
                                     }}</TableHead>
                                     <TableHead>{{
-                                        t('admin.registrations.panel.columns.channel')
+                                        t(
+                                            'admin.registrations.panel.columns.channel',
+                                        )
                                     }}</TableHead>
                                     <TableHead>{{
-                                        t('admin.registrations.panel.columns.registered')
+                                        t(
+                                            'admin.registrations.panel.columns.registered',
+                                        )
                                     }}</TableHead>
                                     <TableHead>{{
-                                        t('admin.registrations.panel.columns.emailVerified')
+                                        t(
+                                            'admin.registrations.panel.columns.emailVerified',
+                                        )
                                     }}</TableHead>
                                     <TableHead class="text-right">{{
-                                        t('admin.registrations.panel.columns.actions')
+                                        t(
+                                            'admin.registrations.panel.columns.actions',
+                                        )
                                     }}</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                <TableRow
-                                    v-for="row in pending"
-                                    :key="row.id"
-                                >
+                                <TableRow v-for="row in pending" :key="row.id">
                                     <TableCell class="font-medium">{{
                                         row.name
                                     }}</TableCell>
@@ -331,13 +364,8 @@ function releaseBlock(block: RegistrationBlockRow): void {
                                             }}
                                         </Badge>
                                     </TableCell>
-                                    <TableCell
-                                        class="flex justify-end gap-2"
-                                    >
-                                        <Button
-                                            size="sm"
-                                            @click="approve(row)"
-                                        >
+                                    <TableCell class="flex justify-end gap-2">
+                                        <Button size="sm" @click="approve(row)">
                                             <Check class="size-4" />
                                             {{
                                                 t(
@@ -384,7 +412,11 @@ function releaseBlock(block: RegistrationBlockRow): void {
                             {{ t('admin.registrations.panel.rejected.title') }}
                         </CardTitle>
                         <CardDescription>
-                            {{ t('admin.registrations.panel.rejected.description') }}
+                            {{
+                                t(
+                                    'admin.registrations.panel.rejected.description',
+                                )
+                            }}
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
@@ -392,30 +424,39 @@ function releaseBlock(block: RegistrationBlockRow): void {
                             <TableHeader>
                                 <TableRow>
                                     <TableHead>{{
-                                        t('admin.registrations.panel.columns.name')
+                                        t(
+                                            'admin.registrations.panel.columns.name',
+                                        )
                                     }}</TableHead>
                                     <TableHead>{{
-                                        t('admin.registrations.panel.columns.email')
+                                        t(
+                                            'admin.registrations.panel.columns.email',
+                                        )
                                     }}</TableHead>
                                     <TableHead>{{
-                                        t('admin.registrations.panel.columns.rejectedBy')
+                                        t(
+                                            'admin.registrations.panel.columns.rejectedBy',
+                                        )
                                     }}</TableHead>
                                     <TableHead>{{
-                                        t('admin.registrations.panel.columns.rejectedAt')
+                                        t(
+                                            'admin.registrations.panel.columns.rejectedAt',
+                                        )
                                     }}</TableHead>
                                     <TableHead>{{
-                                        t('admin.registrations.panel.columns.reason')
+                                        t(
+                                            'admin.registrations.panel.columns.reason',
+                                        )
                                     }}</TableHead>
                                     <TableHead class="text-right">{{
-                                        t('admin.registrations.panel.columns.actions')
+                                        t(
+                                            'admin.registrations.panel.columns.actions',
+                                        )
                                     }}</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                <TableRow
-                                    v-for="row in rejected"
-                                    :key="row.id"
-                                >
+                                <TableRow v-for="row in rejected" :key="row.id">
                                     <TableCell class="font-medium">{{
                                         row.name
                                     }}</TableCell>
@@ -435,7 +476,11 @@ function releaseBlock(block: RegistrationBlockRow): void {
                                     }}</TableCell>
                                     <TableCell class="text-right">
                                         <Button
-                                            v-if="can('admin.registrations.release-rejection')"
+                                            v-if="
+                                                can(
+                                                    'admin.registrations.release-rejection',
+                                                )
+                                            "
                                             size="sm"
                                             variant="outline"
                                             @click="releaseRejection(row)"
@@ -474,7 +519,11 @@ function releaseBlock(block: RegistrationBlockRow): void {
                             {{ t('admin.registrations.panel.blocked.title') }}
                         </CardTitle>
                         <CardDescription>
-                            {{ t('admin.registrations.panel.blocked.description') }}
+                            {{
+                                t(
+                                    'admin.registrations.panel.blocked.description',
+                                )
+                            }}
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
@@ -482,19 +531,29 @@ function releaseBlock(block: RegistrationBlockRow): void {
                             <TableHeader>
                                 <TableRow>
                                     <TableHead>{{
-                                        t('admin.registrations.panel.columns.reason')
+                                        t(
+                                            'admin.registrations.panel.columns.reason',
+                                        )
                                     }}</TableHead>
                                     <TableHead>{{
-                                        t('admin.registrations.panel.columns.source')
+                                        t(
+                                            'admin.registrations.panel.columns.source',
+                                        )
                                     }}</TableHead>
                                     <TableHead>{{
-                                        t('admin.registrations.panel.columns.createdBy')
+                                        t(
+                                            'admin.registrations.panel.columns.createdBy',
+                                        )
                                     }}</TableHead>
                                     <TableHead>{{
-                                        t('admin.registrations.panel.columns.createdAt')
+                                        t(
+                                            'admin.registrations.panel.columns.createdAt',
+                                        )
                                     }}</TableHead>
                                     <TableHead class="text-right">{{
-                                        t('admin.registrations.panel.columns.actions')
+                                        t(
+                                            'admin.registrations.panel.columns.actions',
+                                        )
                                     }}</TableHead>
                                 </TableRow>
                             </TableHeader>
@@ -504,7 +563,9 @@ function releaseBlock(block: RegistrationBlockRow): void {
                                         row.reason ??
                                         t('admin.registrations.panel.unknown')
                                     }}</TableCell>
-                                    <TableCell>{{ row.source_label }}</TableCell>
+                                    <TableCell>{{
+                                        row.source_label
+                                    }}</TableCell>
                                     <TableCell>{{
                                         row.created_by ??
                                         t('admin.registrations.panel.unknown')
@@ -514,7 +575,11 @@ function releaseBlock(block: RegistrationBlockRow): void {
                                     }}</TableCell>
                                     <TableCell class="text-right">
                                         <Button
-                                            v-if="can('admin.registration-blocks.release')"
+                                            v-if="
+                                                can(
+                                                    'admin.registration-blocks.release',
+                                                )
+                                            "
                                             size="sm"
                                             variant="outline"
                                             @click="releaseBlock(row)"
@@ -563,9 +628,12 @@ function releaseBlock(block: RegistrationBlockRow): void {
                 </DialogTitle>
                 <DialogDescription>
                     {{
-                        t('admin.registrations.panel.rejectDialog.description', {
-                            name: rejectTarget?.name ?? '',
-                        })
+                        t(
+                            'admin.registrations.panel.rejectDialog.description',
+                            {
+                                name: rejectTarget?.name ?? '',
+                            },
+                        )
                     }}
                 </DialogDescription>
             </DialogHeader>

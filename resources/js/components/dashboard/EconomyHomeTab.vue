@@ -53,7 +53,10 @@ const otherCurrenciesDetail = computed(() => {
 const kpiCards = computed(() => [
     {
         label: t('economy.stats.expenses'),
-        value: formatMoney(props.overview.totals.expenses_minor, currency.value),
+        value: formatMoney(
+            props.overview.totals.expenses_minor,
+            currency.value,
+        ),
     },
     {
         label: t('economy.stats.income'),
@@ -159,9 +162,13 @@ const memberConfig = computed<ChartConfig>(() => ({
 <template>
     <div class="flex flex-col gap-6">
         <div class="flex flex-wrap items-center justify-between gap-3">
-            <h3 class="text-lg font-medium">{{ t('dashboard.householdEconomy') }}</h3>
+            <h3 class="text-lg font-medium">
+                {{ t('dashboard.householdEconomy') }}
+            </h3>
             <div class="flex items-center gap-2">
-                <Badge v-if="currency" variant="secondary">{{ currency }}</Badge>
+                <Badge v-if="currency" variant="secondary">{{
+                    currency
+                }}</Badge>
                 <Button as-child variant="outline" size="sm">
                     <Link :href="householdEconomyIndex.url(householdId)">
                         <ReceiptText data-icon="inline-start" />

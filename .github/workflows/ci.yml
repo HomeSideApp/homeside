@@ -130,6 +130,12 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build
+      # Prettier runs the same `resources/` tree ESLint and vue-tsc read, and it
+      # needs no database or server, so it fails fastest. It is blocking because
+      # unformatted code is invisible to the other gates: Lint and Typecheck both
+      # passed while 81 files sat outside the configured style.
+      - name: Formatting (Prettier)
+        run: npm run format:check
       - name: Lint
         run: npm run lint:check
       - name: Typecheck

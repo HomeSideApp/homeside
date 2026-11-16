@@ -143,8 +143,7 @@ onUnmounted(() => clearTimeout(filterTimer));
         <div class="flex items-end gap-2">
             <Button type="button" @click="apply">{{
                 t('economy.ui.filter')
-            }}</Button
-            ><Button type="button" variant="ghost" @click="clear">{{
+            }}</Button><Button type="button" variant="ghost" @click="clear">{{
                 t('economy.ui.clear')
             }}</Button>
         </div>

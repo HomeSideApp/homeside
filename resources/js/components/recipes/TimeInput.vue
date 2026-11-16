@@ -14,8 +14,8 @@ const emit = defineEmits<{
 const hours = computed({
     get: () => {
         if (props.modelValue == null) {
-return null;
-}
+            return null;
+        }
 
         return Math.floor(props.modelValue / 3600) || null;
     },
@@ -27,8 +27,8 @@ return null;
 const minutes = computed({
     get: () => {
         if (props.modelValue == null) {
-return null;
-}
+            return null;
+        }
 
         return Math.floor((props.modelValue % 3600) / 60) || null;
     },
@@ -40,10 +40,10 @@ return null;
 const seconds = computed({
     get: () => {
         if (props.modelValue == null) {
-return null;
-}
+            return null;
+        }
 
-        return (props.modelValue % 60) || null;
+        return props.modelValue % 60 || null;
     },
     set: (val: number | null) => {
         emitValue(hours.value, minutes.value, val);
@@ -68,9 +68,13 @@ function emitValue(h: number | null, m: number | null, s: number | null): void {
             max="23"
             placeholder="h"
             class="w-16"
-            @update:model-value="(val: string | number) => { hours = val ? Number(val) : null; }"
+            @update:model-value="
+                (val: string | number) => {
+                    hours = val ? Number(val) : null;
+                }
+            "
         />
-        <span class="text-muted-foreground text-sm">h</span>
+        <span class="text-sm text-muted-foreground">h</span>
         <Input
             :model-value="minutes ?? undefined"
             type="number"
@@ -78,9 +82,13 @@ function emitValue(h: number | null, m: number | null, s: number | null): void {
             max="59"
             placeholder="m"
             class="w-16"
-            @update:model-value="(val: string | number) => { minutes = val ? Number(val) : null; }"
+            @update:model-value="
+                (val: string | number) => {
+                    minutes = val ? Number(val) : null;
+                }
+            "
         />
-        <span class="text-muted-foreground text-sm">m</span>
+        <span class="text-sm text-muted-foreground">m</span>
         <Input
             :model-value="seconds ?? undefined"
             type="number"
@@ -88,8 +96,12 @@ function emitValue(h: number | null, m: number | null, s: number | null): void {
             max="59"
             placeholder="s"
             class="w-16"
-            @update:model-value="(val: string | number) => { seconds = val ? Number(val) : null; }"
+            @update:model-value="
+                (val: string | number) => {
+                    seconds = val ? Number(val) : null;
+                }
+            "
         />
-        <span class="text-muted-foreground text-sm">s</span>
+        <span class="text-sm text-muted-foreground">s</span>
     </div>
 </template>
