@@ -7,6 +7,7 @@ use App\Actions\Auth\CreateAuthenticationBootstrap;
 use App\Contracts\AuthenticationBootstrapRepository;
 use App\Enums\AuthenticationBootstrapPurpose;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\ConfirmAuthenticationBootstrapRequest;
 use App\Http\Requests\ResendEnrolmentLinkRequest;
 use App\Models\AuthenticationBootstrap;
 use App\Models\User;
@@ -151,21 +152,19 @@ final class AuthenticationBootstrapController extends Controller
     /**
      * Verify the code, consume the token and, when eligible, start the session.
      *
-     * @param  Request  $request  The incoming HTTP request.
+     * @param  ConfirmAuthenticationBootstrapRequest  $request  The validated request.
      * @param  string  $token  The plaintext bootstrap token.
      * @param  AuthenticationBootstrapRepository  $bootstraps  The bootstrap repository.
      * @param  CompleteAuthenticationBootstrap  $complete  The redemption action.
      * @return Response|RedirectResponse The HTTP response.
      */
     public function confirm(
-        Request $request,
+        ConfirmAuthenticationBootstrapRequest $request,
         string $token,
         AuthenticationBootstrapRepository $bootstraps,
         CompleteAuthenticationBootstrap $complete,
     ): Response|RedirectResponse {
-        $validated = $request->validate([
-            'code' => ['required', 'string', 'size:6'],
-        ]);
+        $validated = $request->validated();
 
         $bootstrap = $bootstraps->findActive($token, AuthenticationBootstrapPurpose::TwoFactorEnrolment);
 

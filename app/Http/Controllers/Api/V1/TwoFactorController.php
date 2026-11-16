@@ -7,9 +7,11 @@ use App\Contracts\AuthenticationBootstrapRepository;
 use App\Enums\ApprovalStatus;
 use App\Enums\AuthenticationBootstrapPurpose;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\ConfirmTwoFactorFromBootstrapApiRequest;
 use App\Http\Requests\ConfirmTwoFactorRequest;
 use App\Http\Requests\RegenerateRecoveryCodesRequest;
 use App\Http\Requests\SecurityConfirmedRequest;
+use App\Http\Requests\SetupTwoFactorFromBootstrapApiRequest;
 use App\Http\Requests\SetupTwoFactorRequest;
 use App\Http\Resources\Users\UserResource;
 use App\Models\User;
@@ -48,15 +50,13 @@ final class TwoFactorController extends Controller
      * client that holds the unconsumed enrolment token. The token itself is
      * carried in the request body; a client never receives it from a link.
      *
-     * @param  Request  $request  The incoming HTTP request.
+     * @param  SetupTwoFactorFromBootstrapApiRequest  $request  The validated request.
      * @param  AuthenticationBootstrapRepository  $bootstraps  The bootstrap repository.
      * @return JsonResponse The JSON response.
      */
-    public function setupFromBootstrap(Request $request, AuthenticationBootstrapRepository $bootstraps): JsonResponse
+    public function setupFromBootstrap(SetupTwoFactorFromBootstrapApiRequest $request, AuthenticationBootstrapRepository $bootstraps): JsonResponse
     {
-        $validated = $request->validate([
-            'enrolment_token' => ['required', 'string'],
-        ]);
+        $validated = $request->validated();
 
         $bootstrap = $bootstraps->findActive($validated['enrolment_token'], AuthenticationBootstrapPurpose::TwoFactorEnrolment);
 
@@ -99,21 +99,17 @@ final class TwoFactorController extends Controller
      * token is issued ONLY when approval, email verification and account status
      * all allow a session; otherwise the client is told which step is missing.
      *
-     * @param  Request  $request  The incoming HTTP request.
+     * @param  ConfirmTwoFactorFromBootstrapApiRequest  $request  The validated request.
      * @param  AuthenticationBootstrapRepository  $bootstraps  The bootstrap repository.
      * @param  CompleteAuthenticationBootstrap  $complete  The redemption action.
      * @return JsonResponse The JSON response.
      */
     public function confirmFromBootstrap(
-        Request $request,
+        ConfirmTwoFactorFromBootstrapApiRequest $request,
         AuthenticationBootstrapRepository $bootstraps,
         CompleteAuthenticationBootstrap $complete,
     ): JsonResponse {
-        $validated = $request->validate([
-            'enrolment_token' => ['required', 'string'],
-            'challenge_id' => ['required', 'string'],
-            'code' => ['required', 'string', 'size:6'],
-        ]);
+        $validated = $request->validated();
 
         $challengeKey = $this->bootstrapChallengeKey($validated['challenge_id']);
         $challenge = Cache::pull($challengeKey);
