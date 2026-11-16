@@ -20,7 +20,10 @@ use function Laravel\Prompts\text;
  */
 class CreateUser extends Command
 {
-    protected $signature = 'app:create-user';
+    protected $signature = 'app:create-user
+                            {--name= : The name of the new user}
+                            {--email= : The email address of the new user}
+                            {--role= : The slug of the role assigned to the new user}';
 
     protected $description = 'Create a new user and send invitation email';
 
@@ -31,6 +34,10 @@ class CreateUser extends Command
      */
     public function handle(): int
     {
+        if ($this->hasAnyOption()) {
+            return $this->handleNonInteractive();
+        }
+
         $name = text(
             label: __('console.create_user.name'),
             required: true,
@@ -65,6 +72,89 @@ class CreateUser extends Command
             return self::SUCCESS;
         }
 
+        $this->createUser($name, $email, $role);
+
+        return self::SUCCESS;
+    }
+
+    /**
+     * Determine whether any of the non-interactive options was supplied.
+     *
+     * @return bool True when at least one option carries a value.
+     */
+    private function hasAnyOption(): bool
+    {
+        foreach ($this->suppliedOptions() as $value) {
+            if ($this->isFilled($value)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Create the user from the command options without any prompt.
+     *
+     * @return int The integer result.
+     */
+    private function handleNonInteractive(): int
+    {
+        $missing = [];
+        foreach ($this->suppliedOptions() as $option => $value) {
+            if (! $this->isFilled($value)) {
+                $missing[] = '--'.$option;
+            }
+        }
+
+        if ($missing !== []) {
+            $this->error(__('console.create_user.missing_options', ['options' => implode(', ', $missing)]));
+
+            return self::FAILURE;
+        }
+
+        $name = trim((string) $this->option('name'));
+        $email = trim((string) $this->option('email'));
+        $role = trim((string) $this->option('role'));
+
+        if (! filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            $this->error(__('console.create_user.invalid_email'));
+
+            return self::FAILURE;
+        }
+
+        if (User::where('email', $email)->exists()) {
+            $this->error(__('console.create_user.email_exists'));
+
+            return self::FAILURE;
+        }
+
+        $availableRoles = Role::query()->orderBy('slug')->pluck('slug')->all();
+
+        if (! in_array($role, $availableRoles, true)) {
+            $this->error(__('console.create_user.unknown_role', [
+                'role' => $role,
+                'roles' => implode(', ', $availableRoles),
+            ]));
+
+            return self::FAILURE;
+        }
+
+        $this->createUser($name, $email, $role);
+
+        return self::SUCCESS;
+    }
+
+    /**
+     * Create the user, assign the roles and fire the registration event.
+     *
+     * @param  string  $name  The user name.
+     * @param  string  $email  The user email address.
+     * @param  string  $role  The slug of the role assigned to the user.
+     * @return User The created user.
+     */
+    private function createUser(string $name, string $email, string $role): User
+    {
         $user = User::create([
             'name' => $name,
             'email' => $email,
@@ -82,6 +172,31 @@ class CreateUser extends Command
         $this->info(__('console.create_user.created'));
         $this->info('');
 
-        return self::SUCCESS;
+        return $user;
+    }
+
+    /**
+     * Map the non-interactive option names to their raw values.
+     *
+     * @return array<string, mixed> The option values keyed by option name.
+     */
+    private function suppliedOptions(): array
+    {
+        return [
+            'name' => $this->option('name'),
+            'email' => $this->option('email'),
+            'role' => $this->option('role'),
+        ];
+    }
+
+    /**
+     * Determine whether an option value was actually supplied.
+     *
+     * @param  mixed  $value  The raw option value.
+     * @return bool True when the value is a non-empty string.
+     */
+    private function isFilled(mixed $value): bool
+    {
+        return is_string($value) && trim($value) !== '';
     }
 }

@@ -18,37 +18,11 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
+import type { AiProviderFormFields } from '@/types';
 
-type ProviderFieldsModel = {
-    name: string;
-    driver: string;
-    base_url: string;
-    model: string;
-    api_key: string;
-    modules: string[];
-    configuration: {
-        temperature: number | null;
-        model_capabilities: {
-            reasoning: boolean;
-            reasoning_effort: string;
-            context_tokens: number | null;
-        };
-    };
-    privacy_level: string;
-    fallback_policy: string;
-    family: string | null;
-    description: string | null;
-    attachment: boolean;
-    reasoning: boolean;
-    tool_call: boolean;
-    structured_output: boolean;
-    open_weights: boolean;
-    context_window: number | null;
-    max_output_tokens: number | null;
-};
+const provider = defineModel<AiProviderFormFields>({ required: true });
 
-const props = defineProps<{
-    provider: ProviderFieldsModel;
+defineProps<{
     editing?: boolean;
 }>();
 
@@ -63,23 +37,23 @@ const availableModules = [
 ];
 
 function setReasoning(enabled: boolean) {
-    props.provider.configuration.model_capabilities.reasoning = enabled;
-    props.provider.reasoning = enabled;
+    provider.value.configuration.model_capabilities.reasoning = enabled;
+    provider.value.reasoning = enabled;
 }
 
 function setContext(value: string | number) {
     const context = value === '' ? null : Number(value);
-    props.provider.context_window = context;
-    props.provider.configuration.model_capabilities.context_tokens = context;
+    provider.value.context_window = context;
+    provider.value.configuration.model_capabilities.context_tokens = context;
 }
 
 function setTemperature(value: string | number) {
-    props.provider.configuration.temperature =
+    provider.value.configuration.temperature =
         value === '' ? null : Number(value);
 }
 
 function setOutputLimit(value: string | number) {
-    props.provider.max_output_tokens = value === '' ? null : Number(value);
+    provider.value.max_output_tokens = value === '' ? null : Number(value);
 }
 </script>
 

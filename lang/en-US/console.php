@@ -14,6 +14,8 @@ return [
         'confirm' => 'Create user?',
         'cancelled' => 'Operation cancelled.',
         'created' => 'User created and verification email sent.',
+        'missing_options' => 'The non-interactive mode needs --name, --email and --role together. Missing: :options.',
+        'unknown_role' => 'The role ":role" does not exist. Use one of the available roles: :roles.',
     ],
     'economy' => [
         'recurring' => [

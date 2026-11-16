@@ -74,9 +74,17 @@ function retry(): void {
 }
 
 function statusVariant(status: string): 'default' | 'secondary' | 'destructive' | 'outline' {
-    if (status === 'processed') return 'default';
-    if (status === 'failed') return 'destructive';
-    if (status === 'processing') return 'secondary';
+    if (status === 'processed') {
+        return 'default';
+    }
+
+    if (status === 'failed') {
+        return 'destructive';
+    }
+
+    if (status === 'processing') {
+        return 'secondary';
+    }
 
     return 'outline';
 }

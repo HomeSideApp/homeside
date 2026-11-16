@@ -406,7 +406,12 @@ function onKeydown(event: KeyboardEvent): void {
 
     if (modifier && event.key.toLowerCase() === 'z') {
         event.preventDefault();
-        event.shiftKey ? redo() : undo();
+
+        if (event.shiftKey) {
+            redo();
+        } else {
+            undo();
+        }
 
         return;
     }

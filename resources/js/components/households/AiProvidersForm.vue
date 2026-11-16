@@ -9,7 +9,7 @@ import {
     Trash2,
     Sparkles,
 } from '@lucide/vue';
-import { computed, ref } from 'vue';
+import { ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import AiProviderFields from '@/components/households/AiProviderFields.vue';
 import CatalogModelPicker from '@/components/households/CatalogModelPicker.vue';
@@ -42,6 +42,7 @@ import {
 } from '@/components/ui/tooltip';
 import type {
     AiProvider,
+    AiProviderFormFields,
     CatalogPrefillData,
     PaginatedData,
     CatalogProvider,
@@ -153,6 +154,8 @@ const newProvider = useForm({
     cost_cache_write: null as number | null,
 });
 
+const newProviderFields = ref<AiProviderFormFields>(newProvider);
+
 const showCatalogPicker = ref(false);
 
 function applyCatalogPrefill(prefill: CatalogPrefillData) {
@@ -180,7 +183,7 @@ newProvider.privacy_level = prefill.privacy_level;
     newProvider.description = prefill.description;
     newProvider.attachment = prefill.attachment;
     newProvider.reasoning = prefill.reasoning;
-    newCapabilities.value.reasoning = prefill.reasoning;
+    newProviderCapabilities().reasoning = prefill.reasoning;
     newProvider.reasoning_options = prefill.reasoning_options;
     newProvider.tool_call = prefill.tool_call;
     newProvider.structured_output = prefill.structured_output;
@@ -189,7 +192,7 @@ newProvider.privacy_level = prefill.privacy_level;
     newProvider.modalities_input = prefill.modalities_input;
     newProvider.modalities_output = prefill.modalities_output;
     newProvider.context_window = prefill.context_window;
-    newCapabilities.value.context_tokens = prefill.context_window;
+    newProviderCapabilities().context_tokens = prefill.context_window;
     newProvider.max_input_tokens = prefill.max_input_tokens;
     newProvider.max_output_tokens = prefill.max_output_tokens;
     newProvider.cost_input = prefill.cost_input;
@@ -206,11 +209,17 @@ newProvider.privacy_level = prefill.privacy_level;
     history.replaceState(history.state, '', baseUrl);
 }
 
-const newCapabilities = computed(
-    () =>
-        (newProvider.configuration.model_capabilities ??=
-            defaultCapabilities()),
-);
+/**
+ * Fills the nested model capabilities block on demand before writing into it.
+ *
+ * Doing it in a plain function instead of a computed getter keeps reading form
+ * state free of side effects.
+ */
+function newProviderCapabilities() {
+    newProvider.configuration.model_capabilities ??= defaultCapabilities();
+
+    return newProvider.configuration.model_capabilities;
+}
 
 function submitCreate() {
     newProvider.post(props.baseUrl, {
@@ -282,11 +291,13 @@ const editProvider = useForm({
     cost_cache_write: null as number | null,
 });
 
-const editCapabilities = computed(
-    () =>
-        (editProvider.configuration.model_capabilities ??=
-            defaultCapabilities()),
-);
+function editProviderCapabilities() {
+    editProvider.configuration.model_capabilities ??= defaultCapabilities();
+
+    return editProvider.configuration.model_capabilities;
+}
+
+const editProviderFields = ref<AiProviderFormFields>(editProvider);
 
 function startEdit(provider: AiProvider) {
     editingId.value = provider.id;
@@ -312,7 +323,7 @@ function startEdit(provider: AiProvider) {
     editProvider.description = provider.description;
     editProvider.attachment = provider.attachment;
     editProvider.reasoning = provider.reasoning;
-    editCapabilities.value.reasoning = provider.reasoning;
+    editProviderCapabilities().reasoning = provider.reasoning;
     editProvider.reasoning_options = provider.reasoning_options;
     editProvider.tool_call = provider.tool_call;
     editProvider.structured_output = provider.structured_output;
@@ -324,7 +335,7 @@ function startEdit(provider: AiProvider) {
         provider.context_window ??
         provider.configuration?.model_capabilities?.context_tokens ??
         null;
-    editCapabilities.value.context_tokens ??= provider.context_window;
+    editProviderCapabilities().context_tokens ??= provider.context_window;
     editProvider.max_input_tokens = provider.max_input_tokens;
     editProvider.max_output_tokens = provider.max_output_tokens;
     editProvider.cost_input = provider.cost_input;
@@ -486,7 +497,7 @@ async function testProvider(providerId: string) {
                             }}</TooltipContent>
                         </Tooltip>
                     </div>
-                    <AiProviderFields :provider="newProvider" />
+                    <AiProviderFields v-model="newProviderFields" />
                     <div
                         v-if="newProvider.hasErrors"
                         class="space-y-1 text-sm text-destructive"
@@ -757,7 +768,10 @@ async function testProvider(providerId: string) {
                         <h4 class="text-sm font-medium">
                             {{ t('households.aiProviders.editProvider') }}
                         </h4>
-                        <AiProviderFields :provider="editProvider" editing />
+                        <AiProviderFields
+                            v-model="editProviderFields"
+                            editing
+                        />
                         <div
                             v-if="editProvider.hasErrors"
                             class="space-y-1 text-sm text-destructive"

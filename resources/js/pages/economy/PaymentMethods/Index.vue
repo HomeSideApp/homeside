@@ -51,7 +51,7 @@ import {
 } from '@/routes/economy/me/payment-methods';
 const { t } = useI18n();
 
-const props = defineProps<{
+defineProps<{
     paymentMethods: PaymentMethod[];
 }>();
 

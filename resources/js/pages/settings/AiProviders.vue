@@ -19,7 +19,7 @@ import type {
 
 const { t } = useI18n();
 
-const props = defineProps<{
+defineProps<{
     providers: AiProvider[];
     catalogProviders?: PaginatedData<CatalogProvider> | null;
     catalogModels?: PaginatedData<CatalogModel> | null;

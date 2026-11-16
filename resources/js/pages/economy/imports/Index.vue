@@ -16,7 +16,6 @@ import {
     TooltipProvider,
     TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { vCan } from '@/directives/can';
 import { index as privateEconomyIndex } from '@/routes/economy/me';
 import {
     index as privateImportsIndex,
