@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use App\Actions\Auth\CreateAuthenticationBootstrap;
 use App\Actions\Auth\RegisterAccount;
+use App\Actions\Auth\ResolveEnrolmentUrl;
 use App\Data\Auth\InvitationContextData;
 use App\Data\Auth\RegisterAccountData;
 use App\Enums\AppLocale;
@@ -70,10 +70,10 @@ class InvitationController
      *
      * @param  AcceptInvitationRequest  $request  The incoming HTTP request.
      * @param  RegisterAccount  $accounts  The shared registration use case.
-     * @param  CreateAuthenticationBootstrap  $bootstraps  The single-use bootstrap issuer.
+     * @param  ResolveEnrolmentUrl  $enrolment  The shared next-step decision.
      * @return RedirectResponse The HTTP response.
      */
-    public function store(AcceptInvitationRequest $request, RegisterAccount $accounts, CreateAuthenticationBootstrap $bootstraps): RedirectResponse
+    public function store(AcceptInvitationRequest $request, RegisterAccount $accounts, ResolveEnrolmentUrl $enrolment): RedirectResponse
     {
         $validated = $request->validated();
         $user = $request->invitedUser();
@@ -99,7 +99,7 @@ class InvitationController
             ]);
         }
 
-        return redirect()->to($this->enrolmentUrl($outcome->user, $bootstraps));
+        return redirect()->to($enrolment->execute($outcome->user));
     }
 
     /**
@@ -141,7 +141,7 @@ class InvitationController
      * @param  User  $user  The invited account, bound from the route.
      * @param  RegisterAccount  $accounts  The shared registration use case.
      * @param  GoogleIdentityService  $identities  The shared identity linker.
-     * @param  CreateAuthenticationBootstrap  $bootstraps  The single-use bootstrap issuer.
+     * @param  ResolveEnrolmentUrl  $enrolment  The shared next-step decision.
      * @return RedirectResponse The HTTP response.
      */
     public function googleCallback(
@@ -149,7 +149,7 @@ class InvitationController
         User $user,
         RegisterAccount $accounts,
         GoogleIdentityService $identities,
-        CreateAuthenticationBootstrap $bootstraps,
+        ResolveEnrolmentUrl $enrolment,
     ): RedirectResponse {
         $marker = $request->session()->pull(self::GOOGLE_MARKER_KEY);
 
@@ -202,7 +202,7 @@ class InvitationController
 
         $accounts->dispatchNotifications($outcome, RegistrationChannel::AdminInvitation);
 
-        return redirect()->to($this->enrolmentUrl($outcome->user, $bootstraps));
+        return redirect()->to($enrolment->execute($outcome->user));
     }
 
     /**
@@ -245,29 +245,5 @@ class InvitationController
         return to_route('login')->withErrors([
             'google' => __('app.errors.invitation_google_refused'),
         ]);
-    }
-
-    /**
-     * Build the single-use enrolment URL for a freshly completed account.
-     *
-     * A signed `otp.setup` URL is deliberately NOT used: the token is bound to
-     * the user AND the purpose, lives for the enrolment lifetime (12 hours by
-     * default) and is consumed once. Issuance also mails the link. When the
-     * account already has a second factor there is nothing to enrol, so the
-     * user goes to login instead.
-     *
-     * @param  User  $user  The account that just completed registration.
-     * @param  CreateAuthenticationBootstrap  $bootstraps  The bootstrap issuer.
-     * @return string The redirect target.
-     */
-    private function enrolmentUrl(User $user, CreateAuthenticationBootstrap $bootstraps): string
-    {
-        if ($user->hasEnabledTwoFactorAuthentication()) {
-            return route('login');
-        }
-
-        $token = $bootstraps->execute($user);
-
-        return route('auth.bootstrap.two-factor.show', ['token' => $token]);
     }
 }
