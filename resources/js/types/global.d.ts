@@ -34,6 +34,11 @@ declare module '@inertiajs/core' {
             auth: Auth;
             localization: Localization;
             sidebarOpen: boolean;
+            // Plan feature flags shared by HandleInertiaRequests. `null` means no
+            // entitlement system applies (self-hosted install), so nothing is filtered.
+            entitlement: {
+                features: Record<string, boolean> | null;
+            };
             [key: string]: unknown;
         };
     }

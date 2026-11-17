@@ -139,6 +139,12 @@ class EnsureEntitlementMiddlewareTest extends TestCase
                 abort(403, __('app.errors.permission_denied'));
             }
 
+            /** @return array<string, bool>|null */
+            public function features(User $user): ?array
+            {
+                return null;
+            }
+
             public function reserveUsage(User $user, string $metric, int $amount, string $operationId): string
             {
                 return "{$user->id}:{$operationId}";

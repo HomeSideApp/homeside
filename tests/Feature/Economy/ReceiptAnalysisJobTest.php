@@ -280,6 +280,12 @@ class ReceiptAnalysisJobTest extends TestCase
                 $this->calls[] = "assertFeature:{$feature}";
             }
 
+            /** @return array<string, bool>|null */
+            public function features(User $user): ?array
+            {
+                return null;
+            }
+
             public function reserveUsage(User $user, string $metric, int $amount, string $operationId): string
             {
                 $this->calls[] = "reserveUsage:{$metric}";
@@ -322,6 +328,12 @@ class ReceiptAnalysisJobTest extends TestCase
         $this->app->instance(EntitlementGate::class, new class implements EntitlementGate
         {
             public function assertFeature(User $user, string $feature): void {}
+
+            /** @return array<string, bool>|null */
+            public function features(User $user): ?array
+            {
+                return null;
+            }
 
             public function reserveUsage(User $user, string $metric, int $amount, string $operationId): string
             {

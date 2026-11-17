@@ -14,6 +14,20 @@ final class NullEntitlementGate implements EntitlementGate
     public function assertFeature(User $user, string $feature): void {}
 
     /**
+     * Report "no entitlement system" rather than an empty map.
+     *
+     * Null is the self-hosted answer: there is no plan, so no surface may filter
+     * on features. An empty map would instead read as "every feature denied" and
+     * hide the whole application.
+     *
+     * @return array<string, bool>|null Always null.
+     */
+    public function features(User $user): ?array
+    {
+        return null;
+    }
+
+    /**
      * Return a deterministic canonical operation id.
      *
      * Nothing is persisted in this mode, so the value only has to be stable and

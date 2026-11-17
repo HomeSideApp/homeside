@@ -24,6 +24,19 @@ interface EntitlementGate
     public function assertFeature(User $user, string $feature): void;
 
     /**
+     * The user's effective feature flags, as the same resolver assertFeature evaluates.
+     *
+     * This is a read-only projection of the plan, meant for surfaces that must not
+     * advertise what assertFeature would deny (navigation, for instance). A null
+     * answer means no entitlement system applies at all -- the self-hosted case --
+     * so nothing may be filtered; a non-null map is authoritative for every key it
+     * is asked about, and a missing key means "not entitled".
+     *
+     * @return array<string, bool>|null Effective feature flags, or null when no entitlement system applies
+     */
+    public function features(User $user): ?array;
+
+    /**
      * Reserve usage against the user's quota for a metered metric.
      *
      * The returned value is the canonical operation id and the ONLY value

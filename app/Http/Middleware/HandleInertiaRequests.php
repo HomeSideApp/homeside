@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Contracts\EntitlementGate;
 use App\Enums\AppLocale;
 use App\Enums\HouseholdAccessProfile;
 use App\Http\Resources\Households\HouseholdInvitationResource;
@@ -15,6 +16,19 @@ use Inertia\Middleware;
 
 class HandleInertiaRequests extends Middleware
 {
+    /**
+     * Features resolved from the entitlement port for this request.
+     *
+     * The shared prop is lazy, so this memo keeps the port -- and the plan
+     * lookup behind it -- evaluated once per request instead of once per prop
+     * read.
+     *
+     * @var array<string, bool>|null
+     */
+    private ?array $resolvedFeatures = null;
+
+    private bool $featuresResolved = false;
+
     /**
      * Determine the current asset version.
      *
@@ -60,6 +74,13 @@ class HandleInertiaRequests extends Middleware
                     ? $user->getRoleNames()->toArray()
                     : [],
             ],
+            // Only the effective feature flags cross to the client: enough for the
+            // navigation to stop advertising modules the plan denies, and nothing
+            // about pricing, plans or billing. Null means "no plan system here",
+            // which the client reads as "show everything".
+            'entitlement' => [
+                'features' => fn (): ?array => $this->entitlementFeatures($user),
+            ],
             'householdContext' => [
                 'active' => fn () => $this->resolveActiveHousehold($request, $user),
                 'enabledModules' => fn () => $this->resolveEnabledModules($request, $user),
@@ -81,6 +102,25 @@ class HandleInertiaRequests extends Middleware
                 : [],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
         ];
+    }
+
+    /**
+     * Resolve the authenticated user's effective feature flags through the port.
+     *
+     * @return array<string, bool>|null Feature key => enabled, or null for guests and when no entitlement system applies.
+     */
+    private function entitlementFeatures(?User $user): ?array
+    {
+        if (! $user) {
+            return null;
+        }
+
+        if (! $this->featuresResolved) {
+            $this->featuresResolved = true;
+            $this->resolvedFeatures = app(EntitlementGate::class)->features($user);
+        }
+
+        return $this->resolvedFeatures;
     }
 
     /**

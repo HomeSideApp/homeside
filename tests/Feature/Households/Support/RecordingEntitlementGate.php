@@ -42,6 +42,16 @@ final class RecordingEntitlementGate implements EntitlementGate
         $this->calls[] = "assertFeature:{$feature}";
     }
 
+    /**
+     * The double models a gate with no plan map: nothing is filtered downstream.
+     *
+     * @return array<string, bool>|null Always null.
+     */
+    public function features(User $user): ?array
+    {
+        return null;
+    }
+
     public function reserveUsage(User $user, string $metric, int $amount, string $operationId): string
     {
         $this->calls[] = "reserveUsage:{$metric}";

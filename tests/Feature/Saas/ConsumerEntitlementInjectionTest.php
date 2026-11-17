@@ -154,6 +154,12 @@ class ConsumerEntitlementInjectionTest extends TestCase
                 $this->calls[] = "assertFeature:{$feature}";
             }
 
+            /** @return array<string, bool>|null */
+            public function features(User $user): ?array
+            {
+                return null;
+            }
+
             public function reserveUsage(User $user, string $metric, int $amount, string $operationId): string
             {
                 $this->calls[] = "reserveUsage:{$metric}";

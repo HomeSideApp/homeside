@@ -302,6 +302,12 @@ class EntitlementBindingLifecycleTest extends TestCase
         {
             public function assertFeature(User $user, string $feature): void {}
 
+            /** @return array<string, bool>|null */
+            public function features(User $user): ?array
+            {
+                return null;
+            }
+
             public function reserveUsage(User $user, string $metric, int $amount, string $operationId): string
             {
                 return "{$user->id}:{$operationId}";

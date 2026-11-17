@@ -86,6 +86,74 @@ type SaasProps = {
 
 const page = usePage();
 
+/**
+ * Effective plan features for the signed-in user, or `null` when the install has
+ * no entitlement system (self-hosted) or nobody is signed in.
+ *
+ * `null` is the compatibility guarantee: no filtering happens, the sidebar shows
+ * exactly what it showed before plans existed. A map, even an empty one, is
+ * authoritative.
+ */
+const entitlementFeatures = computed<Record<string, boolean> | null>(() => {
+    const entitlement = (page.props as Record<string, unknown>).entitlement;
+
+    if (!entitlement || typeof entitlement !== 'object') {
+        return null;
+    }
+
+    const features = (entitlement as { features?: unknown }).features;
+
+    return features && typeof features === 'object'
+        ? (features as Record<string, boolean>)
+        : null;
+});
+
+/**
+ * Whether the plan enables the feature an item is gated on.
+ *
+ * Untagged items are always visible. When a feature map is shared, a missing key
+ * hides the item just like an explicit `false`: the map is authoritative.
+ */
+function isFeatureEnabled(feature: NavItem['feature']): boolean {
+    if (!feature) {
+        return true;
+    }
+
+    const features = entitlementFeatures.value;
+
+    if (!features) {
+        return true;
+    }
+
+    return features[feature] === true;
+}
+
+/**
+ * Drop items the plan does not include, recursively, including a parent whose
+ * children were all removed (an empty submenu links nowhere).
+ */
+function filterByFeature(items: NavItem[]): NavItem[] {
+    return items.reduce<NavItem[]>((visible, item) => {
+        if (!isFeatureEnabled(item.feature)) {
+            return visible;
+        }
+
+        if (!item.children) {
+            visible.push(item);
+
+            return visible;
+        }
+
+        const children = filterByFeature(item.children);
+
+        if (children.length > 0) {
+            visible.push({ ...item, children });
+        }
+
+        return visible;
+    }, []);
+}
+
 const saasProps = computed<SaasProps>(() => {
     const saas = (page.props as Record<string, unknown>).saas;
 
@@ -142,21 +210,25 @@ const mainNavItems = computed<NavItem[]>(() => [
         href: listRoutes.index(),
         icon: ClipboardList,
         permission: 'lists.index',
+        feature: 'lists',
     },
     {
         title: 'Recetas',
         href: '#',
         icon: CookingPot,
+        feature: 'recipes',
         children: [
             {
                 title: 'Mi Cookbook',
                 href: '/recipes',
                 icon: BookUser,
+                feature: 'recipes',
             },
             {
                 title: 'Colecciones',
                 href: recipeCollectionsIndex(),
                 icon: FolderTree,
+                feature: 'recipes',
             },
             {
                 title: t('sidebar.householdRecipes'),
@@ -164,6 +236,7 @@ const mainNavItems = computed<NavItem[]>(() => [
                 icon: CookingPot,
                 permission: 'households.recipes.index',
                 module: 'recipes',
+                feature: 'recipes',
             },
         ],
     },
@@ -191,24 +264,28 @@ const mainNavItems = computed<NavItem[]>(() => [
         title: t('sidebar.economy'),
         href: '#',
         icon: Wallet,
+        feature: 'economy',
         children: [
             {
                 title: t('sidebar.myEconomy'),
                 href: personalEconomyIndex(),
                 icon: PiggyBank,
                 permission: ['economy.me.index', 'economy.me.show'],
+                feature: 'economy',
             },
             {
                 title: t('sidebar.myAccounts'),
                 href: personalAccountsIndex(),
                 icon: Landmark,
                 permission: ['economy.me.accounts.index'],
+                feature: 'economy',
             },
             {
                 title: t('sidebar.paymentMethods'),
                 href: paymentMethodsIndex(),
                 icon: CreditCard,
                 permission: ['economy.me.payment-methods.index'],
+                feature: 'economy',
             },
             ...(activeHousehold.value
                 ? [
@@ -221,6 +298,7 @@ const mainNavItems = computed<NavItem[]>(() => [
                               'households.economy.show',
                           ],
                           module: 'economy',
+                          feature: 'economy' as const,
                       },
                   ]
                 : []),
@@ -232,6 +310,7 @@ const mainNavItems = computed<NavItem[]>(() => [
                   title: t('sidebar.assistant'),
                   href: '/assistant',
                   icon: MessageSquare,
+                  feature: 'ai_assistant' as const,
               },
               {
                   title: t('sidebar.aiConfig'),
@@ -364,6 +443,15 @@ const mainNavItems = computed<NavItem[]>(() => [
     },
 ]);
 
+/**
+ * The navigation the plans allow. Applied here, before NavMain/NavMenuItem
+ * filter by permission and module, so a plan-gated parent and its children are
+ * removed together.
+ */
+const visibleMainNavItems = computed<NavItem[]>(() =>
+    filterByFeature(mainNavItems.value),
+);
+
 const footerNavItems: NavItem[] = [];
 </script>
 
@@ -382,7 +470,7 @@ const footerNavItems: NavItem[] = [];
         </SidebarHeader>
 
         <SidebarContent>
-            <NavMain :items="mainNavItems" />
+            <NavMain :items="visibleMainNavItems" />
         </SidebarContent>
 
         <SidebarFooter>
