@@ -13,15 +13,32 @@ use App\Http\Requests\ViewInvitationRequest;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\URL;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
+use Laravel\Socialite\Facades\Socialite;
+use Symfony\Component\HttpFoundation\RedirectResponse as SymfonyRedirectResponse;
 
 /**
  * Handles user invitations and password set-up for invited users.
  */
 class InvitationController
 {
+    /**
+     * The single-use session marker that authorises the Google callback.
+     *
+     * @var string
+     */
+    private const GOOGLE_MARKER_KEY = 'invitation.google.pending';
+
+    /**
+     * How long the Google invitation marker stays usable, in minutes.
+     *
+     * @var int
+     */
+    private const GOOGLE_MARKER_TTL_MINUTES = 10;
+
     /**
      * Show the set-password page for a pending invitation.
      *
@@ -79,6 +96,29 @@ class InvitationController
         }
 
         return redirect()->to($this->enrolmentUrl($outcome->user, $bootstraps));
+    }
+
+    /**
+     * Start the Google path for a pending invitation.
+     *
+     * The signed invitation URL is the first half of the authority: it was
+     * mailed to the invited address, so possessing it proves control of that
+     * mailbox. This route records that fact in a single-use session marker and
+     * sends the invitee to Google; the callback supplies the second half.
+     *
+     * @param  ViewInvitationRequest  $request  The signed invitation request.
+     * @param  User  $user  The invited, still pending account.
+     * @return SymfonyRedirectResponse The redirect to Google.
+     */
+    public function googleRedirect(ViewInvitationRequest $request, User $user): SymfonyRedirectResponse
+    {
+        $request->session()->put(self::GOOGLE_MARKER_KEY, [
+            'user_id' => $user->getRouteKey(),
+            'email' => Str::lower(trim((string) $user->email)),
+            'expires_at' => now()->addMinutes(self::GOOGLE_MARKER_TTL_MINUTES)->getTimestamp(),
+        ]);
+
+        return Socialite::driver('google')->redirect();
     }
 
     /**
