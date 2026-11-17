@@ -228,6 +228,7 @@ return [
         'invitation_already_processed' => 'This invitation has already been processed.',
         'invitation_expired' => 'This invitation has expired.',
         'invitation_invalid' => 'Invalid invitation or already used.',
+        'invitation_google_refused' => 'We could not complete the invitation with Google. Open the invitation link again to continue.',
         'invitation_no_permission_cancel' => 'You do not have permission to cancel this invitation.',
         'invite_link_unusable' => 'This invitation link is no longer valid.',
         'registration_identity_exists' => 'An account already exists for this email. Sign in to continue.',

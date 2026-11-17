@@ -502,5 +502,8 @@ require __DIR__.'/auth.php';
 Route::middleware([EnsureRegistrationInvitationsEnabled::class.':'.RegistrationChannel::AdminInvitation->value])->group(function (): void {
     Route::get('invitation/{user}', [InvitationController::class, 'show'])->middleware('signed')->name('invitation.show');
     Route::get('invitation/{user}/google', [InvitationController::class, 'googleRedirect'])->middleware(['signed', 'throttle:10,1'])->name('invitation.google.redirect');
+    // Google's redirect carries no signature: the callback is authorised by the
+    // single-use session marker the signed start route writes instead.
+    Route::get('invitation/{user}/google/callback', [InvitationController::class, 'googleCallback'])->name('invitation.google.callback');
     Route::post('invitation', [InvitationController::class, 'store'])->middleware(['signed', 'throttle:registration'])->name('invitation.store');
 });

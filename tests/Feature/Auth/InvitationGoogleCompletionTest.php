@@ -8,6 +8,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\URL;
+use Illuminate\Testing\TestResponse;
 use Laravel\Socialite\Facades\Socialite;
 use Laravel\Socialite\Two\User as SocialiteUser;
 use Tests\TestCase;
@@ -65,6 +66,152 @@ class InvitationGoogleCompletionTest extends TestCase
         $this->assertNull(session('invitation.google.pending'));
     }
 
+    public function test_pending_invitee_completes_the_invitation_with_google(): void
+    {
+        $invitee = $this->pendingInvitee();
+        $this->fakeGoogle('google-happy', $invitee->email);
+
+        $this->get($this->startUrl($invitee))->assertRedirect();
+
+        $response = $this->get($this->callbackUrl($invitee));
+
+        $response->assertRedirect();
+        $this->assertStringContainsString('auth/bootstrap', (string) $response->headers->get('Location'));
+
+        $invitee->refresh();
+        $this->assertNotNull($invitee->email_verified_at);
+        $this->assertDatabaseHas('google_identities', [
+            'user_id' => $invitee->id,
+            'google_sub' => 'google-happy',
+        ]);
+        $this->assertGuest();
+        $this->assertNull(session('invitation.google.pending'));
+    }
+
+    public function test_a_different_google_address_is_refused(): void
+    {
+        $invitee = $this->pendingInvitee();
+        $passwordHash = $invitee->password;
+        $this->fakeGoogle('google-other', 'someone-else@example.com');
+
+        $this->get($this->startUrl($invitee))->assertRedirect();
+
+        $this->assertRefusedGoogleCompletion($this->get($this->callbackUrl($invitee)));
+
+        $this->assertDatabaseCount('google_identities', 0);
+        $this->assertPendingAndUntouched($invitee, $passwordHash);
+    }
+
+    public function test_an_unverified_google_address_is_refused(): void
+    {
+        $invitee = $this->pendingInvitee();
+        $passwordHash = $invitee->password;
+        $this->fakeGoogle('google-unverified', $invitee->email, verified: false);
+
+        $this->get($this->startUrl($invitee))->assertRedirect();
+
+        $this->assertRefusedGoogleCompletion($this->get($this->callbackUrl($invitee)));
+
+        $this->assertDatabaseCount('google_identities', 0);
+        $this->assertPendingAndUntouched($invitee, $passwordHash);
+    }
+
+    public function test_a_missing_marker_is_refused(): void
+    {
+        $invitee = $this->pendingInvitee();
+        $passwordHash = $invitee->password;
+        $this->fakeGoogle('google-without-marker', $invitee->email);
+
+        $this->assertRefusedGoogleCompletion($this->get($this->callbackUrl($invitee)));
+
+        $this->assertDatabaseCount('google_identities', 0);
+        $this->assertPendingAndUntouched($invitee, $passwordHash);
+    }
+
+    public function test_a_replayed_marker_is_refused(): void
+    {
+        $invitee = $this->pendingInvitee();
+        $this->fakeGoogle('google-replayed', $invitee->email);
+
+        $this->get($this->startUrl($invitee))->assertRedirect();
+        $this->get($this->callbackUrl($invitee))->assertRedirect();
+        $this->assertNotNull($invitee->fresh()->email_verified_at);
+
+        $this->assertRefusedGoogleCompletion($this->get($this->callbackUrl($invitee)));
+
+        $this->assertDatabaseCount('google_identities', 1);
+        $this->assertSame(1, User::query()->count());
+    }
+
+    public function test_an_expired_marker_is_refused(): void
+    {
+        $invitee = $this->pendingInvitee();
+        $passwordHash = $invitee->password;
+        $this->fakeGoogle('google-late', $invitee->email);
+
+        $this->get($this->startUrl($invitee))->assertRedirect();
+        $this->travel(11)->minutes();
+
+        $this->assertRefusedGoogleCompletion($this->get($this->callbackUrl($invitee)));
+
+        $this->assertDatabaseCount('google_identities', 0);
+        $this->assertPendingAndUntouched($invitee, $passwordHash);
+    }
+
+    public function test_an_account_completed_between_start_and_callback_is_refused(): void
+    {
+        $invitee = $this->pendingInvitee();
+        $this->fakeGoogle('google-too-late', $invitee->email);
+
+        $this->get($this->startUrl($invitee))->assertRedirect();
+
+        $completedAt = now();
+        $invitee->forceFill([
+            'password' => 'completed-somewhere-else',
+            'email_verified_at' => $completedAt,
+        ])->save();
+        $passwordHash = $invitee->fresh()->password;
+
+        $this->assertRefusedGoogleCompletion($this->get($this->callbackUrl($invitee)));
+
+        $this->assertDatabaseCount('google_identities', 0);
+        $invitee->refresh();
+        $this->assertSame($passwordHash, $invitee->password);
+        $this->assertSame($completedAt->getTimestamp(), $invitee->email_verified_at?->getTimestamp());
+    }
+
+    public function test_a_google_account_already_linked_to_someone_else_is_refused(): void
+    {
+        $owner = User::factory()->create(['email' => 'owner@example.com']);
+        $owner->googleIdentity()->create(['google_sub' => 'google-taken']);
+        $invitee = $this->pendingInvitee();
+        $passwordHash = $invitee->password;
+        $this->fakeGoogle('google-taken', $invitee->email);
+
+        $this->get($this->startUrl($invitee))->assertRedirect();
+
+        $this->assertRefusedGoogleCompletion($this->get($this->callbackUrl($invitee)));
+
+        $this->assertDatabaseCount('google_identities', 1);
+        $this->assertDatabaseHas('google_identities', ['user_id' => $owner->id, 'google_sub' => 'google-taken']);
+        $this->assertPendingAndUntouched($invitee, $passwordHash);
+    }
+
+    public function test_a_marker_for_another_invitee_is_refused(): void
+    {
+        $invited = $this->pendingInvitee();
+        $other = $this->pendingInvitee(['email' => 'other-invitee@example.com']);
+        $otherPasswordHash = $other->password;
+        $this->fakeGoogle('google-other-invitee', $other->email);
+
+        $this->get($this->startUrl($invited))->assertRedirect();
+
+        $this->assertRefusedGoogleCompletion($this->get($this->callbackUrl($other)));
+
+        $this->assertDatabaseCount('google_identities', 0);
+        $this->assertPendingAndUntouched($other, $otherPasswordHash);
+    }
+
     /**
      * Create a pending, administrator-invited account.
      *
@@ -88,6 +235,42 @@ class InvitationGoogleCompletionTest extends TestCase
     private function startUrl(User $user): string
     {
         return URL::temporarySignedRoute('invitation.google.redirect', now()->addMinutes(30), ['user' => $user->getRouteKey()]);
+    }
+
+    /**
+     * Build the unsigned Google callback URL for an invitee.
+     *
+     * @param  User  $user  The invited account.
+     * @return string The callback URL.
+     */
+    private function callbackUrl(User $user): string
+    {
+        return route('invitation.google.callback', ['user' => $user->getRouteKey()]);
+    }
+
+    /**
+     * Assert the Google completion was refused without leaking an exception.
+     *
+     * @param  TestResponse  $response  The callback response.
+     */
+    private function assertRefusedGoogleCompletion($response): void
+    {
+        $response->assertRedirect(route('login'));
+        $response->assertSessionHasErrors('google');
+    }
+
+    /**
+     * Assert the account is still pending and no write has happened to it.
+     *
+     * @param  User  $user  The invited account.
+     * @param  string|null  $passwordHash  The password hash recorded before the flow.
+     */
+    private function assertPendingAndUntouched(User $user, ?string $passwordHash): void
+    {
+        $user->refresh();
+
+        $this->assertNull($user->email_verified_at);
+        $this->assertSame($passwordHash, $user->password);
     }
 
     /**
