@@ -12,8 +12,10 @@ use App\Http\Requests\AcceptInvitationRequest;
 use App\Http\Requests\ViewInvitationRequest;
 use App\Models\User;
 use App\Services\Auth\GoogleIdentityService;
+use App\Support\Auth\GoogleSecondFactorPolicy;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
@@ -155,7 +157,10 @@ class InvitationController
      * never proves that the account is still pending.
      *
      * The completion and the identity link run inside one transaction, so any
-     * refusal writes nothing at all.
+     * refusal raised while resolving the Google identity writes nothing at all.
+     * The access gate that guards the session runs after that commit on purpose:
+     * an account that completed but cannot access the application keeps the
+     * completed row and the linked identity, and only loses the session.
      *
      * @param  Request  $request  The incoming HTTP request.
      * @param  User  $user  The invited account, bound from the route.
@@ -221,8 +226,29 @@ class InvitationController
         }
 
         $accounts->dispatchNotifications($outcome, RegistrationChannel::AdminInvitation);
+        $completed = $outcome->user;
 
-        return redirect()->to($enrolment->execute($outcome->user));
+        // The operator may keep the application's own OTP as a hard second
+        // factor: then this path ends exactly as the password path does, with
+        // a forced enrolment and no session.
+        if (GoogleSecondFactorPolicy::requiresApplicationOtp()) {
+            return redirect()->to($enrolment->execute($completed));
+        }
+
+        // Google is the second factor here, and the person just proved the
+        // mailbox twice (signed invitation URL plus a verified Google address
+        // matching it). The same access gate as the Google login callback
+        // still applies: without it, no session is established. The completion
+        // and the identity link above stand, exactly as they do for a Google
+        // login that resolves an account without a role.
+        if (! $completed->canAccessApplication()) {
+            return $this->refuseGoogleCompletion();
+        }
+
+        Auth::login($completed);
+        $request->session()->regenerate();
+
+        return redirect()->to('/dashboard');
     }
 
     /**

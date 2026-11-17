@@ -68,6 +68,8 @@ class InvitationGoogleCompletionTest extends TestCase
 
     public function test_pending_invitee_completes_the_invitation_with_google(): void
     {
+        config(['auth.google.require_otp' => true]);
+
         $invitee = $this->pendingInvitee();
         $this->fakeGoogle('google-happy', $invitee->email);
 
@@ -86,6 +88,53 @@ class InvitationGoogleCompletionTest extends TestCase
         ]);
         $this->assertGuest();
         $this->assertNull(session('invitation.google.pending'));
+    }
+
+    public function test_delegated_policy_signs_the_invitee_in_without_enrolment(): void
+    {
+        $invitee = $this->pendingInvitee();
+        $invitee->assignRole('user');
+        $this->fakeGoogle('google-delegated', $invitee->email);
+
+        $this->get($this->startUrl($invitee))->assertRedirect();
+
+        $response = $this->get($this->callbackUrl($invitee));
+
+        $response->assertRedirect('/dashboard');
+
+        $invitee->refresh();
+        $this->assertAuthenticatedAs($invitee);
+        $this->assertNotNull($invitee->email_verified_at);
+        $this->assertDatabaseHas('google_identities', [
+            'user_id' => $invitee->id,
+            'google_sub' => 'google-delegated',
+        ]);
+        $this->assertDatabaseCount('authentication_bootstraps', 0);
+        Notification::assertNothingSent();
+        $this->assertNull(session('invitation.google.pending'));
+    }
+
+    public function test_delegated_policy_refuses_an_invitee_who_cannot_access_the_application(): void
+    {
+        $invitee = $this->pendingInvitee();
+        $this->fakeGoogle('google-roleless', $invitee->email);
+
+        $this->get($this->startUrl($invitee))->assertRedirect();
+
+        $this->assertRefusedGoogleCompletion($this->get($this->callbackUrl($invitee)));
+
+        $this->assertGuest();
+
+        // The completion and the identity link already committed stand: the
+        // account is now Google-linked without a role, so the very same gate
+        // a Google login applies withholds the session and nothing else.
+        $invitee->refresh();
+        $this->assertNotNull($invitee->email_verified_at);
+        $this->assertDatabaseHas('google_identities', [
+            'user_id' => $invitee->id,
+            'google_sub' => 'google-roleless',
+        ]);
+        $this->assertDatabaseCount('authentication_bootstraps', 0);
     }
 
     public function test_a_different_google_address_is_refused(): void
