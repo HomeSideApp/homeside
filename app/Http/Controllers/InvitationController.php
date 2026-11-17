@@ -46,6 +46,10 @@ class InvitationController
     /**
      * Show the set-password page for a pending invitation.
      *
+     * The Google start route sits behind the `signed` middleware, so the page can
+     * only offer that path when it receives a signed URL: the signature is what
+     * proves the invitee reached this page from the mailed invitation.
+     *
      * @param  User  $user  The authenticated user.
      * @return Response The HTTP response.
      */
@@ -56,7 +60,23 @@ class InvitationController
             'email' => $user->email,
             'name' => $user->name,
             'storeUrl' => URL::temporarySignedRoute('invitation.store', now()->addMinutes(30)),
+            'googleUrl' => $this->googleUrlFor($user),
         ]);
+    }
+
+    /**
+     * Build the signed Google start URL, or null when Google is not configured.
+     *
+     * @param  User  $user  The invited account.
+     * @return string|null The signed start URL, or null when Google is unavailable.
+     */
+    private function googleUrlFor(User $user): ?string
+    {
+        if (! filled(config('services.google.client_id'))) {
+            return null;
+        }
+
+        return URL::signedRoute('invitation.google.redirect', ['user' => $user]);
     }
 
     /**
