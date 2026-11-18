@@ -57,6 +57,7 @@ use App\Http\Controllers\Api\V1\RecipeShoppingListController;
 use App\Http\Controllers\Api\V1\ShoppingListController;
 use App\Http\Controllers\Api\V1\StoreController;
 use App\Http\Controllers\Api\V1\SyncController;
+use App\Http\Controllers\Api\V1\SyncPushController;
 use App\Http\Controllers\Api\V1\TwoFactorController;
 use App\Http\Controllers\Api\V1\UserAiProviderController;
 use App\Http\Controllers\HouseholdMemberPermissionController;
@@ -281,6 +282,10 @@ Route::prefix('v1')->as('api.v1.')->middleware(['auth:sanctum', 'locale', 'api.p
     // Un solo delta con cursor opaco. El permiso `sync.changes` cubre los tres
     // dominios porque el feed mezcla listas, economía y hogares en una página.
     Route::get('sync/changes', [SyncController::class, 'changes'])->name('sync.changes');
+    // El lote re-ejecuta otras rutas, así que sólo alcanza los nombres de ruta
+    // que la allowlist de `PushSyncOperations` enumera. El `idempotency` del lote
+    // hace que un reintento idéntico reproduzca la respuesta en vez de re-ejecutar.
+    Route::post('sync/push', [SyncPushController::class, 'store'])->middleware('idempotency')->name('sync.push');
 
     Route::post('categories', [CategoryController::class, 'store'])->name('categories.store');
     Route::put('categories/{category}', [CategoryController::class, 'update'])->name('categories.update');

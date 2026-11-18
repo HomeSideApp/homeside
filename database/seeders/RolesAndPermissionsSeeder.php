@@ -55,6 +55,7 @@ class RolesAndPermissionsSeeder extends Seeder
         // Sincronización offline: un único permiso porque el delta cruza listas,
         // economía y hogares en la misma respuesta.
         Permission::firstOrCreate(['route_name' => 'sync.changes'], ['name' => 'read offline changes', 'description' => 'Leer el delta de sincronización offline', 'permission_group_id' => $listasGroup->id]);
+        Permission::firstOrCreate(['route_name' => 'sync.push'], ['name' => 'push offline changes', 'description' => 'Enviar el lote de operaciones offline', 'permission_group_id' => $listasGroup->id]);
 
         // Productos (anidados bajo households/{household}/)
         Permission::firstOrCreate(['route_name' => 'households.products.store'], ['name' => 'store products', 'description' => 'Crear productos', 'permission_group_id' => $productosGroup->id]);
@@ -444,6 +445,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'recipes.store',
             'recipes.update',
             'sync.changes',
+            'sync.push',
         ];
         $permissions = Permission::all();
         $definitions = [
