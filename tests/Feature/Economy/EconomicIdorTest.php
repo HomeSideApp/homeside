@@ -89,7 +89,7 @@ class EconomicIdorTest extends TestCase
 
         $this->patchJson("/api/v1/households/{$this->householdB->id}/economy/transactions/{$transaction->id}", [
             'title' => 'hackeado',
-        ])->assertForbidden();
+        ], ['Idempotency-Key' => 'idor-update-transaction'])->assertForbidden();
 
         $this->assertDatabaseHas('economic_transactions', [
             'id' => $transaction->id,
@@ -107,7 +107,7 @@ class EconomicIdorTest extends TestCase
         Sanctum::actingAs($this->attacker);
         $transaction = EconomicTransaction::factory()->forHousehold($this->householdA)->createdBy($this->owner)->shared()->create();
 
-        $this->deleteJson("/api/v1/households/{$this->householdB->id}/economy/transactions/{$transaction->id}")
+        $this->deleteJson("/api/v1/households/{$this->householdB->id}/economy/transactions/{$transaction->id}", [], ['Idempotency-Key' => 'idor-delete-transaction'])
             ->assertForbidden();
 
         $this->assertDatabaseHas('economic_transactions', ['id' => $transaction->id]);
@@ -235,7 +235,7 @@ class EconomicIdorTest extends TestCase
             'amount_minor' => 500,
             'currency' => 'EUR',
             'source_document_id' => $foreignDoc->id,
-        ])->assertJsonValidationErrors(['source_document_id']);
+        ], ['Idempotency-Key' => 'idor-foreign-document'])->assertJsonValidationErrors(['source_document_id']);
     }
 
     /**
@@ -276,7 +276,7 @@ class EconomicIdorTest extends TestCase
             'participants' => [
                 ['household_member_id' => $foreignMember->id, 'split_type' => 'equal'],
             ],
-        ])->assertJsonValidationErrors(['participants.0.household_member_id']);
+        ], ['Idempotency-Key' => 'idor-foreign-participant-store'])->assertJsonValidationErrors(['participants.0.household_member_id']);
     }
 
     /**
@@ -300,7 +300,7 @@ class EconomicIdorTest extends TestCase
             'participants' => [
                 ['household_member_id' => $foreignMember->id, 'split_type' => 'equal'],
             ],
-        ])->assertJsonValidationErrors(['participants.0.household_member_id']);
+        ], ['Idempotency-Key' => 'idor-foreign-participant-update'])->assertJsonValidationErrors(['participants.0.household_member_id']);
     }
 
     /**

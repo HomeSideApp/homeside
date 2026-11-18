@@ -35,7 +35,7 @@ class PrivateShoppingListAccessTest extends TestCase
         $this->get(route('lists.create'))->assertOk();
 
         $this->post(route('lists.store'), ['name' => 'Private web list'])->assertRedirect();
-        $this->postJson(route('api.v1.lists.store'), ['name' => 'Private API list'])->assertCreated();
+        $this->postJson(route('api.v1.lists.store'), ['name' => 'Private API list'], ['Idempotency-Key' => 'private-api-list'])->assertCreated();
 
         foreach (['Private web list', 'Private API list'] as $name) {
             $this->assertDatabaseHas('shopping_lists', ['name' => $name, 'created_by' => $user->id, 'household_id' => null]);
