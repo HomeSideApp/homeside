@@ -2,10 +2,12 @@
 
 namespace App\Actions\ShoppingLists;
 
+use App\Models\ListItem;
 use App\Models\ShoppingList;
+use Illuminate\Support\Facades\DB;
 
 /**
- * Deletes a shopping list.
+ * Deletes a shopping list and tombstones the items it owned.
  */
 final class DeleteShoppingList
 {
@@ -14,6 +16,16 @@ final class DeleteShoppingList
      */
     public function execute(ShoppingList $list): void
     {
-        $list->delete();
+        DB::transaction(function () use ($list): void {
+            // Deleting the list alone would leave its items live but unreachable:
+            // every read resolves them through the list. Each item goes through
+            // Eloquent so the tombstone also advances `updated_at`, which an
+            // `updated_at`-ordered delta cursor needs in order to report the delete.
+            $list->items()->get()->each(function (ListItem $item): void {
+                $item->delete();
+            });
+
+            $list->delete();
+        });
     }
 }

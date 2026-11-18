@@ -15,6 +15,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
 
 /**
@@ -46,6 +47,7 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $recurrence_next_at The next occurrence waiting to be generated.
  * @property Carbon|null $created_at The timestamp when the transaction was created.
  * @property Carbon|null $updated_at The timestamp when the transaction was last updated.
+ * @property Carbon|null $deleted_at The tombstone timestamp, set when the transaction is deleted.
  *
  * Relationships:
  * @property Household|null $household The household the transaction belongs to, if any.
@@ -64,7 +66,7 @@ use Illuminate\Support\Carbon;
 class EconomicTransaction extends Model
 {
     /** @use HasFactory<EconomicTransactionFactory> */
-    use HasFactory, HasUuids;
+    use HasFactory, HasUuids, SoftDeletes;
 
     protected $fillable = [
         'household_id', 'created_by', 'type', 'scope', 'title',

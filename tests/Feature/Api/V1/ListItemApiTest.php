@@ -66,7 +66,7 @@ class ListItemApiTest extends TestCase
             'custom_name' => 'Leche',
             'quantity' => 2,
             'unit' => 'l',
-        ]);
+        ], ['Idempotency-Key' => 'add-milk']);
 
         $response->assertCreated()
             ->assertJsonPath('data.custom_name', 'Leche');
@@ -85,8 +85,11 @@ class ListItemApiTest extends TestCase
         $route = route('api.v1.households.lists.items.store', [$this->household, $this->list]);
         $payload = ['product_id' => $product->id, 'quantity' => 1];
 
-        $firstResponse = $this->postJson($route, $payload);
-        $secondResponse = $this->postJson($route, $payload);
+        // Distinct keys on purpose: this test covers the dedupe inside
+        // AddListItem, not the idempotency replay, so both requests must reach
+        // the action.
+        $firstResponse = $this->postJson($route, $payload, ['Idempotency-Key' => 'pending-product-first']);
+        $secondResponse = $this->postJson($route, $payload, ['Idempotency-Key' => 'pending-product-second']);
 
         $firstResponse->assertCreated();
         $secondResponse->assertOk()
@@ -106,7 +109,7 @@ class ListItemApiTest extends TestCase
 
         $this->postJson(route('api.v1.households.lists.items.store', [$this->household, $foreignList]), [
             'custom_name' => 'Elemento compartido',
-        ])->assertCreated();
+        ], ['Idempotency-Key' => 'add-shared-item'])->assertCreated();
 
         $this->assertDatabaseHas('list_items', [
             'list_id' => $foreignList->id,
@@ -121,7 +124,7 @@ class ListItemApiTest extends TestCase
         $response = $this->putJson(route('api.v1.households.lists.items.update', [$this->household, $this->list, $item]), [
             'is_checked' => true,
             'quantity' => 5,
-        ]);
+        ], ['Idempotency-Key' => 'update-item']);
 
         $response->assertOk()
             ->assertJsonPath('data.is_checked', true);
@@ -133,10 +136,11 @@ class ListItemApiTest extends TestCase
     {
         $item = ListItem::factory()->create(['list_id' => $this->list->id]);
 
-        $response = $this->deleteJson(route('api.v1.households.lists.items.destroy', [$this->household, $this->list, $item]));
+        $response = $this->deleteJson(route('api.v1.households.lists.items.destroy', [$this->household, $this->list, $item]), [], ['Idempotency-Key' => 'delete-item']);
 
         $response->assertNoContent();
-        $this->assertDatabaseMissing('list_items', ['id' => $item->id]);
+        // Deleting is a tombstone now: the row stays behind for the delta cursor.
+        $this->assertSoftDeleted('list_items', ['id' => $item->id]);
     }
 
     public function test_item_resource_uses_nested_api_image_url(): void

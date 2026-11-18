@@ -53,6 +53,7 @@ class EconomyTransactionApiTest extends TestCase
      */
     public function test_user_can_create_expense(): void
     {
+        $this->withHeader('Idempotency-Key', 'test-user-can-create-expense');
         $response = $this->postJson("/api/v1/households/{$this->household->id}/economy/transactions", [
             'type' => 'expense',
             'scope' => 'personal',
@@ -80,6 +81,7 @@ class EconomyTransactionApiTest extends TestCase
      */
     public function test_user_can_create_income(): void
     {
+        $this->withHeader('Idempotency-Key', 'test-user-can-create-income');
         $response = $this->postJson("/api/v1/households/{$this->household->id}/economy/transactions", [
             'type' => 'income',
             'scope' => 'shared',
@@ -101,6 +103,7 @@ class EconomyTransactionApiTest extends TestCase
      */
     public function test_user_can_create_private_transaction_without_household(): void
     {
+        $this->withHeader('Idempotency-Key', 'test-user-can-create-private-transaction-without-household');
         $response = $this->postJson('/api/v1/economy/me/transactions', [
             'type' => 'expense',
             'scope' => 'personal',
@@ -126,6 +129,7 @@ class EconomyTransactionApiTest extends TestCase
      */
     public function test_private_transaction_accepts_empty_participants_from_the_form(): void
     {
+        $this->withHeader('Idempotency-Key', 'test-private-transaction-accepts-empty-participants-from-the-form');
         $this->postJson('/api/v1/economy/me/transactions', [
             'type' => 'expense',
             'scope' => 'personal',
@@ -253,6 +257,7 @@ class EconomyTransactionApiTest extends TestCase
     {
         $transaction = EconomicTransaction::factory()->forHousehold($this->household)->createdBy($this->user)->create();
 
+        $this->withHeader('Idempotency-Key', 'test-user-can-update-transaction');
         $this->patchJson("/api/v1/households/{$this->household->id}/economy/transactions/{$transaction->id}", [
             'title' => 'Título editado',
             'amount_minor' => 9999,
@@ -271,6 +276,7 @@ class EconomyTransactionApiTest extends TestCase
     {
         $transaction = EconomicTransaction::factory()->forHousehold($this->household)->createdBy($this->user)->create();
 
+        $this->withHeader('Idempotency-Key', 'test-user-can-update-transaction-with-put');
         $this->putJson("/api/v1/households/{$this->household->id}/economy/transactions/{$transaction->id}", [
             'title' => 'Actualizada con PUT',
         ])->assertOk()
@@ -290,6 +296,7 @@ class EconomyTransactionApiTest extends TestCase
             'occurred_at' => now(),
         ]);
 
+        $this->withHeader('Idempotency-Key', 'test-user-can-clear-optional-transaction-fields');
         $this->patchJson("/api/v1/households/{$this->household->id}/economy/transactions/{$transaction->id}", [
             'place' => null,
             'notes' => null,
@@ -311,10 +318,11 @@ class EconomyTransactionApiTest extends TestCase
     {
         $transaction = EconomicTransaction::factory()->forHousehold($this->household)->createdBy($this->user)->create();
 
+        $this->withHeader('Idempotency-Key', 'test-user-can-delete-transaction');
         $this->deleteJson("/api/v1/households/{$this->household->id}/economy/transactions/{$transaction->id}")
             ->assertNoContent();
 
-        $this->assertDatabaseMissing('economic_transactions', ['id' => $transaction->id]);
+        $this->assertSoftDeleted('economic_transactions', ['id' => $transaction->id]);
     }
 
     /**
@@ -326,6 +334,7 @@ class EconomyTransactionApiTest extends TestCase
     {
         $transaction = EconomicTransaction::factory()->private()->createdBy($this->user)->create();
 
+        $this->withHeader('Idempotency-Key', 'test-cannot-promote-private-transaction-to-shared-via-update');
         $this->patchJson("/api/v1/economy/me/transactions/{$transaction->id}", [
             'scope' => 'shared',
         ])->assertJsonValidationErrors(['scope']);
@@ -471,6 +480,7 @@ class EconomyTransactionApiTest extends TestCase
      */
     public function test_amount_is_required(): void
     {
+        $this->withHeader('Idempotency-Key', 'test-amount-is-required');
         $this->postJson("/api/v1/households/{$this->household->id}/economy/transactions", [
             'type' => 'expense',
             'scope' => 'personal',
@@ -486,6 +496,7 @@ class EconomyTransactionApiTest extends TestCase
      */
     public function test_amount_must_be_positive(): void
     {
+        $this->withHeader('Idempotency-Key', 'test-amount-must-be-positive');
         $this->postJson("/api/v1/households/{$this->household->id}/economy/transactions", [
             'type' => 'expense',
             'scope' => 'personal',
@@ -502,6 +513,7 @@ class EconomyTransactionApiTest extends TestCase
      */
     public function test_type_must_be_valid(): void
     {
+        $this->withHeader('Idempotency-Key', 'test-type-must-be-valid');
         $this->postJson("/api/v1/households/{$this->household->id}/economy/transactions", [
             'type' => 'weird',
             'scope' => 'personal',
@@ -518,6 +530,7 @@ class EconomyTransactionApiTest extends TestCase
      */
     public function test_participants_required_for_shared_scope(): void
     {
+        $this->withHeader('Idempotency-Key', 'test-participants-required-for-shared-scope');
         $this->postJson("/api/v1/households/{$this->household->id}/economy/transactions", [
             'type' => 'expense',
             'scope' => 'shared',
@@ -541,6 +554,7 @@ class EconomyTransactionApiTest extends TestCase
         ]);
         $ownMember = $this->user->householdMemberships()->firstOrFail();
 
+        $this->withHeader('Idempotency-Key', 'test-equal-participants-are-persisted-with-the-full-amount');
         $response = $this->postJson("/api/v1/households/{$this->household->id}/economy/transactions", [
             'type' => 'expense',
             'scope' => 'shared',
@@ -577,6 +591,7 @@ class EconomyTransactionApiTest extends TestCase
             'amount_minor' => 1000,
         ]);
 
+        $this->withHeader('Idempotency-Key', 'test-updating-shared-amount-recalculates-equal-participants');
         $this->patchJson("/api/v1/households/{$this->household->id}/economy/transactions/{$transaction->id}", [
             'amount_minor' => 2000,
         ])->assertOk();

@@ -134,7 +134,7 @@ class ListItemTest extends TestCase
         $response = $this->actingAs($user)->delete(route('households.lists.items.destroy', [$household, $list, $item]));
 
         $response->assertSessionHasNoErrors();
-        $this->assertDatabaseMissing('list_items', ['id' => $item->id]);
+        $this->assertSoftDeleted('list_items', ['id' => $item->id]);
     }
 
     public function test_user_can_upload_image_to_list_item()

@@ -95,7 +95,7 @@ class ShoppingListApiTest extends TestCase
 
         $this->postJson(route('api.v1.households.lists.store', $foreignHousehold), [
             'name' => 'Lista no autorizada',
-        ])->assertForbidden();
+        ], ['Idempotency-Key' => 'foreign-household-list'])->assertForbidden();
 
         $this->assertDatabaseMissing('shopping_lists', [
             'household_id' => $foreignHousehold->id,
@@ -115,7 +115,7 @@ class ShoppingListApiTest extends TestCase
 
         $this->postJson(route('api.v1.households.lists.store', $this->household), [
             'name' => 'No permitida',
-        ])->assertForbidden();
+        ], ['Idempotency-Key' => 'households-disabled-list'])->assertForbidden();
 
         $this->assertDatabaseMissing('shopping_lists', [
             'household_id' => $this->household->id,
@@ -184,7 +184,7 @@ class ShoppingListApiTest extends TestCase
     {
         $response = $this->postJson(route('api.v1.households.lists.store', $this->household), [
             'name' => 'Lista de la compra',
-        ]);
+        ], ['Idempotency-Key' => 'create-household-list']);
 
         $response->assertCreated()
             ->assertJsonPath('data.name', 'Lista de la compra')
@@ -203,7 +203,7 @@ class ShoppingListApiTest extends TestCase
     {
         $response = $this->postJson(route('api.v1.households.lists.store', $this->household), [
             'name' => '',
-        ]);
+        ], ['Idempotency-Key' => 'invalid-household-list']);
 
         $response->assertUnprocessable()
             ->assertJsonValidationErrors('name')
@@ -224,7 +224,7 @@ class ShoppingListApiTest extends TestCase
 
         $response = $this->putJson(route('api.v1.households.lists.update', [$this->household, $list]), [
             'name' => 'Nombre actualizado',
-        ]);
+        ], ['Idempotency-Key' => 'update-own-household-list']);
 
         $response->assertOk()
             ->assertJsonPath('data.name', 'Nombre actualizado');
@@ -244,15 +244,16 @@ class ShoppingListApiTest extends TestCase
             'household_id' => $this->household->id,
         ]);
 
-        $response = $this->deleteJson(route('api.v1.households.lists.destroy', [$this->household, $list]));
+        $response = $this->deleteJson(route('api.v1.households.lists.destroy', [$this->household, $list]), [], ['Idempotency-Key' => 'delete-own-household-list']);
 
         $response->assertNoContent();
-        $this->assertDatabaseMissing('shopping_lists', ['id' => $list->id]);
+        // Deleting is a tombstone now: the row stays behind for the delta cursor.
+        $this->assertSoftDeleted('shopping_lists', ['id' => $list->id]);
     }
 
     public function test_error_response_has_consistent_structure(): void
     {
-        $response = $this->postJson(route('api.v1.households.lists.store', $this->household), []);
+        $response = $this->postJson(route('api.v1.households.lists.store', $this->household), [], ['Idempotency-Key' => 'empty-household-list']);
 
         $response->assertUnprocessable()
             ->assertJsonStructure([
@@ -271,7 +272,7 @@ class ShoppingListApiTest extends TestCase
 
         $createResponse = $this->postJson(route('api.v1.lists.store'), [
             'name' => 'Lista privada',
-        ]);
+        ], ['Idempotency-Key' => 'create-private-list']);
 
         $privateListId = $createResponse->json('data.id');
 
@@ -309,7 +310,7 @@ class ShoppingListApiTest extends TestCase
         $this->postJson(route('api.v1.lists.items.store', $list), [
             'custom_name' => 'Pan',
             'quantity' => 1,
-        ])->assertCreated();
+        ], ['Idempotency-Key' => 'add-private-list-item'])->assertCreated();
 
         $this->assertDatabaseHas('list_items', [
             'list_id' => $list->id,
@@ -341,7 +342,7 @@ class ShoppingListApiTest extends TestCase
 
         $response = $this->putJson(route('api.v1.households.lists.update', [$this->household, $list]), [
             'name' => 'Compra actualizada',
-        ]);
+        ], ['Idempotency-Key' => 'update-foreign-household-list']);
 
         $response->assertOk()
             ->assertJsonPath('data.name', 'Compra actualizada');
@@ -357,10 +358,11 @@ class ShoppingListApiTest extends TestCase
 
         $list = ShoppingList::factory()->create(['created_by' => $owner->id, 'household_id' => $this->household->id]);
 
-        $response = $this->deleteJson(route('api.v1.households.lists.destroy', [$this->household, $list]));
+        $response = $this->deleteJson(route('api.v1.households.lists.destroy', [$this->household, $list]), [], ['Idempotency-Key' => 'delete-foreign-household-list']);
 
         $response->assertNoContent();
-        $this->assertDatabaseMissing('shopping_lists', ['id' => $list->id]);
+        // Deleting is a tombstone now: the row stays behind for the delta cursor.
+        $this->assertSoftDeleted('shopping_lists', ['id' => $list->id]);
     }
 
     public function test_user_cannot_show_another_users_personal_list(): void
@@ -384,7 +386,7 @@ class ShoppingListApiTest extends TestCase
 
         $response = $this->putJson(route('api.v1.lists.update', $list), [
             'name' => 'No permitido',
-        ]);
+        ], ['Idempotency-Key' => 'update-foreign-private-list']);
 
         $response->assertForbidden();
         $this->assertDatabaseMissing('shopping_lists', [
@@ -400,7 +402,7 @@ class ShoppingListApiTest extends TestCase
             'household_id' => null,
         ]);
 
-        $response = $this->deleteJson(route('api.v1.lists.destroy', $list));
+        $response = $this->deleteJson(route('api.v1.lists.destroy', $list), [], ['Idempotency-Key' => 'delete-foreign-private-list']);
 
         $response->assertForbidden();
         $this->assertModelExists($list);

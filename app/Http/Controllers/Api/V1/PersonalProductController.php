@@ -39,12 +39,17 @@ final class PersonalProductController extends Controller
                         }
 
                         $q->whereIn('id', function ($subQuery) use ($householdId) {
+                            // Raw subqueries bypass the soft-delete scope, so a tombstoned
+                            // item would otherwise keep its personal product visible here
+                            // long after the household removed it from every list.
                             $subQuery->select('product_id')
                                 ->from('list_items')
                                 ->whereNotNull('product_id')
+                                ->whereNull('deleted_at')
                                 ->whereIn('list_id', function ($listQuery) use ($householdId) {
                                     $listQuery->select('id')
                                         ->from('shopping_lists')
+                                        ->whereNull('deleted_at')
                                         ->where('household_id', $householdId);
                                 });
                         });
