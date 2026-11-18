@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
 
 /**
@@ -25,6 +26,7 @@ use Illuminate\Support\Carbon;
  * @property string|null $household_id The id of the household the shopping list belongs to, if any.
  * @property Carbon|null $created_at The timestamp when the shopping list was created.
  * @property Carbon|null $updated_at The timestamp when the shopping list was last updated.
+ * @property Carbon|null $deleted_at The tombstone timestamp, set when the list is deleted.
  *
  * Relationships:
  * @property User|null $creator The user who created the shopping list.
@@ -36,7 +38,7 @@ use Illuminate\Support\Carbon;
 class ShoppingList extends Model
 {
     /** @use HasFactory<ShoppingListFactory> */
-    use HasFactory, HasUuids;
+    use HasFactory, HasUuids, SoftDeletes;
 
     protected $fillable = ['name', 'created_by', 'household_id'];
 

@@ -98,7 +98,7 @@ final class HouseholdEconomyRouteBindingTest extends TestCase
 
         $response->assertRedirect(route('households.economy.index', $household));
 
-        $this->assertDatabaseMissing('economic_transactions', ['id' => $transaction->id]);
+        $this->assertSoftDeleted('economic_transactions', ['id' => $transaction->id]);
     }
 
     /**

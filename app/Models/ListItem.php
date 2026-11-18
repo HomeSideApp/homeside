@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
 
 /**
@@ -24,6 +25,7 @@ use Illuminate\Support\Carbon;
  * @property float $quantity The quantity of the item.
  * @property string|null $unit The unit of the item, if any.
  * @property bool $is_checked Whether the item is checked off the list.
+ * @property Carbon|null $checked_at The moment the item was checked off, cleared when unchecked.
  * @property string|null $notes Additional notes of the item, if any.
  * @property string|null $store_id The id of the store associated with the item, if any.
  * @property string|null $image_url The URL of the item image, if any.
@@ -37,6 +39,7 @@ use Illuminate\Support\Carbon;
  * @property int|null $scaled_servings The number of servings the item was scaled for, if any.
  * @property Carbon|null $created_at The timestamp when the item was created.
  * @property Carbon|null $updated_at The timestamp when the item was last updated.
+ * @property Carbon|null $deleted_at The tombstone timestamp, set when the item is deleted.
  *
  * Relationships:
  * @property ShoppingList|null $list The shopping list the item belongs to.
@@ -50,7 +53,7 @@ use Illuminate\Support\Carbon;
 class ListItem extends Model
 {
     /** @use HasFactory<ListItemFactory> */
-    use HasFactory, HasUuids;
+    use HasFactory, HasUuids, SoftDeletes;
 
     protected $fillable = ['list_id', 'product_id', 'custom_name', 'quantity', 'unit', 'is_checked', 'notes', 'store_id', 'image_url', 'icon', 'category_id', 'added_by', 'source_type', 'source_id', 'original_quantity', 'original_unit', 'scaled_servings'];
 
@@ -64,6 +67,7 @@ class ListItem extends Model
         return [
             'quantity' => 'float',
             'is_checked' => 'boolean',
+            'checked_at' => 'datetime',
             'original_quantity' => 'float',
         ];
     }

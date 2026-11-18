@@ -20,6 +20,8 @@ class StoreListItemRequest extends FormRequest
     public function rules(): array
     {
         return [
+            // Client-provided id for a write queued offline; see StoreListRequest.
+            'id' => ['sometimes', 'uuid'],
             'product_id' => ['nullable', 'exists:products,id'],
             'custom_name' => ['nullable', 'string', 'max:255'],
             'quantity' => ['sometimes', 'numeric', 'min:0.01'],

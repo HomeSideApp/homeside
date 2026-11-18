@@ -155,11 +155,14 @@ final class GetShoppingList
                     });
                 }
 
-                // Or personal products already in this list
+                // Or personal products already in this list. Raw subquery: the
+                // soft-delete scope does not reach here, so tombstoned items are
+                // excluded explicitly.
                 $query->orWhereIn('id', function ($subQuery) use ($listId) {
                     $subQuery->select('product_id')
                         ->from('list_items')
                         ->where('list_id', $listId)
+                        ->whereNull('deleted_at')
                         ->whereNotNull('product_id');
                 });
             })

@@ -145,7 +145,7 @@ class ListAuthorizationTest extends TestCase
         $response = $this->actingAs($user)->delete(route('households.lists.destroy', [$household, $list]));
 
         $response->assertRedirect(route('households.lists.index', $household));
-        $this->assertDatabaseMissing('shopping_lists', ['id' => $list->id]);
+        $this->assertSoftDeleted('shopping_lists', ['id' => $list->id]);
     }
 
     // ========== LISTS: MEMBERSHIP IS REQUIRED ==========

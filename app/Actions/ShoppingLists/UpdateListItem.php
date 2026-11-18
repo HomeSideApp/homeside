@@ -41,6 +41,20 @@ final class UpdateListItem
             }
         }
 
+        $wasChecked = (bool) $item->is_checked;
+
+        if (array_key_exists('is_checked', $data)) {
+            $isChecked = (bool) $data['is_checked'];
+
+            if ($isChecked && ! $wasChecked) {
+                // Set before `update()` so `save()` persists it in the same write and
+                // bumps `updated_at`, which the offline delta cursor orders by.
+                $item->checked_at = now();
+            } elseif (! $isChecked) {
+                $item->checked_at = null;
+            }
+        }
+
         $item->update($data);
 
         $item->refresh();

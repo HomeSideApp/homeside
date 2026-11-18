@@ -109,7 +109,7 @@ final class EconomicTransactionController extends Controller
     public function store(StoreEconomicTransactionApiRequest $request, CreateEconomicTransaction $action): JsonResponse
     {
         $household = $this->resolveHousehold($request);
-        $data = CreateEconomicTransactionData::fromArray($request->validated());
+        $data = CreateEconomicTransactionData::fromArray($request->validated(), $request->validated('id'));
         $transaction = $action->execute($data, $household, $this->authenticatedUser($request));
 
         return EconomicTransactionResource::make($transaction)

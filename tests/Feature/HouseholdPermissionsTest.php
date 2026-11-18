@@ -74,7 +74,7 @@ class HouseholdPermissionsTest extends TestCase
         $item = ListItem::factory()->create();
         $quantity = $item->quantity;
 
-        $this->actingAs($user)->json($httpMethod, route($routeName, [$list, $item]), ['quantity' => 'invalid'])->assertNotFound();
+        $this->actingAs($user)->json($httpMethod, route($routeName, [$list, $item]), ['quantity' => 'invalid'], ['Idempotency-Key' => 'foreign-item-before-validation'])->assertNotFound();
 
         $this->assertSame($quantity, $item->refresh()->quantity);
     }
@@ -258,7 +258,7 @@ class HouseholdPermissionsTest extends TestCase
         $this->getJson(route('api.v1.households.economy.transactions.show', [$household, $shared]))->assertOk();
         $this->get(route('households.economy.show', [$household, $private]))->assertForbidden();
         $this->getJson(route('api.v1.households.economy.transactions.show', [$household, $private]))->assertForbidden();
-        $this->putJson(route('api.v1.households.economy.transactions.update', [$household, $shared]), ['title' => 'Blocked'])->assertForbidden();
+        $this->putJson(route('api.v1.households.economy.transactions.update', [$household, $shared]), ['title' => 'Blocked'], ['Idempotency-Key' => 'reader-blocked-update'])->assertForbidden();
         $this->get(route('households.economy.create', $household))->assertForbidden();
         $this->assertFalse($reader->can('update', $shared));
     }
@@ -334,7 +334,7 @@ class HouseholdPermissionsTest extends TestCase
         $this->assertFalse($member->user->can('view', $document));
         $this->actingAs($member->user)->postJson(route('api.v1.households.economy.transactions.store', $household), [
             'type' => 'expense', 'scope' => 'shared', 'title' => 'Invalid document', 'amount' => 12, 'currency' => 'EUR', 'source_document_id' => $document->id,
-        ])->assertUnprocessable()->assertJsonValidationErrors('source_document_id');
+        ], ['Idempotency-Key' => 'shared-movement-private-document'])->assertUnprocessable()->assertJsonValidationErrors('source_document_id');
         EconomicTransaction::factory()->forHousehold($household)->createdBy($owner)->shared()->create(['source_document_id' => $document->id]);
         $reader = HouseholdMember::factory()->create(['household_id' => $household->id, 'access_profile' => 'reader']);
         $this->assertTrue($reader->user->can('view', $document));

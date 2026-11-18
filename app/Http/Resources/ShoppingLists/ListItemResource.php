@@ -32,6 +32,7 @@ final class ListItemResource extends JsonResource
             'quantity' => $this->quantity,
             'unit' => $this->unit,
             'is_checked' => $this->is_checked,
+            'checked_at' => $this->checked_at?->toISOString(),
             'notes' => $this->notes,
             'icon' => $this->icon,
             'image_url' => $this->image_url

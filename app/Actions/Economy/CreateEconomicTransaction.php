@@ -11,6 +11,9 @@ use App\Models\EconomicDocument;
 use App\Models\EconomicTransaction;
 use App\Models\Household;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\UniqueConstraintViolationException;
+use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -157,8 +160,10 @@ final class CreateEconomicTransaction
             $recurrenceNextAt = null;
         }
 
-        return DB::transaction(function () use ($data, $household, $participants, $recurrenceNextAt, $user) {
-            $transaction = EconomicTransaction::create([
+        $clientId = $data->id;
+
+        return DB::transaction(function () use ($data, $household, $participants, $recurrenceNextAt, $user, $clientId) {
+            $transaction = new EconomicTransaction([
                 'household_id' => $household?->id,
                 'created_by' => $user->id,
                 'type' => $data->type,
@@ -183,6 +188,16 @@ final class CreateEconomicTransaction
                     : $data->recurrence_ends_at,
                 'recurrence_next_at' => $recurrenceNextAt,
             ]);
+
+            $this->assignClientId($transaction, $clientId);
+
+            try {
+                $transaction->save();
+            } catch (UniqueConstraintViolationException) {
+                // The pre-check cannot see a row another device committed in
+                // between, so the unique index is the referee for that race.
+                throw $this->idTaken();
+            }
 
             foreach ($data->items as $index => $itemData) {
                 $transaction->items()->create([
@@ -217,5 +232,31 @@ final class CreateEconomicTransaction
 
             return $transaction->load(['items', 'taxes', 'participants', 'contacts']);
         });
+    }
+
+    /**
+     * Keep the client id, refusing one that a row already owns.
+     */
+    private function assignClientId(Model $model, ?string $clientId): void
+    {
+        if ($clientId === null) {
+            return;
+        }
+
+        // A tombstoned row still occupies its id, so the pre-check has to see it.
+        if ($model::withTrashed()->whereKey($clientId)->exists()) {
+            throw $this->idTaken();
+        }
+
+        $model->id = $clientId;
+    }
+
+    private function idTaken(): HttpResponseException
+    {
+        return new HttpResponseException(response()->json([
+            'message' => 'This id is already used by another record.',
+            'code' => 'id_taken',
+            'errors' => ['id' => ['This id is already used by another record.']],
+        ], 422));
     }
 }

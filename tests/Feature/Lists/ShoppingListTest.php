@@ -156,7 +156,7 @@ class ShoppingListTest extends TestCase
         $response = $this->actingAs($user)->delete(route('households.lists.destroy', [$household, $list]));
 
         $response->assertRedirect(route('households.lists.index', $household));
-        $this->assertDatabaseMissing('shopping_lists', ['id' => $list->id]);
+        $this->assertSoftDeleted('shopping_lists', ['id' => $list->id]);
     }
 
     public function test_reader_membership_cannot_create_list()

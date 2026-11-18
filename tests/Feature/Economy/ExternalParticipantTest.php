@@ -133,6 +133,7 @@ final class ExternalParticipantTest extends TestCase
      */
     public function test_shared_transaction_persists_a_named_external_participant(): void
     {
+        $this->withHeader('Idempotency-Key', 'test-shared-transaction-persists-a-named-external-participant');
         $response = $this->postJson($this->storeUrl(), $this->sharedPayload([
             ['household_member_id' => $this->ownerMembership->id, 'split_type' => 'equal'],
             ['display_name' => 'Juan', 'split_type' => 'equal'],
@@ -161,6 +162,7 @@ final class ExternalParticipantTest extends TestCase
      */
     public function test_shared_transaction_persists_one_anonymous_portion_with_share_count(): void
     {
+        $this->withHeader('Idempotency-Key', 'test-shared-transaction-persists-one-anonymous-portion-with-share-count');
         $response = $this->postJson($this->storeUrl(), $this->sharedPayload([
             ['household_member_id' => $this->ownerMembership->id, 'split_type' => 'equal'],
             ['share_count' => 3, 'split_type' => 'equal'],
@@ -189,6 +191,7 @@ final class ExternalParticipantTest extends TestCase
     {
         $partner = $this->addPartnerMembership();
 
+        $this->withHeader('Idempotency-Key', 'test-member-only-split-keeps-working');
         $response = $this->postJson($this->storeUrl(), $this->sharedPayload([
             ['household_member_id' => $this->ownerMembership->id, 'split_type' => 'equal'],
             ['household_member_id' => $partner->id, 'split_type' => 'equal'],
@@ -224,6 +227,7 @@ final class ExternalParticipantTest extends TestCase
             'display_name' => 'Ana',
         ]);
 
+        $this->withHeader('Idempotency-Key', 'test-external-participant-with-foreign-contact-is-rejected');
         $response = $this->postJson($this->storeUrl(), $this->sharedPayload([
             ['household_member_id' => $this->ownerMembership->id, 'split_type' => 'equal'],
             ['display_name' => 'Ana', 'contact_id' => $contact->id, 'split_type' => 'equal'],
@@ -242,6 +246,7 @@ final class ExternalParticipantTest extends TestCase
      */
     public function test_two_anonymous_portions_are_rejected(): void
     {
+        $this->withHeader('Idempotency-Key', 'test-two-anonymous-portions-are-rejected');
         $response = $this->postJson($this->storeUrl(), $this->sharedPayload([
             ['household_member_id' => $this->ownerMembership->id, 'split_type' => 'equal'],
             ['split_type' => 'equal'],
@@ -265,6 +270,7 @@ final class ExternalParticipantTest extends TestCase
      */
     public function test_updating_the_amount_keeps_the_external_participant(): void
     {
+        $this->withHeader('Idempotency-Key', 'test-updating-the-amount-keeps-the-external-participant');
         $this->postJson($this->storeUrl(), $this->sharedPayload([
             ['household_member_id' => $this->ownerMembership->id, 'split_type' => 'equal'],
             ['display_name' => 'Juan', 'split_type' => 'equal'],
@@ -272,6 +278,7 @@ final class ExternalParticipantTest extends TestCase
 
         $transaction = EconomicTransaction::query()->latest('created_at')->firstOrFail();
 
+        $this->withHeader('Idempotency-Key', 'test-updating-the-amount-keeps-the-external-participant-2');
         $this->putJson("{$this->storeUrl()}/{$transaction->id}", [
             'amount_minor' => 12000,
         ])->assertOk();
@@ -291,6 +298,7 @@ final class ExternalParticipantTest extends TestCase
      */
     public function test_shared_transaction_serializes_member_external_and_anonymous_participants(): void
     {
+        $this->withHeader('Idempotency-Key', 'test-shared-transaction-serializes-member-external-and-anonymous-participants');
         $response = $this->postJson($this->storeUrl(), $this->sharedPayload([
             ['household_member_id' => $this->ownerMembership->id, 'split_type' => 'equal'],
             ['display_name' => 'Juan', 'split_type' => 'equal'],
@@ -345,6 +353,7 @@ final class ExternalParticipantTest extends TestCase
      */
     public function test_recurring_shared_transaction_copies_the_external_participant(): void
     {
+        $this->withHeader('Idempotency-Key', 'test-recurring-shared-transaction-copies-the-external-participant');
         $response = $this->postJson($this->storeUrl(), $this->sharedPayload([
             ['household_member_id' => $this->ownerMembership->id, 'split_type' => 'equal'],
             ['display_name' => 'Juan', 'share_count' => 1, 'split_type' => 'equal'],
@@ -392,6 +401,7 @@ final class ExternalParticipantTest extends TestCase
 
         Sanctum::actingAs($partner);
 
+        $this->withHeader('Idempotency-Key', 'test-external-participants-do-not-inflate-personal-totals');
         $this->postJson($this->storeUrl(), $this->sharedPayload([
             ['household_member_id' => $this->ownerMembership->id, 'split_type' => 'equal'],
             ['household_member_id' => $partnerMembership->id, 'split_type' => 'equal'],

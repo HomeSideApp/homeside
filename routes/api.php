@@ -56,6 +56,8 @@ use App\Http\Controllers\Api\V1\RecipeImportController;
 use App\Http\Controllers\Api\V1\RecipeShoppingListController;
 use App\Http\Controllers\Api\V1\ShoppingListController;
 use App\Http\Controllers\Api\V1\StoreController;
+use App\Http\Controllers\Api\V1\SyncController;
+use App\Http\Controllers\Api\V1\SyncPushController;
 use App\Http\Controllers\Api\V1\TwoFactorController;
 use App\Http\Controllers\Api\V1\UserAiProviderController;
 use App\Http\Controllers\HouseholdMemberPermissionController;
@@ -276,6 +278,15 @@ Route::prefix('v1/recipes')->as('api.v1.recipes.')->middleware(['auth:sanctum', 
 });
 
 Route::prefix('v1')->as('api.v1.')->middleware(['auth:sanctum', 'locale', 'api.permission'])->group(function () {
+    // === Sincronización offline ===
+    // Un solo delta con cursor opaco. El permiso `sync.changes` cubre los tres
+    // dominios porque el feed mezcla listas, economía y hogares en una página.
+    Route::get('sync/changes', [SyncController::class, 'changes'])->name('sync.changes');
+    // El lote re-ejecuta otras rutas, así que sólo alcanza los nombres de ruta
+    // que la allowlist de `PushSyncOperations` enumera. El `idempotency` del lote
+    // hace que un reintento idéntico reproduzca la respuesta en vez de re-ejecutar.
+    Route::post('sync/push', [SyncPushController::class, 'store'])->middleware('idempotency')->name('sync.push');
+
     Route::post('categories', [CategoryController::class, 'store'])->name('categories.store');
     Route::put('categories/{category}', [CategoryController::class, 'update'])->name('categories.update');
     Route::delete('categories/{category}', [CategoryController::class, 'destroy'])->name('categories.destroy');
@@ -290,11 +301,18 @@ Route::prefix('v1')->as('api.v1.')->middleware(['auth:sanctum', 'locale', 'api.p
     Route::post('personal-products', [PersonalProductController::class, 'store'])->name('personal-products.store');
 
     // Listas privadas del usuario
-    Route::apiResource('lists', PersonalShoppingListController::class)->except('create', 'edit');
+    // The write routes carry the mandatory `idempotency` middleware: an offline
+    // client retries a queued write after a lost response, and the replay must
+    // return the first resource instead of creating a second one. The read
+    // routes keep the plain resource registration.
+    Route::apiResource('lists', PersonalShoppingListController::class)->only('index', 'show');
+    Route::post('lists', [PersonalShoppingListController::class, 'store'])->middleware('idempotency')->name('lists.store');
+    Route::match(['put', 'patch'], 'lists/{list}', [PersonalShoppingListController::class, 'update'])->middleware('idempotency')->name('lists.update');
+    Route::delete('lists/{list}', [PersonalShoppingListController::class, 'destroy'])->middleware('idempotency')->name('lists.destroy');
     Route::post('lists/{list}/items/quick-create', [ListItemController::class, 'quickCreate'])->middleware('idempotency')->name('lists.items.quick-create');
-    Route::post('lists/{list}/items', [ListItemController::class, 'store'])->name('lists.items.store');
-    Route::put('lists/{list}/items/{item}', [ListItemController::class, 'update'])->name('lists.items.update');
-    Route::delete('lists/{list}/items/{item}', [ListItemController::class, 'destroy'])->name('lists.items.destroy');
+    Route::post('lists/{list}/items', [ListItemController::class, 'store'])->middleware('idempotency')->name('lists.items.store');
+    Route::put('lists/{list}/items/{item}', [ListItemController::class, 'update'])->middleware(['idempotency', 'not-stale'])->name('lists.items.update');
+    Route::delete('lists/{list}/items/{item}', [ListItemController::class, 'destroy'])->middleware(['idempotency', 'not-stale'])->name('lists.items.destroy');
     Route::get('lists/{list}/items/{item}/image', [ListItemController::class, 'image'])->name('lists.items.image');
 
     // === Households ===
@@ -324,16 +342,16 @@ Route::prefix('v1')->as('api.v1.')->middleware(['auth:sanctum', 'locale', 'api.p
         // Lists (requires shopping_lists module enabled)
         Route::middleware('module:shopping_lists')->group(function () {
             Route::get('lists', [ShoppingListController::class, 'index'])->name('lists.index');
-            Route::post('lists', [ShoppingListController::class, 'store'])->name('lists.store');
+            Route::post('lists', [ShoppingListController::class, 'store'])->middleware('idempotency')->name('lists.store');
             Route::get('lists/{list}', [ShoppingListController::class, 'show'])->scopeBindings()->name('lists.show');
-            Route::put('lists/{list}', [ShoppingListController::class, 'update'])->scopeBindings()->name('lists.update');
-            Route::delete('lists/{list}', [ShoppingListController::class, 'destroy'])->scopeBindings()->name('lists.destroy');
+            Route::put('lists/{list}', [ShoppingListController::class, 'update'])->middleware('idempotency')->scopeBindings()->name('lists.update');
+            Route::delete('lists/{list}', [ShoppingListController::class, 'destroy'])->middleware('idempotency')->scopeBindings()->name('lists.destroy');
 
             // List Items
             Route::post('lists/{list}/items/quick-create', [ListItemController::class, 'quickCreate'])->middleware('idempotency')->scopeBindings()->name('lists.items.quick-create');
-            Route::post('lists/{list}/items', [ListItemController::class, 'store'])->name('lists.items.store');
-            Route::put('lists/{list}/items/{item}', [ListItemController::class, 'update'])->name('lists.items.update');
-            Route::delete('lists/{list}/items/{item}', [ListItemController::class, 'destroy'])->name('lists.items.destroy');
+            Route::post('lists/{list}/items', [ListItemController::class, 'store'])->middleware('idempotency')->name('lists.items.store');
+            Route::put('lists/{list}/items/{item}', [ListItemController::class, 'update'])->middleware(['idempotency', 'not-stale'])->name('lists.items.update');
+            Route::delete('lists/{list}/items/{item}', [ListItemController::class, 'destroy'])->middleware(['idempotency', 'not-stale'])->name('lists.items.destroy');
             Route::get('lists/{list}/items/{item}/image', [ListItemController::class, 'image'])->name('lists.items.image');
         });
 
@@ -369,13 +387,13 @@ Route::prefix('v1/economy/me')->as('api.v1.economy.me.')->middleware(['auth:sanc
 
     Route::get('transactions', [EconomicTransactionController::class, 'personalIndex'])->name('transactions.index');
     Route::get('totals', [EconomicTransactionController::class, 'personalTotals'])->name('totals');
-    Route::post('transactions', [EconomicTransactionController::class, 'store'])->name('transactions.store');
+    Route::post('transactions', [EconomicTransactionController::class, 'store'])->middleware('idempotency')->name('transactions.store');
     Route::post('transactions/{transaction}/attachments', [EconomicTransactionAttachmentController::class, 'store'])->name('transactions.attachments.store');
     Route::delete('transactions/{transaction}/attachments/{attachment}', [EconomicTransactionAttachmentController::class, 'destroy'])->name('transactions.attachments.destroy');
     Route::get('transactions/{transaction}', [EconomicTransactionController::class, 'show'])->name('transactions.show');
-    Route::put('transactions/{transaction}', [EconomicTransactionController::class, 'update'])->name('transactions.update');
-    Route::patch('transactions/{transaction}', [EconomicTransactionController::class, 'update'])->name('transactions.patch');
-    Route::delete('transactions/{transaction}', [EconomicTransactionController::class, 'destroy'])->name('transactions.destroy');
+    Route::put('transactions/{transaction}', [EconomicTransactionController::class, 'update'])->middleware(['idempotency', 'not-stale'])->name('transactions.update');
+    Route::patch('transactions/{transaction}', [EconomicTransactionController::class, 'update'])->middleware(['idempotency', 'not-stale'])->name('transactions.patch');
+    Route::delete('transactions/{transaction}', [EconomicTransactionController::class, 'destroy'])->middleware(['idempotency', 'not-stale'])->name('transactions.destroy');
 
     Route::post('documents', [EconomicDocumentController::class, 'store'])->name('documents.store');
     Route::get('documents/{document}', [EconomicDocumentController::class, 'show'])->name('documents.show');
@@ -394,13 +412,13 @@ Route::prefix('v1/households/{household}/economy')->as('api.v1.households.econom
     Route::get('overview', [EconomyOverviewController::class, 'household'])->name('overview');
     Route::get('transactions', [EconomicTransactionController::class, 'index'])->name('transactions.index');
     Route::get('totals', [EconomicTransactionController::class, 'totals'])->name('totals');
-    Route::post('transactions', [EconomicTransactionController::class, 'store'])->name('transactions.store');
+    Route::post('transactions', [EconomicTransactionController::class, 'store'])->middleware('idempotency')->name('transactions.store');
     Route::post('transactions/{transaction}/attachments', [EconomicTransactionAttachmentController::class, 'store'])->name('transactions.attachments.store');
     Route::delete('transactions/{transaction}/attachments/{attachment}', [EconomicTransactionAttachmentController::class, 'destroy'])->name('transactions.attachments.destroy');
     Route::get('transactions/{transaction}', [EconomicTransactionController::class, 'show'])->name('transactions.show');
-    Route::put('transactions/{transaction}', [EconomicTransactionController::class, 'update'])->name('transactions.update');
-    Route::patch('transactions/{transaction}', [EconomicTransactionController::class, 'update'])->name('transactions.patch');
-    Route::delete('transactions/{transaction}', [EconomicTransactionController::class, 'destroy'])->name('transactions.destroy');
+    Route::put('transactions/{transaction}', [EconomicTransactionController::class, 'update'])->middleware(['idempotency', 'not-stale'])->name('transactions.update');
+    Route::patch('transactions/{transaction}', [EconomicTransactionController::class, 'update'])->middleware(['idempotency', 'not-stale'])->name('transactions.patch');
+    Route::delete('transactions/{transaction}', [EconomicTransactionController::class, 'destroy'])->middleware(['idempotency', 'not-stale'])->name('transactions.destroy');
 
     Route::post('documents', [EconomicDocumentController::class, 'store'])->name('documents.store');
     Route::get('documents/{document}', [EconomicDocumentController::class, 'show'])->name('documents.show');
