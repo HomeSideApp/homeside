@@ -160,7 +160,7 @@ final class CreateEconomicTransaction
             $recurrenceNextAt = null;
         }
 
-        $clientId = $this->clientProvidedId();
+        $clientId = $data->id;
 
         return DB::transaction(function () use ($data, $household, $participants, $recurrenceNextAt, $user, $clientId) {
             $transaction = new EconomicTransaction([
@@ -232,25 +232,6 @@ final class CreateEconomicTransaction
 
             return $transaction->load(['items', 'taxes', 'participants', 'contacts']);
         });
-    }
-
-    /**
-     * The id the offline client claimed for this write, when it sent one.
-     *
-     * The API request validates it as a UUID; nothing else feeds ids in, so the
-     * action only has to keep it instead of letting HasUuids mint a new one.
-     */
-    private function clientProvidedId(): ?string
-    {
-        $request = request();
-
-        if (! $request->routeIs('api.v1.*')) {
-            return null;
-        }
-
-        $id = $request->input('id');
-
-        return is_string($id) && $id !== '' ? $id : null;
     }
 
     /**

@@ -24,16 +24,14 @@ final class CreateShoppingList
      */
     public function execute(CreateShoppingListData $data, User $actor, ?Household $household = null): ShoppingList
     {
-        $clientId = $this->clientProvidedId();
-
-        return DB::transaction(function () use ($data, $actor, $household, $clientId) {
+        return DB::transaction(function () use ($data, $actor, $household) {
             $list = new ShoppingList([
                 'name' => $data->name,
                 'created_by' => $actor->id,
                 'household_id' => $household?->id,
             ]);
 
-            $this->assignClientId($list, $clientId);
+            $this->assignClientId($list, $data->id);
 
             try {
                 $list->save();
@@ -45,25 +43,6 @@ final class CreateShoppingList
 
             return $list;
         });
-    }
-
-    /**
-     * The id the offline client claimed for this write, when it sent one.
-     *
-     * The API request validates it as a UUID; nothing else feeds ids in, so the
-     * action only has to keep it instead of letting HasUuids mint a new one.
-     */
-    private function clientProvidedId(): ?string
-    {
-        $request = request();
-
-        if (! $request->routeIs('api.v1.*')) {
-            return null;
-        }
-
-        $id = $request->input('id');
-
-        return is_string($id) && $id !== '' ? $id : null;
     }
 
     /**

@@ -30,6 +30,7 @@ final readonly class CreateEconomicTransactionData
      * @param  array<int, int>  $recurrence_weekdays  The selected ISO weekdays for a weekly recurrence.
      * @param  Carbon|null  $recurrence_ends_at  The optional inclusive final recurrence date.
      * @param  string|null  $contact_id  The optional contact linked to the transaction for context.
+     * @param  string|null  $id  The client-supplied UUIDv7 identity, or null when the server assigns one.
      * @return void This constructor does not return a value.
      */
     public function __construct(
@@ -51,15 +52,17 @@ final readonly class CreateEconomicTransactionData
         public array $recurrence_weekdays = [],
         public ?Carbon $recurrence_ends_at = null,
         public ?string $contact_id = null,
+        public ?string $id = null,
     ) {}
 
     /**
      * Build transaction creation data from a validated request payload.
      *
      * @param  array<string, mixed>  $data  The validated creation values keyed by request field.
+     * @param  string|null  $id  The client-supplied UUIDv7 identity, or null when the server assigns one.
      * @return self The normalized immutable transaction creation data.
      */
-    public static function fromArray(array $data): self
+    public static function fromArray(array $data, ?string $id = null): self
     {
         return new self(
             type: TransactionType::from($data['type']),
@@ -98,6 +101,7 @@ final readonly class CreateEconomicTransactionData
                 ? Carbon::parse($data['recurrence_ends_at'])
                 : null,
             contact_id: $data['contact_id'] ?? null,
+            id: $id,
         );
     }
 }

@@ -65,7 +65,7 @@ final class ShoppingListController extends Controller
      */
     public function store(StoreListRequest $request, Household $household, CreateShoppingList $action): JsonResponse
     {
-        $data = CreateShoppingListData::fromArray($request->validated());
+        $data = CreateShoppingListData::fromArray($request->validated(), $request->validated('id'));
         $list = $action->execute($data, $this->authenticatedUser($request), $household);
 
         return ShoppingListResource::make($list)
