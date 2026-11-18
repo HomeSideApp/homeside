@@ -9,14 +9,14 @@ to make room for it.
 
 ## Status
 
-| Item                                       | State                                                                       |
-| ------------------------------------------ | --------------------------------------------------------------------------- |
-| Delta feed `GET /v1/sync/changes`          | implemented                                                                 |
-| Tombstones (`deleted_at`)                  | implemented for lists, list items, economy transactions                     |
-| Mandatory idempotency on the write surface | implemented                                                                 |
-| Client-provided ids                        | implemented on the six create routes                                        |
-| Stale-write detection                      | implemented on the item and transaction write routes                        |
-| `POST /v1/sync/push` (batch)               | **not implemented**; a client can drain its outbox with individual requests |
+| Item                                       | State                                                   |
+| ------------------------------------------ | ------------------------------------------------------- |
+| Delta feed `GET /v1/sync/changes`          | implemented                                             |
+| Tombstones (`deleted_at`)                  | implemented for lists, list items, economy transactions |
+| Mandatory idempotency on the write surface | implemented                                             |
+| Client-provided ids                        | implemented on the six create routes                    |
+| Stale-write detection                      | implemented on the item and transaction write routes    |
+| `POST /v1/sync/push` (batch)               | implemented; up to 50 operations per request            |
 
 Tombstones for `households` and `recipes` are intentionally absent: neither is in the offline write
 set.
@@ -164,6 +164,68 @@ working.
 Enforced on the item and transaction write routes: `PUT`/`DELETE` for items in both scopes, and
 `PUT`/`PATCH`/`DELETE` for transactions in both scopes. It runs **after** idempotency, so a replay
 short-circuits before any comparison.
+
+Inside a batch (below) the version cannot travel as a header, because only the token and each
+operation's own key are forwarded: send it in the body or the query string.
+
+## Batch push
+
+```
+POST /api/v1/sync/push
+
+{"operations": [
+  {"op_id": "uuid", "method": "POST", "path": "/v1/lists/l1/items",
+   "body": {"custom_name": "Milk"}, "idempotency_key": "uuid"}
+]}
+```
+
+```json
+{
+    "data": {
+        "results": [
+            {
+                "op_id": "...",
+                "status": "applied",
+                "status_code": 201,
+                "body": {}
+            },
+            {
+                "op_id": "...",
+                "status": "conflict",
+                "status_code": 409,
+                "body": {}
+            },
+            {
+                "op_id": "...",
+                "status": "rejected",
+                "status_code": 422,
+                "body": {}
+            }
+        ]
+    }
+}
+```
+
+Draining the outbox in one request instead of one per operation. Rules a client must know:
+
+- Results come back in request order, one per operation, and a failure never stops the rest.
+- `applied` is any 2xx, `conflict` is 409, `rejected` is any other 4xx, and `failed` is a 5xx with
+  its own body. Nothing is ever a silent success.
+- `body` is that operation's own response body, so validation errors, `id_taken`, `stale_write` and
+  the created resource arrive exactly as a direct call would return them.
+- Each operation runs through the same middleware as a direct request: permission, policy,
+  idempotency and staleness. The batch does not re-implement those rules.
+- Only the write routes of the offline scope are reachable this way, matched by route name. An admin
+  route, a read route, a household delete or any other path is `rejected` with 422 and touches
+  nothing. Only `POST`, `PUT`, `PATCH` and `DELETE` are accepted.
+- Up to 50 operations. More than that is a `422` for the whole request.
+- The batch itself takes an `Idempotency-Key`, so retrying an identical batch replays it. Each
+  operation also carries its own key, which is what prevents duplicates when a retry happens after
+  the batch-level TTL.
+
+Because the batch re-runs the real routes, an operation that succeeded in a previous attempt and is
+retried with the same key replays rather than repeating, which is why a partially applied batch is
+safe to resend.
 
 ## Field notes
 
