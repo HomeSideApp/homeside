@@ -238,9 +238,9 @@ class InvitationController
         // Google is the second factor here, and the person just proved the
         // mailbox twice (signed invitation URL plus a verified Google address
         // matching it). The same access gate as the Google login callback
-        // still applies: without it, no session is established. The completion
-        // and the identity link above stand, exactly as they do for a Google
-        // login that resolves an account without a role.
+        // still applies: without it, no session is established. Completion
+        // grants the baseline role to a role-less invitee, so this can only
+        // fail on approval or account status, never on the role axis.
         if (! $completed->canAccessApplication()) {
             return $this->refuseGoogleCompletion();
         }
