@@ -19,6 +19,7 @@ use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Foundation\Http\Middleware\HandlePrecognitiveRequests;
+use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
@@ -128,6 +129,17 @@ return Application::configure(basePath: dirname(__DIR__))
                 'errors' => (object) [],
                 'retry_after' => $retryAfter,
             ], fn ($value): bool => $value !== null), $status, $headers);
+        });
+
+        // A request, action or middleware that already built its own JSON answer
+        // (a 422 `id_taken`, for instance) must reach the client as it is instead
+        // of being flattened into the catch-all server error below.
+        $exceptions->render(function (HttpResponseException $exception, Request $request) {
+            if (! $request->is('api/*')) {
+                return null;
+            }
+
+            return $exception->getResponse();
         });
 
         $exceptions->render(function (Throwable $exception, Request $request) {

@@ -23,6 +23,12 @@ class StoreListRequest extends FormRequest
      */
     public function rules(): array
     {
-        return $this->listRules();
+        return [
+            ...$this->listRules(),
+            // An offline client mints the id locally so the queued row keeps the
+            // same identity once it reaches the server; HasUuids only fills an
+            // empty key, so the validated id travels straight to the insert.
+            'id' => ['sometimes', 'uuid'],
+        ];
     }
 }

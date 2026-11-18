@@ -5,6 +5,9 @@ namespace App\Actions\ShoppingLists;
 use App\Models\ListItem;
 use App\Models\ProductUsage;
 use App\Models\ShoppingList;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\UniqueConstraintViolationException;
+use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -23,10 +26,16 @@ final class AddListItem
      */
     public function execute(ShoppingList $list, array $data, string $userId): ListItem
     {
-        return DB::transaction(function () use ($list, $data, $userId): ListItem {
+        // An offline client mints the item id locally and the request validated
+        // it as a UUID; the merge below cannot stand in for it, because the row
+        // it returns would carry a different identity.
+        $clientId = is_string($data['id'] ?? null) && $data['id'] !== '' ? $data['id'] : null;
+        unset($data['id']);
+
+        return DB::transaction(function () use ($list, $data, $userId, $clientId): ListItem {
             ShoppingList::query()->whereKey($list->id)->lockForUpdate()->firstOrFail();
 
-            if (! empty($data['product_id'])) {
+            if ($clientId === null && ! empty($data['product_id'])) {
                 $pendingItem = $list->items()
                     ->where('product_id', $data['product_id'])
                     ->where('is_checked', false)
@@ -61,7 +70,16 @@ final class AddListItem
                 }
             }
 
-            $item = $list->items()->create($data);
+            $item = new ListItem($data);
+            $this->assignClientId($item, $clientId);
+
+            try {
+                $list->items()->save($item);
+            } catch (UniqueConstraintViolationException) {
+                // The pre-check cannot see a row another device committed in
+                // between, so the unique index is the referee for that race.
+                throw $this->idTaken();
+            }
 
             if (! empty($data['product_id'])) {
                 ProductUsage::updateOrCreate(
@@ -83,6 +101,32 @@ final class AddListItem
 
             return $item->load('product.category', 'store', 'category', 'addedByUser');
         });
+    }
+
+    /**
+     * Keep the client id, refusing one that a row already owns.
+     */
+    private function assignClientId(Model $model, ?string $clientId): void
+    {
+        if ($clientId === null) {
+            return;
+        }
+
+        // A tombstoned row still occupies its id, so the pre-check has to see it.
+        if ($model::withTrashed()->whereKey($clientId)->exists()) {
+            throw $this->idTaken();
+        }
+
+        $model->id = $clientId;
+    }
+
+    private function idTaken(): HttpResponseException
+    {
+        return new HttpResponseException(response()->json([
+            'message' => 'This id is already used by another record.',
+            'code' => 'id_taken',
+            'errors' => ['id' => ['This id is already used by another record.']],
+        ], 422));
     }
 
     /**

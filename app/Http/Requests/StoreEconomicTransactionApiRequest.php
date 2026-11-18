@@ -26,6 +26,8 @@ final class StoreEconomicTransactionApiRequest extends StoreEconomicTransactionR
 
         return [
             ...$rules,
+            // Client-provided id for a write queued offline; see StoreListRequest.
+            'id' => ['sometimes', 'uuid'],
             'amount_minor' => ['required', 'integer', 'min:1'],
             'items.*.unit_amount_minor' => ['required_with:items', 'integer', 'min:0'],
             'items.*.subtotal_minor' => ['required_with:items', 'integer', 'min:0'],
