@@ -7,6 +7,7 @@ use App\Http\Middleware\EnsureEntitlement;
 use App\Http\Middleware\EnsureIdempotentRequest;
 use App\Http\Middleware\EnsureModuleEnabled;
 use App\Http\Middleware\EnsureUserHasHousehold;
+use App\Http\Middleware\EnsureWriteIsNotStale;
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\PermissionsMiddleware;
@@ -56,6 +57,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'module' => EnsureModuleEnabled::class,
             'locale' => SetLocale::class,
             'idempotency' => EnsureIdempotentRequest::class,
+            'not-stale' => EnsureWriteIsNotStale::class,
             'entitlement' => EnsureEntitlement::class,
             'account.active' => EnsureAccountIsActive::class,
         ]);
