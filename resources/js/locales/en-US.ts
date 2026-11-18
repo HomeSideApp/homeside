@@ -97,6 +97,7 @@ export default {
         setPassword: {
             title: 'Set password',
             description: 'Create your password to access HomeShop',
+            google: 'Continue with Google',
             greeting: 'Hello, {name}',
             linkGreeting: 'Join {household} with your new account',
             account: 'Account: {email}',

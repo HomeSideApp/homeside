@@ -228,6 +228,7 @@ return [
         'invitation_already_processed' => 'Esta invitación ya ha sido procesada.',
         'invitation_expired' => 'Esta invitación ha expirado.',
         'invitation_invalid' => 'Invitación no válida o ya utilizada.',
+        'invitation_google_refused' => 'No se pudo completar la invitación con Google. Vuelve a abrir el enlace de invitación para continuar.',
         'invitation_no_permission_cancel' => 'No tienes permiso para cancelar esta invitación.',
         'invite_link_unusable' => 'Este enlace de invitación ya no es válido.',
         'invitation_not_pending' => 'Esta invitación ya no está pendiente.',
