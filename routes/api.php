@@ -56,6 +56,7 @@ use App\Http\Controllers\Api\V1\RecipeImportController;
 use App\Http\Controllers\Api\V1\RecipeShoppingListController;
 use App\Http\Controllers\Api\V1\ShoppingListController;
 use App\Http\Controllers\Api\V1\StoreController;
+use App\Http\Controllers\Api\V1\SyncController;
 use App\Http\Controllers\Api\V1\TwoFactorController;
 use App\Http\Controllers\Api\V1\UserAiProviderController;
 use App\Http\Controllers\HouseholdMemberPermissionController;
@@ -276,6 +277,11 @@ Route::prefix('v1/recipes')->as('api.v1.recipes.')->middleware(['auth:sanctum', 
 });
 
 Route::prefix('v1')->as('api.v1.')->middleware(['auth:sanctum', 'locale', 'api.permission'])->group(function () {
+    // === Sincronización offline ===
+    // Un solo delta con cursor opaco. El permiso `sync.changes` cubre los tres
+    // dominios porque el feed mezcla listas, economía y hogares en una página.
+    Route::get('sync/changes', [SyncController::class, 'changes'])->name('sync.changes');
+
     Route::post('categories', [CategoryController::class, 'store'])->name('categories.store');
     Route::put('categories/{category}', [CategoryController::class, 'update'])->name('categories.update');
     Route::delete('categories/{category}', [CategoryController::class, 'destroy'])->name('categories.destroy');
