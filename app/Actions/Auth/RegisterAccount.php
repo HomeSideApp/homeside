@@ -195,6 +195,8 @@ final class RegisterAccount
             'email_verified_at' => $data->invitation?->emailVerified === true ? now() : $user->email_verified_at,
         ])->save();
 
+        $this->assignDefaultRole($user, $data->channel, RegistrationDecision::Allowed);
+
         $this->audit->append(
             RegistrationAuditAction::RegistrationCreated,
             $user,
@@ -297,8 +299,13 @@ final class RegisterAccount
      *
      * Google users wait for an administrator to choose their roles while they
      * are pending, but an `open` Google registration is approved immediately
-     * and therefore needs the default role to be usable at all. An invited
-     * account already carries the roles chosen explicitly when it was created.
+     * and therefore needs the default role to be usable at all.
+     *
+     * An administrator-invited account normally carries the roles chosen when
+     * it was created, and those must win untouched. Only an invitation that
+     * completed with no roles at all receives the default role: an account
+     * with a Google identity and no role fails `canAccessApplication()`, which
+     * would leave a completed invitee permanently unable to sign in.
      *
      * @param  User  $user  The new user.
      * @param  RegistrationChannel  $channel  The channel the registration used.
@@ -307,7 +314,8 @@ final class RegisterAccount
     private function assignDefaultRole(User $user, RegistrationChannel $channel, RegistrationDecision $decision): void
     {
         $grantsDefault = in_array($channel, [RegistrationChannel::Web, RegistrationChannel::Api, RegistrationChannel::HouseholdInvitation], true)
-            || ($channel === RegistrationChannel::Google && $decision === RegistrationDecision::Allowed);
+            || ($channel === RegistrationChannel::Google && $decision === RegistrationDecision::Allowed)
+            || ($channel === RegistrationChannel::AdminInvitation && ! $user->roles()->exists());
 
         if (! $grantsDefault) {
             return;

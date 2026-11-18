@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Auth;
 
+use App\Enums\AccountStatus;
 use App\Models\User;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -114,10 +115,51 @@ class InvitationGoogleCompletionTest extends TestCase
         $this->assertNull(session('invitation.google.pending'));
     }
 
-    public function test_delegated_policy_refuses_an_invitee_who_cannot_access_the_application(): void
+    public function test_delegated_policy_grants_the_default_role_to_a_roleless_invitee(): void
+    {
+        $invitee = $this->pendingInvitee(['email' => 'roleless@example.com']);
+        $this->assertTrue($invitee->roles()->doesntExist(), 'The invitation deliberately starts without a role.');
+        $this->fakeGoogle('google-roleless', $invitee->email);
+
+        $this->get($this->startUrl($invitee))->assertRedirect();
+
+        $this->get($this->callbackUrl($invitee))->assertRedirect('/dashboard');
+
+        // The baseline role is what makes the Google-linked account usable: a
+        // Google identity with no role is exactly what the access gate refuses.
+        $invitee->refresh();
+        $this->assertTrue($invitee->hasRole('user'));
+        $this->assertSame(['user'], $invitee->roles()->pluck('slug')->all());
+        $this->assertTrue($invitee->canAccessApplication());
+        $this->assertAuthenticatedAs($invitee);
+        $this->assertNotNull($invitee->email_verified_at);
+        $this->assertDatabaseHas('google_identities', [
+            'user_id' => $invitee->id,
+            'google_sub' => 'google-roleless',
+        ]);
+        $this->assertDatabaseCount('authentication_bootstraps', 0);
+    }
+
+    public function test_delegated_policy_keeps_the_roles_the_administrator_chose(): void
     {
         $invitee = $this->pendingInvitee();
-        $this->fakeGoogle('google-roleless', $invitee->email);
+        $invitee->assignRole('admin');
+        $this->fakeGoogle('google-admin-invitee', $invitee->email);
+
+        $this->get($this->startUrl($invitee))->assertRedirect();
+
+        $this->get($this->callbackUrl($invitee))->assertRedirect('/dashboard');
+
+        $invitee->refresh();
+        $this->assertSame(['admin'], $invitee->roles()->pluck('slug')->all());
+        $this->assertFalse($invitee->hasRole('user'), 'An explicit role is never widened with the baseline role.');
+        $this->assertAuthenticatedAs($invitee);
+    }
+
+    public function test_delegated_policy_refuses_an_invitee_who_cannot_access_the_application(): void
+    {
+        $invitee = $this->pendingInvitee(['account_status' => AccountStatus::Suspended]);
+        $this->fakeGoogle('google-suspended', $invitee->email);
 
         $this->get($this->startUrl($invitee))->assertRedirect();
 
@@ -126,13 +168,15 @@ class InvitationGoogleCompletionTest extends TestCase
         $this->assertGuest();
 
         // The completion and the identity link already committed stand: the
-        // account is now Google-linked without a role, so the very same gate
+        // account is now Google-linked but suspended, so the very same gate
         // a Google login applies withholds the session and nothing else.
         $invitee->refresh();
         $this->assertNotNull($invitee->email_verified_at);
+        $this->assertSame(AccountStatus::Suspended, $invitee->account_status);
+        $this->assertFalse($invitee->canAccessApplication());
         $this->assertDatabaseHas('google_identities', [
             'user_id' => $invitee->id,
-            'google_sub' => 'google-roleless',
+            'google_sub' => 'google-suspended',
         ]);
         $this->assertDatabaseCount('authentication_bootstraps', 0);
     }
@@ -302,7 +346,7 @@ class InvitationGoogleCompletionTest extends TestCase
      *
      * @param  TestResponse  $response  The callback response.
      */
-    private function assertRefusedGoogleCompletion($response): void
+    private function assertRefusedGoogleCompletion(TestResponse $response): void
     {
         $response->assertRedirect(route('login'));
         $response->assertSessionHasErrors('google');
