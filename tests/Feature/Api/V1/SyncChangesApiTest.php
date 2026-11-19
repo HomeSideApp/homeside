@@ -89,6 +89,24 @@ class SyncChangesApiTest extends TestCase
         $this->assertCount(5, $this->entries($second), 'The second call must carry exactly the five rows, and nothing else.');
     }
 
+    public function test_the_list_item_stream_carries_what_a_device_needs_to_draw_an_item_offline(): void
+    {
+        $list = $this->personalList();
+        $item = $this->item($list);
+
+        $page = $this->sync();
+
+        $row = collect($page['changes']['list_items'])->firstWhere('id', $item->id);
+
+        // El espejo del teléfono se llena **sólo** con este delta. Si la
+        // relación no viaja acá, sin red el ítem se dibuja sin nombre ni ícono,
+        // y además pisa lo que ya había devuelto el POST de creación.
+        $this->assertIsArray($row['product'] ?? null);
+        $this->assertSame($item->product->name, $row['product']['name'] ?? null);
+        $this->assertSame($item->product->icon, $row['product']['icon'] ?? null);
+        $this->assertArrayHasKey('category', $row['product']);
+    }
+
     public function test_has_more_is_false_for_a_small_page_and_true_when_the_limit_truncates(): void
     {
         $list = $this->personalList();
