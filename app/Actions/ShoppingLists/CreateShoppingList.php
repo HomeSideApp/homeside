@@ -6,7 +6,6 @@ use App\Data\ShoppingLists\CreateShoppingListData;
 use App\Models\Household;
 use App\Models\ShoppingList;
 use App\Models\User;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Support\Facades\DB;
@@ -48,7 +47,7 @@ final class CreateShoppingList
     /**
      * Keep the client id, refusing one that a row already owns.
      */
-    private function assignClientId(Model $model, ?string $clientId): void
+    private function assignClientId(ShoppingList $model, ?string $clientId): void
     {
         if ($clientId === null) {
             return;

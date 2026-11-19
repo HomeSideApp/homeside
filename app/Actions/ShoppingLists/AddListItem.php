@@ -5,7 +5,6 @@ namespace App\Actions\ShoppingLists;
 use App\Models\ListItem;
 use App\Models\ProductUsage;
 use App\Models\ShoppingList;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Support\Facades\DB;
@@ -106,7 +105,7 @@ final class AddListItem
     /**
      * Keep the client id, refusing one that a row already owns.
      */
-    private function assignClientId(Model $model, ?string $clientId): void
+    private function assignClientId(ListItem $model, ?string $clientId): void
     {
         if ($clientId === null) {
             return;

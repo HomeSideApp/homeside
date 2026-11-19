@@ -11,7 +11,6 @@ use App\Models\EconomicDocument;
 use App\Models\EconomicTransaction;
 use App\Models\Household;
 use App\Models\User;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Support\Facades\DB;
@@ -237,7 +236,7 @@ final class CreateEconomicTransaction
     /**
      * Keep the client id, refusing one that a row already owns.
      */
-    private function assignClientId(Model $model, ?string $clientId): void
+    private function assignClientId(EconomicTransaction $model, ?string $clientId): void
     {
         if ($clientId === null) {
             return;

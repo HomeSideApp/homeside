@@ -12,12 +12,13 @@ use App\Models\ListItem;
 use App\Models\ShoppingList;
 use App\Models\User;
 use App\Support\HouseholdAccess;
+use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
-use Illuminate\Support\Carbon;
 use Illuminate\Validation\ValidationException;
+use RuntimeException;
 
 /**
  * Builds one page of the offline delta feed.
@@ -140,6 +141,7 @@ final class GetSyncChanges
     }
 
     /**
+     * @param  array<int, string>  $householdIds
      * @return Builder<ShoppingList>
      */
     private function listsQuery(string $userId, array $householdIds): Builder
@@ -151,6 +153,7 @@ final class GetSyncChanges
     }
 
     /**
+     * @param  array<int, string>  $householdIds
      * @return Builder<ListItem>
      */
     private function listItemsQuery(string $userId, array $householdIds, bool $withTrashedLists): Builder
@@ -170,6 +173,8 @@ final class GetSyncChanges
     }
 
     /**
+     * @param  array<int, string>  $economyHouseholdIds
+     * @param  array<int, string>  $membershipIds
      * @return Builder<EconomicTransaction>
      */
     private function transactionsQuery(string $userId, array $economyHouseholdIds, array $membershipIds): Builder
@@ -236,7 +241,7 @@ final class GetSyncChanges
      * Flatten the stream pages into a single list ordered by `(updated_at, id)`.
      *
      * @param  array<string, Collection<int, Model>>  $streams
-     * @return array<int, array{updated_at: Carbon, id: string, bucket: string, model: Model}>
+     * @return array<int, array{updated_at: CarbonImmutable, id: string, bucket: string, model: Model}>
      */
     private function entries(array $streams): array
     {
@@ -244,11 +249,8 @@ final class GetSyncChanges
 
         foreach ($streams as $bucket => $models) {
             foreach ($models as $model) {
-                /** @var Carbon|null $updatedAt */
-                $updatedAt = $model->getAttribute('updated_at');
-
                 $entries[] = [
-                    'updated_at' => $updatedAt,
+                    'updated_at' => $this->updatedAtOf($model),
                     'id' => (string) $model->getKey(),
                     'bucket' => $bucket,
                     'model' => $model,
@@ -268,7 +270,26 @@ final class GetSyncChanges
     }
 
     /**
-     * @param  array<int, array{updated_at: Carbon, id: string, bucket: string, model: Model}>  $entries
+     * Read the row version every stream filters and orders by.
+     *
+     * Each query already requires `updated_at`, so a row without one is a
+     * programming error rather than a state the feed could describe.
+     *
+     * @throws RuntimeException When a stream returns a row without a version.
+     */
+    private function updatedAtOf(Model $model): CarbonImmutable
+    {
+        $updatedAt = $model->getAttribute('updated_at');
+
+        if (! $updatedAt instanceof CarbonImmutable) {
+            throw new RuntimeException('Every synced row must carry a non-null updated_at.');
+        }
+
+        return $updatedAt;
+    }
+
+    /**
+     * @param  array<int, array{updated_at: CarbonImmutable, id: string, bucket: string, model: Model}>  $entries
      * @return array<string, array<int, Model>>
      */
     private function groupByBucket(array $entries): array

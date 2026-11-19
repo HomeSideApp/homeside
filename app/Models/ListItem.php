@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Carbon\CarbonImmutable;
 use Database\Factories\ListItemFactory;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -25,7 +26,7 @@ use Illuminate\Support\Carbon;
  * @property float $quantity The quantity of the item.
  * @property string|null $unit The unit of the item, if any.
  * @property bool $is_checked Whether the item is checked off the list.
- * @property Carbon|null $checked_at The moment the item was checked off, cleared when unchecked.
+ * @property CarbonImmutable|null $checked_at The moment the item was checked off, cleared when unchecked.
  * @property string|null $notes Additional notes of the item, if any.
  * @property string|null $store_id The id of the store associated with the item, if any.
  * @property string|null $image_url The URL of the item image, if any.
@@ -67,7 +68,7 @@ class ListItem extends Model
         return [
             'quantity' => 'float',
             'is_checked' => 'boolean',
-            'checked_at' => 'datetime',
+            'checked_at' => 'immutable_datetime',
             'original_quantity' => 'float',
         ];
     }

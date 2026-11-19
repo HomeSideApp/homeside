@@ -37,7 +37,7 @@ final class EnsureWriteIsNotStale
      * Route parameters this middleware guards, with the model they bind and the
      * resource that describes the live row to the client.
      *
-     * @var array<string, array{0: class-string<Model>, 1: class-string<JsonResource>}>
+     * @var array<string, array{0: class-string<ListItem|EconomicTransaction>, 1: class-string<JsonResource>}>
      */
     private const array TARGETS = [
         'item' => [ListItem::class, ListItemResource::class],
@@ -51,11 +51,13 @@ final class EnsureWriteIsNotStale
      */
     public function handle(Request $request, Closure $next): Response
     {
-        [$model, $resource] = $this->target($request);
+        $target = $this->target($request);
 
-        if (! $model instanceof Model) {
+        if ($target === null) {
             return $next($request);
         }
+
+        [$model, $resource] = $target;
 
         $version = $this->version($request);
 
@@ -81,14 +83,14 @@ final class EnsureWriteIsNotStale
      * authorization answers for it, so this middleware never discloses a
      * resource through the 409 body.
      *
-     * @return array{0: Model|null, 1: class-string<JsonResource>|null}
+     * @return array{0: ListItem|EconomicTransaction, 1: class-string<JsonResource>}|null
      */
-    private function target(Request $request): array
+    private function target(Request $request): ?array
     {
         $route = $request->route();
 
         if (! $route instanceof Route) {
-            return [null, null];
+            return null;
         }
 
         foreach (self::TARGETS as $parameter => [$modelClass, $resource]) {
@@ -102,13 +104,13 @@ final class EnsureWriteIsNotStale
                 : $modelClass::query()->whereKey($bound)->first();
 
             if (! $model instanceof $modelClass || ! $this->mayWrite($request, $model)) {
-                return [null, null];
+                return null;
             }
 
             return [$model, $resource];
         }
 
-        return [null, null];
+        return null;
     }
 
     /**
