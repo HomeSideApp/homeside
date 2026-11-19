@@ -169,7 +169,19 @@ final class GetSyncChanges
 
         $this->applyListVisibility($listIds, $userId, $householdIds);
 
-        return ListItem::query()->whereIn('list_id', $listIds);
+        // A device that reads offline has nowhere else to get the product name,
+        // icon or category colour from: the client mirror is fed by this delta
+        // alone, and `ListItemResource` omits any relation that is not loaded.
+        // Without this, a synced item renders with the placeholder name and no
+        // icon, wiping what the create response had already handed over.
+        // A device that reads offline has nowhere else to get the product name,
+        // icon or category colour from: the client mirror is fed by this delta
+        // alone, and `ListItemResource` omits any relation that is not loaded.
+        // Without this, a synced item renders with the placeholder name and no
+        // icon, wiping what the create response had already handed over.
+        return ListItem::query()
+            ->with(['product.category', 'store', 'category'])
+            ->whereIn('list_id', $listIds);
     }
 
     /**
