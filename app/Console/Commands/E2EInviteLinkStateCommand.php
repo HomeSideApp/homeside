@@ -31,7 +31,8 @@ class E2EInviteLinkStateCommand extends Command
             return self::FAILURE;
         }
 
-        $token = (string) $this->argument('token');
+        $rawToken = $this->argument('token');
+        $token = is_string($rawToken) ? $rawToken : '';
         $link = HouseholdInviteLink::query()->where('token', $token)->with('household')->first();
 
         if ($link === null) {

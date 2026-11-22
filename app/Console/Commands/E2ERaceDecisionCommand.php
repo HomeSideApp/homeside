@@ -51,7 +51,8 @@ class E2ERaceDecisionCommand extends Command
             return SymfonyCommand::FAILURE;
         }
 
-        $action = (string) $this->argument('action');
+        $rawAction = $this->argument('action');
+        $action = is_string($rawAction) ? $rawAction : '';
 
         if (! in_array($action, ['approve', 'reject'], true)) {
             $this->error('The action must be approve or reject.');
@@ -59,12 +60,15 @@ class E2ERaceDecisionCommand extends Command
             return SymfonyCommand::FAILURE;
         }
 
+        $rawTarget = $this->argument('target');
+        $rawActor = $this->argument('actor');
+
         $target = User::query()
-            ->where('email', mb_strtolower(trim((string) $this->argument('target'))))
+            ->where('email', mb_strtolower(trim(is_string($rawTarget) ? $rawTarget : '')))
             ->first();
 
         $actor = User::query()
-            ->where('email', mb_strtolower(trim((string) $this->argument('actor'))))
+            ->where('email', mb_strtolower(trim(is_string($rawActor) ? $rawActor : '')))
             ->first();
 
         if ($target === null || $actor === null) {
@@ -109,8 +113,10 @@ class E2ERaceDecisionCommand extends Command
      */
     private function waitForGate(): void
     {
-        $readyFile = (string) $this->option('ready-file');
-        $gateFile = (string) $this->option('gate-file');
+        $rawReadyFile = $this->option('ready-file');
+        $rawGateFile = $this->option('gate-file');
+        $readyFile = is_string($rawReadyFile) ? $rawReadyFile : '';
+        $gateFile = is_string($rawGateFile) ? $rawGateFile : '';
 
         if ($readyFile !== '') {
             file_put_contents($readyFile, (string) getmypid());

@@ -35,6 +35,8 @@ use App\Http\Controllers\Api\V1\HouseholdConfigurationController;
 use App\Http\Controllers\Api\V1\HouseholdController;
 use App\Http\Controllers\Api\V1\HouseholdDashboardController;
 use App\Http\Controllers\Api\V1\HouseholdInvitationController;
+use App\Http\Controllers\Api\V1\HouseholdMemberPermissionController;
+use App\Http\Controllers\Api\V1\HouseholdOwnershipController;
 use App\Http\Controllers\Api\V1\HouseholdRecipeController;
 use App\Http\Controllers\Api\V1\IconController;
 use App\Http\Controllers\Api\V1\InviteLinkController;
@@ -60,8 +62,6 @@ use App\Http\Controllers\Api\V1\SyncController;
 use App\Http\Controllers\Api\V1\SyncPushController;
 use App\Http\Controllers\Api\V1\TwoFactorController;
 use App\Http\Controllers\Api\V1\UserAiProviderController;
-use App\Http\Controllers\HouseholdMemberPermissionController;
-use App\Http\Controllers\HouseholdOwnershipController;
 use App\Http\Middleware\EnsureRegistrationInvitationsEnabled;
 use Illuminate\Support\Facades\Route;
 

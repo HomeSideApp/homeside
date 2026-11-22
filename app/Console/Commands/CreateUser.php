@@ -113,9 +113,12 @@ class CreateUser extends Command
             return self::FAILURE;
         }
 
-        $name = trim((string) $this->option('name'));
-        $email = trim((string) $this->option('email'));
-        $role = trim((string) $this->option('role'));
+        $rawName = $this->option('name');
+        $rawEmail = $this->option('email');
+        $rawRole = $this->option('role');
+        $name = trim(is_string($rawName) ? $rawName : '');
+        $email = trim(is_string($rawEmail) ? $rawEmail : '');
+        $role = trim(is_string($rawRole) ? $rawRole : '');
 
         if (! filter_var($email, FILTER_VALIDATE_EMAIL)) {
             $this->error(__('console.create_user.invalid_email'));

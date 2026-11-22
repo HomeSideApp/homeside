@@ -44,7 +44,8 @@ class E2EBootstrapCommand extends Command
             return self::FAILURE;
         }
 
-        $email = mb_strtolower(trim((string) $this->argument('email')));
+        $rawEmail = $this->argument('email');
+        $email = mb_strtolower(trim(is_string($rawEmail) ? $rawEmail : ''));
         $purpose = $this->resolvePurpose();
 
         if ($purpose === null) {
@@ -62,7 +63,8 @@ class E2EBootstrapCommand extends Command
         }
 
         return $this->runGuarded(function () use ($create, $user, $purpose): void {
-            $action = (string) $this->argument('action');
+            $rawAction = $this->argument('action');
+            $action = is_string($rawAction) ? $rawAction : '';
 
             match ($action) {
                 'issue' => $this->issue($create, $user, $purpose),
@@ -160,7 +162,9 @@ class E2EBootstrapCommand extends Command
      */
     private function resolvePurpose(): ?AuthenticationBootstrapPurpose
     {
-        return match ((string) $this->option('purpose')) {
+        $rawPurpose = $this->option('purpose');
+
+        return match (is_string($rawPurpose) ? $rawPurpose : '') {
             'two_factor', AuthenticationBootstrapPurpose::TwoFactorEnrolment->value => AuthenticationBootstrapPurpose::TwoFactorEnrolment,
             'account_recovery', AuthenticationBootstrapPurpose::AccountRecovery->value => AuthenticationBootstrapPurpose::AccountRecovery,
             default => null,

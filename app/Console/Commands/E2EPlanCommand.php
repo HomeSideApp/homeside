@@ -54,7 +54,9 @@ class E2EPlanCommand extends Command
         }
 
         return $this->runGuarded(function () use ($fixtures): void {
-            match ((string) $this->argument('action')) {
+            $rawAction = $this->argument('action');
+
+            match (is_string($rawAction) ? $rawAction : '') {
                 'seed' => $this->seed($fixtures),
                 'grant' => $this->grant($fixtures),
                 default => throw new InvalidArgumentException('Unknown action; expected seed or grant.'),
@@ -83,8 +85,10 @@ class E2EPlanCommand extends Command
      */
     private function grant(ControlledPlanFixture $fixtures): void
     {
-        $email = mb_strtolower(trim((string) $this->argument('email')));
-        $planKey = (string) $this->argument('plan');
+        $rawEmail = $this->argument('email');
+        $rawPlan = $this->argument('plan');
+        $email = mb_strtolower(trim(is_string($rawEmail) ? $rawEmail : ''));
+        $planKey = is_string($rawPlan) ? $rawPlan : '';
 
         if ($email === '' || $planKey === '') {
             throw new InvalidArgumentException('grant requires an email and a plan key.');

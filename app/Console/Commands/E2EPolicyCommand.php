@@ -33,8 +33,10 @@ class E2EPolicyCommand extends Command
             return self::FAILURE;
         }
 
-        $channel = RegistrationChannel::tryFrom((string) $this->argument('channel'));
-        $policy = RegistrationPolicy::tryFrom((string) $this->argument('policy'));
+        $rawChannel = $this->argument('channel');
+        $rawPolicy = $this->argument('policy');
+        $channel = RegistrationChannel::tryFrom(is_string($rawChannel) ? $rawChannel : '');
+        $policy = RegistrationPolicy::tryFrom(is_string($rawPolicy) ? $rawPolicy : '');
 
         if ($channel === null || ! $channel->isPolicyGated()) {
             $this->error('Unknown or non-policy channel.');

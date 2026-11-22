@@ -32,9 +32,9 @@ final class GenerateRecurringEconomicTransactions extends Command
     public function handle(GenerateRecurringTransactions $action): int
     {
         try {
-            $through = $this->option('date')
-                ? Carbon::parse((string) $this->option('date'))
-                : now();
+            $rawDate = $this->option('date');
+            $date = is_string($rawDate) ? $rawDate : null;
+            $through = $date ? Carbon::parse($date) : now();
         } catch (InvalidFormatException) {
             $this->components->error(__('console.economy.recurring.invalid_date'));
 

@@ -40,7 +40,8 @@ class E2EUserStateCommand extends Command
             return self::FAILURE;
         }
 
-        $email = mb_strtolower(trim((string) $this->argument('email')));
+        $rawEmail = $this->argument('email');
+        $email = mb_strtolower(trim(is_string($rawEmail) ? $rawEmail : ''));
         $user = User::query()->where('email', $email)->first();
 
         if ($user === null) {

@@ -40,8 +40,10 @@ class E2EDeleteUserCommand extends Command
             return self::FAILURE;
         }
 
-        $email = mb_strtolower(trim((string) $this->argument('email')));
-        $actorEmail = mb_strtolower(trim((string) $this->option('actor')));
+        $rawEmail = $this->argument('email');
+        $rawActor = $this->option('actor');
+        $email = mb_strtolower(trim(is_string($rawEmail) ? $rawEmail : ''));
+        $actorEmail = mb_strtolower(trim(is_string($rawActor) ? $rawActor : ''));
 
         return $this->runGuarded(function () use ($delete, $email, $actorEmail): void {
             $target = User::query()->where('email', $email)->first();
