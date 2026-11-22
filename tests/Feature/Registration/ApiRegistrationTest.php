@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Registration;
 
+use App\Enums\AppLocale;
 use App\Enums\ApprovalStatus;
 use App\Enums\RegistrationChannel;
 use App\Enums\RegistrationPolicy;
@@ -67,6 +68,30 @@ class ApiRegistrationTest extends TestCase
         $this->assertTrue($user->hasRole('user'));
         $this->assertSame(ApprovalStatus::Approved->value, $user->approval_status);
         Notification::assertSentTo($user, MobileVerifyEmailNotification::class);
+    }
+
+    public function test_api_registration_without_a_locale_creates_an_english_account(): void
+    {
+        // El default es el mismo que ve el formulario web: inglés. La app móvil
+        // no manda locale, así que este es el idioma con el que nace la cuenta.
+        app(RegistrationSettings::class)->setPolicy(RegistrationChannel::Api, RegistrationPolicy::Open);
+
+        $this->postJson(route('api.v1.auth.register'), $this->payload('english@example.com'))
+            ->assertCreated();
+
+        $this->assertSame(AppLocale::EnglishUnitedStates->value, User::query()->where('email', 'english@example.com')->value('locale'));
+    }
+
+    public function test_api_registration_keeps_the_locale_the_client_asks_for(): void
+    {
+        app(RegistrationSettings::class)->setPolicy(RegistrationChannel::Api, RegistrationPolicy::Open);
+
+        $this->postJson(route('api.v1.auth.register'), [
+            ...$this->payload('spanish@example.com'),
+            'locale' => AppLocale::SpanishSpain->value,
+        ])->assertCreated();
+
+        $this->assertSame(AppLocale::SpanishSpain->value, User::query()->where('email', 'spanish@example.com')->value('locale'));
     }
 
     public function test_api_registration_waits_for_approval_when_required(): void

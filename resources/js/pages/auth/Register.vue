@@ -26,6 +26,8 @@ defineProps<{
             approval_required: boolean;
         };
     };
+    localeOptions: { code: string; label: string }[];
+    defaultLocale: string;
     status?: string;
 }>();
 
@@ -123,10 +125,34 @@ watchEffect(() => {
                     />
                 </div>
 
+                <div class="grid gap-2">
+                    <Label for="locale">{{ t('auth.register.locale') }}</Label>
+                    <select
+                        id="locale"
+                        name="locale"
+                        :value="defaultLocale"
+                        :tabindex="5"
+                        class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none"
+                        @change="validate('locale')"
+                    >
+                        <option
+                            v-for="option in localeOptions"
+                            :key="option.code"
+                            :value="option.code"
+                        >
+                            {{ option.label }}
+                        </option>
+                    </select>
+                    <p class="text-xs text-muted-foreground">
+                        {{ t('auth.register.localeHint') }}
+                    </p>
+                    <InputError :message="errors.locale" />
+                </div>
+
                 <Button
                     type="submit"
                     class="mt-4 w-full"
-                    :tabindex="5"
+                    :tabindex="6"
                     :disabled="processing"
                     data-test="register-button"
                 >

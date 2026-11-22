@@ -14,6 +14,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 use Inertia\Response;
+use Laravel\Socialite\AbstractUser;
 use Laravel\Socialite\Facades\Socialite;
 use PragmaRX\Google2FA\Google2FA;
 
@@ -28,11 +29,15 @@ class GoogleAuthController extends Controller
     {
         try {
             $google = Socialite::driver('google')->user();
+            // El contrato de Socialite no expone el payload crudo; la
+            // implementación concreta sí. Sin él no hay claim `locale`.
+            $raw = $google instanceof AbstractUser ? $google->getRaw() : [];
             $outcome = $identities->resolve(
                 (string) $google->getId(),
                 (string) $google->getEmail(),
                 (string) $google->getName(),
-                ($google->user['email_verified'] ?? false) === true,
+                ($raw['email_verified'] ?? false) === true,
+                is_string($raw['locale'] ?? null) ? $raw['locale'] : null,
             );
         } catch (\Throwable $exception) {
             report($exception);

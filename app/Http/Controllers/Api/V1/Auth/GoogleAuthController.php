@@ -22,7 +22,7 @@ class GoogleAuthController extends Controller
     {
         $input = $request->validated();
         $google = $verifier->verify($input['id_token']);
-        $outcome = $identities->resolve($google['sub'], $google['email'], $google['name'], $google['email_verified']);
+        $outcome = $identities->resolve($google['sub'], $google['email'], $google['name'], $google['email_verified'], $google['locale'] ?? null);
 
         if ($outcome->decision === RegistrationDecision::LinkRequired) {
             return response()->json(['code' => 'link_required', 'message' => 'Entra con tu método actual y vincula Google.'], 409);

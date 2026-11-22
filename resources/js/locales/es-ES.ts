@@ -142,6 +142,9 @@ export default {
             title: 'Crear cuenta',
             description: 'Registra una cuenta nueva',
             name: 'Nombre',
+            locale: 'Idioma',
+            localeHint:
+                'La app y los correos van a usar este idioma. Inglés por defecto.',
             submit: 'Crear cuenta',
             approvalNotice:
                 'Las cuentas nuevas necesitan la aprobación de un administrador antes de poder iniciar sesión.',

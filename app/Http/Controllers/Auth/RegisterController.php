@@ -39,6 +39,10 @@ final class RegisterController extends Controller
     {
         return Inertia::render('auth/Register', [
             'capabilities' => $this->capabilities($settings),
+            // El formulario muestra los idiomas y arranca en inglés: la cuenta
+            // no puede nacer en un idioma que nadie eligió.
+            'localeOptions' => AppLocale::options(),
+            'defaultLocale' => AppLocale::default()->value,
         ]);
     }
 

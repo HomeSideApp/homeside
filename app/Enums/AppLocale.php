@@ -43,6 +43,25 @@ enum AppLocale: string
         return self::tryFrom($locale ?? '') ?? self::default();
     }
 
+    /**
+     * Map a provider's BCP-47 tag (`es`, `es-419`, `en-GB`, `pt-BR`) to a
+     * supported locale.
+     *
+     * Providers report a language, not one of our exact tags, so the primary
+     * subtag decides. Anything unknown falls back to the application default,
+     * which is English: an account must never be born in a language nobody
+     * chose.
+     */
+    public static function fromLanguageTag(?string $tag): self
+    {
+        $language = mb_strtolower(mb_substr(trim((string) $tag), 0, 2));
+
+        return match ($language) {
+            self::SpanishSpain->language() => self::SpanishSpain,
+            default => self::default(),
+        };
+    }
+
     public function language(): string
     {
         return match ($this) {

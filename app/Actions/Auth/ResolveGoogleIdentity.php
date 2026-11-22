@@ -50,12 +50,18 @@ final class ResolveGoogleIdentity
      * @param  string  $email  The provider-asserted email.
      * @param  string  $name  The provider-asserted display name.
      * @param  bool  $emailVerified  Whether the provider reliably verified the email.
+     * @param  string|null  $locale  The provider-reported language tag, when present.
      * @return RegistrationOutcomeData The typed outcome.
      *
      * @throws ValidationException When the provider did not reliably verify the email.
      */
-    public function resolve(string $subject, string $email, string $name, bool $emailVerified): RegistrationOutcomeData
-    {
+    public function resolve(
+        string $subject,
+        string $email,
+        string $name,
+        bool $emailVerified,
+        ?string $locale = null,
+    ): RegistrationOutcomeData {
         $normalised = mb_strtolower(trim($email));
 
         if ($subject === '' || $normalised === '' || ! $emailVerified) {
@@ -81,7 +87,7 @@ final class ResolveGoogleIdentity
             name: $name,
             email: $normalised,
             password: null,
-            locale: AppLocale::default()->value,
+            locale: AppLocale::fromLanguageTag($locale)->value,
             channel: RegistrationChannel::Google,
             externalIdentity: new ExternalIdentityData('google', $subject, $normalised, true),
             origin: 'web',

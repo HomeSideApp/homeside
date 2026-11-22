@@ -9,7 +9,7 @@ class GoogleIdTokenVerifier
 {
     public function __construct(private AccessToken $accessToken) {}
 
-    /** @return array{sub: string, email: string, name: string, email_verified: bool} */
+    /** @return array{sub: string, email: string, name: string, email_verified: bool, locale: string|null} */
     public function verify(string $idToken): array
     {
         $clientIds = array_values(array_filter([
@@ -41,6 +41,11 @@ class GoogleIdTokenVerifier
             'email' => $claims['email'],
             'name' => is_string($claims['name'] ?? null) ? $claims['name'] : $claims['email'],
             'email_verified' => true,
+            // `locale` es un claim **opcional** del ID token de Google: viene
+            // cuando la cuenta lo tiene público y no viene cuando no. Por eso
+            // el registro decide con `AppLocale::fromLanguageTag()`, que cae al
+            // default (inglés) si falta o no lo soportamos.
+            'locale' => is_string($claims['locale'] ?? null) ? $claims['locale'] : null,
         ];
     }
 }

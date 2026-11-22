@@ -18,7 +18,9 @@ use Illuminate\Support\Facades\Route;
 Route::middleware('guest')->group(function () {
     Route::get('login', [LoginController::class, 'show'])->name('login');
     Route::get('register', [RegisterController::class, 'show'])->name('register');
-    Route::post('register', [RegisterController::class, 'store'])->middleware('throttle:registration')->name('register.store');
+    Route::post('register', [RegisterController::class, 'store'])
+        ->middleware(['precognitive', 'throttle:registration'])
+        ->name('register.store');
     Route::get('auth/google', [GoogleAuthController::class, 'redirect'])->middleware('throttle:10,1')->name('google.redirect');
     Route::get('auth/google/callback', [GoogleAuthController::class, 'callback'])->middleware('throttle:10,1')->name('google.callback');
     Route::post('login', [LoginController::class, 'store'])->middleware('throttle:login')->name('login.store');

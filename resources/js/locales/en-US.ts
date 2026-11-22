@@ -138,6 +138,9 @@ export default {
             title: 'Create account',
             description: 'Register a new account',
             name: 'Name',
+            locale: 'Language',
+            localeHint:
+                'The app and the emails will use this language. English by default.',
             submit: 'Create account',
             approvalNotice:
                 'New accounts need an administrator to approve them before you can sign in.',
