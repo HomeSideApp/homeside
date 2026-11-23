@@ -108,7 +108,8 @@
         ],
         "post-autoload-dump": [
             "Illuminate\\Foundation\\ComposerScripts::postAutoloadDump",
-            "@php artisan package:discover --ansi"
+            "@php artisan package:discover --ansi",
+            "@php scripts/patch-ai-agents-usage.php"
         ],
         "post-update-cmd": [
             "@php artisan vendor:publish --tag=laravel-assets --ansi --force"
@@ -129,8 +130,7 @@
         "laravel": {
             "dont-discover": [],
             "installer": {
-                "post-create-project": [
-                ]
+                "post-create-project": []
             }
         }
     },
@@ -142,17 +142,22 @@
             "pestphp/pest-plugin": true,
             "php-http/discovery": true
         },
-        "github-protocols": ["https"]
+        "github-protocols": [
+            "https"
+        ]
     },
     "minimum-stability": "stable",
     "prefer-stable": true,
-    "repositories": [{
-        "name": "carddavclient",
-        "type": "git",
-        "url": "https://github.com/HomeSideApp/carddavclient.git"
-    },{
-        "name": "laravel-ai-agents",
-        "type": "git",
-        "url": "https://github.com/HomeSideApp/laravel-ai-agents.git"
-    }]
+    "repositories": [
+        {
+            "name": "carddavclient",
+            "type": "git",
+            "url": "https://github.com/HomeSideApp/carddavclient.git"
+        },
+        {
+            "name": "laravel-ai-agents",
+            "type": "git",
+            "url": "https://github.com/HomeSideApp/laravel-ai-agents.git"
+        }
+    ]
 }
