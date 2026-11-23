@@ -77,24 +77,24 @@ jobs:
           --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot"
           --health-interval=5s --health-timeout=5s --health-retries=20
       redis:
-        image: redis:alpine
+        image: redis:8-alpine
         ports: ['6379:6379']
         options: >-
           --health-cmd="redis-cli ping" --health-interval=5s --health-retries=20
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: shivammathur/setup-php@v2
         with:
           php-version: '8.5'
           extensions: mbstring, pdo_mysql, bcmath, gd, intl, zip, pcntl
           coverage: none
-      - uses: actions/cache@v4
+      - uses: actions/cache@v6
         with:
           path: vendor
           key: composer-${{ hashFiles('composer.lock') }}
       - run: composer install --no-interaction --prefer-dist --no-progress
       - run: cp .env.example .env && php artisan key:generate
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: '24'
           cache: npm
@@ -113,7 +113,7 @@ jobs:
     name: Frontend build and typecheck
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       # `npm run build` runs the Wayfinder Vite plugin, which shells out to
       # `php artisan wayfinder:generate`, so this job needs PHP and the
       # Composer dependencies too.
@@ -124,7 +124,7 @@ jobs:
           coverage: none
       - run: composer install --no-interaction --prefer-dist --no-progress
       - run: cp .env.example .env && php artisan key:generate
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: '24'
           cache: npm
@@ -160,16 +160,16 @@ jobs:
           --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot"
           --health-interval=5s --health-timeout=5s --health-retries=20
       redis:
-        image: redis:alpine
+        image: redis:8-alpine
         ports: ['6379:6379']
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: shivammathur/setup-php@v2
         with:
           php-version: '8.5'
           extensions: mbstring, pdo_mysql, bcmath, gd, intl, zip, pcntl
           coverage: none
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: '24'
           cache: npm
@@ -177,7 +177,7 @@ jobs:
       # image the local stack uses, so the assertions and the environment match.
       - name: Start Mailpit
         run: |
-          docker run -d --name mailpit -p 1025:1025 -p 8025:8025 axllent/mailpit:latest
+          docker run -d --name mailpit -p 1025:1025 -p 8025:8025 axllent/mailpit:v1.34.0
       - run: composer install --no-interaction --prefer-dist --no-progress
       - run: cp .env.example .env && php artisan key:generate
       - run: npm ci
@@ -191,7 +191,7 @@ jobs:
         run: npx playwright test --project=chromium --grep @critical
       - name: Upload report and traces
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: playwright-report
           # Artifacts contain cookies and one-time auth URLs. Retention is short
@@ -222,18 +222,18 @@ jobs:
           --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot"
           --health-interval=5s --health-timeout=5s --health-retries=20
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: shivammathur/setup-php@v2
         with:
           php-version: '8.5'
           extensions: mbstring, pdo_mysql, bcmath, gd, intl, zip, pcntl
           coverage: none
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: '24'
           cache: npm
       - name: Start Mailpit
-        run: docker run -d --name mailpit -p 1025:1025 -p 8025:8025 axllent/mailpit:latest
+        run: docker run -d --name mailpit -p 1025:1025 -p 8025:8025 axllent/mailpit:v1.34.0
       - run: composer install --no-interaction --prefer-dist --no-progress
       - run: cp .env.example .env && php artisan key:generate
       - run: npm ci
@@ -243,7 +243,7 @@ jobs:
       - name: Seed the isolated E2E database
         run: php artisan e2e:seed
       - run: npx playwright test
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: playwright-report-full
