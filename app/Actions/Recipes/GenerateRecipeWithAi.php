@@ -21,6 +21,9 @@ final class GenerateRecipeWithAi
 {
     private const int MAX_GENERATION_ATTEMPTS = 3;
 
+    /** @var list<string> Errores del último intento, para diagnosticar. */
+    private array $lastErrors = [];
+
     public function __construct(
         private readonly AiAgentManager $agentManager,
         private readonly RecipeReferenceTargetResolver $referenceResolver,
@@ -90,6 +93,10 @@ final class GenerateRecipeWithAi
             }
 
             if ($attempt === self::MAX_GENERATION_ATTEMPTS) {
+                // El último intento tampoco sirvió: se guardan los errores para
+                // que el fallo se pueda diagnosticar en vez de adivinarlo.
+                $this->lastErrors = $validationErrors;
+
                 continue;
             }
 
@@ -101,9 +108,11 @@ final class GenerateRecipeWithAi
                 ."\n```";
         }
 
-        throw new RuntimeException(
-            'El proveedor IA no devolvió una receta completa y válida después de tres intentos.',
-        );
+        throw new RuntimeException(sprintf(
+            'El proveedor IA no devolvió una receta válida después de %d intentos. Errores: %s',
+            self::MAX_GENERATION_ATTEMPTS,
+            implode(' | ', $this->lastErrors === [] ? ['sin detalle'] : $this->lastErrors),
+        ));
     }
 
     /**

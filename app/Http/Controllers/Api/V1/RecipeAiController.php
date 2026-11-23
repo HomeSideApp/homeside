@@ -47,9 +47,15 @@ final class RecipeAiController extends Controller
         } catch (RuntimeException $exception) {
             $this->entitlements->releaseUsage($canonicalOperationId);
 
+            // Sin esto el fallo es indistinguible de un proveedor caído.
+            report($exception);
+
             return response()->json([
                 'message' => 'The AI provider could not produce a valid recipe draft.',
                 'code' => 'recipe_generation_failed',
+                // El motivo concreto: sin esto, "no pudo" es indistinguible de
+                // un proveedor caído y no hay forma de arreglarlo.
+                'detail' => $exception->getMessage(),
                 'errors' => (object) [],
             ], 422);
         } catch (Throwable $exception) {
