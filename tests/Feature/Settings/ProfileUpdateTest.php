@@ -94,6 +94,44 @@ class ProfileUpdateTest extends TestCase
         $this->assertTrue($user->refresh()->shares_personal_products);
     }
 
+    public function test_the_cloud_ai_permission_is_granted_with_a_date_and_revoked(): void
+    {
+        $user = User::factory()->create(['ai_receipt_consent_at' => null]);
+
+        $this->actingAs($user)
+            ->patch(route('profile.update'), [
+                'name' => $user->name,
+                'email' => $user->email,
+                'locale' => $user->locale,
+                'allow_cloud_ai' => '1',
+            ])
+            ->assertSessionHasNoErrors();
+
+        $granted = $user->refresh()->ai_receipt_consent_at;
+        $this->assertNotNull($granted, 'El permiso tiene que quedar guardado con fecha.');
+
+        $this->actingAs($user->refresh())
+            ->patch(route('profile.update'), [
+                'name' => $user->name,
+                'email' => $user->email,
+                'locale' => $user->locale,
+                'allow_cloud_ai' => '0',
+            ])
+            ->assertSessionHasNoErrors();
+
+        $this->assertNull($user->refresh()->ai_receipt_consent_at, 'Revocarlo tiene que borrar la fecha.');
+    }
+
+    public function test_the_profile_publishes_the_cloud_ai_permission(): void
+    {
+        $user = User::factory()->create(['ai_receipt_consent_at' => now()]);
+
+        $this->actingAs($user)
+            ->get(route('profile.edit'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page): Assert => $page->where('allowCloudAi', true));
+    }
+
     public function test_default_economy_destination_must_be_a_household_the_user_belongs_to(): void
     {
         $user = User::factory()->create();
