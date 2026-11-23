@@ -333,6 +333,7 @@ Route::middleware(['auth', 'verified', 'account.active'])->group(function () {
         Route::get('imports/{import}', [EconomicImportController::class, 'show'])->middleware('permission:economy.me.show')->name('imports.show');
         Route::post('imports/{import}/confirm', [EconomicImportController::class, 'confirm'])->middleware('permission:economy.me.store')->name('imports.confirm');
         Route::post('imports/{import}/retry', [EconomicImportController::class, 'retry'])->middleware('permission:economy.me.create')->name('imports.retry');
+        Route::post('imports/{import}/allow-ai', [EconomicImportController::class, 'allowAi'])->middleware('permission:economy.me.create')->name('imports.allow-ai');
         Route::post('imports/{import}/reprocess', [EconomicImportController::class, 'reprocess'])->middleware('permission:economy.me.create')->name('imports.reprocess');
         Route::post('imports/{import}/discard', [EconomicImportController::class, 'discard'])->middleware('permission:economy.me.destroy')->name('imports.discard');
     });

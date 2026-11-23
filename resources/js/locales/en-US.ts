@@ -515,6 +515,9 @@ export default {
             resendVerification: 'Click here to re-send the verification email.',
             verificationSent:
                 'A new verification link has been sent to your email address.',
+            allowCloudAi: 'Analyse receipts with AI outside this server',
+            allowCloudAiDescription:
+                'When the offline reader cannot read a receipt, it can be sent to the configured AI provider. That provider may run outside this installation, so you decide. You can turn it off at any time.',
             householdsEnabled: 'Use households',
             householdsEnabledDescription:
                 'Enable shared household features. If disabled, shopping lists and the dashboard stay private; your household memberships and data are preserved.',

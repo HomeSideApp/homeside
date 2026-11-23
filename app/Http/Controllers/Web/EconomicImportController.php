@@ -172,6 +172,26 @@ final class EconomicImportController extends Controller
     }
 
     /**
+     * Let the AI read this receipt through a provider that is not on this server,
+     * and restart the analysis.
+     *
+     * The permission is the profile flag the user can revoke at any time; this
+     * route exists so the first import can ask once and continue in place
+     * instead of sending the person to the settings page and back.
+     */
+    public function allowAi(RetryEconomicImportRequest $request, ?Household $household, EconomicImport $import, RetryEconomicImport $action): RedirectResponse
+    {
+        $user = $this->authenticatedUser($request);
+        $user->forceFill(['ai_receipt_consent_at' => $user->ai_receipt_consent_at ?? now()])->save();
+
+        $action->execute($import);
+
+        Inertia::flash('toast', ['type' => 'info', 'message' => __('app.toast.analysis_restarted')]);
+
+        return back();
+    }
+
+    /**
      * Regenerate the analysed image with new adjustments and restart the analysis.
      *
      * @param  ReprocessEconomicImportRequest  $request  The validated request carrying the image adjustments.

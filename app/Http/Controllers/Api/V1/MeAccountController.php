@@ -24,11 +24,13 @@ final class MeAccountController extends Controller
 
         // `allow_cloud_ai` no es una columna: se traduce a la fecha del permiso.
         // Así queda cuándo lo dio, y revocarlo es ponerla en null.
-        $consent = $request->validated('allow_cloud_ai');
+        // Un form HTML manda "1"/"0" y la API un booleano: `boolean()` entiende
+        // los dos, así el interruptor y el JSON se comportan igual.
+        $consent = $request->has('allow_cloud_ai') ? $request->boolean('allow_cloud_ai') : null;
         $attributes = $request->safe()->except('allow_cloud_ai');
         $user->fill($attributes);
 
-        if (is_bool($consent)) {
+        if ($consent !== null) {
             $user->ai_receipt_consent_at = $consent ? ($user->ai_receipt_consent_at ?? now()) : null;
         }
 

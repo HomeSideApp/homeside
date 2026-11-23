@@ -528,6 +528,9 @@ export default {
                 'Haz clic aquí para volver a enviar el correo de verificación.',
             verificationSent:
                 'Se ha enviado un nuevo enlace de verificación a tu correo electrónico.',
+            allowCloudAi: 'Analizar tickets con IA fuera de este servidor',
+            allowCloudAiDescription:
+                'Cuando el lector sin conexión no puede leer un ticket, se puede enviar al proveedor de IA configurado. Ese proveedor puede estar fuera de esta instalación, así que lo decidís vos. Podés desactivarlo cuando quieras.',
             householdsEnabled: 'Usar hogares',
             householdsEnabledDescription:
                 'Activa las funciones compartidas del hogar. Si lo desactivas, las listas de la compra y el panel serán privados; tus hogares y sus datos se conservarán.',

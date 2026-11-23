@@ -47,6 +47,10 @@ const sharesPersonalProducts = ref(
     Boolean(user.value.shares_personal_products),
 );
 
+// Permiso para que el análisis de tickets use IA fuera de este servidor. Arranca
+// desde el servidor porque es una decisión persistida, no una preferencia local.
+const allowCloudAi = ref(Boolean(page.props.allowCloudAi));
+
 watchEffect(() => {
     setLayoutProps({
         breadcrumbs: [
@@ -167,6 +171,24 @@ watchEffect(() => {
                     </div>
                     <FieldDescription>{{
                         t('settings.profile.householdsEnabledDescription')
+                    }}</FieldDescription>
+                </Field>
+
+                <Field>
+                    <input type="hidden" name="allow_cloud_ai" value="0" />
+                    <div class="flex items-center gap-2">
+                        <Checkbox
+                            id="allow_cloud_ai"
+                            name="allow_cloud_ai"
+                            v-model="allowCloudAi"
+                            value="1"
+                        />
+                        <FieldLabel for="allow_cloud_ai">{{
+                            t('settings.profile.allowCloudAi')
+                        }}</FieldLabel>
+                    </div>
+                    <FieldDescription>{{
+                        t('settings.profile.allowCloudAiDescription')
                     }}</FieldDescription>
                 </Field>
 

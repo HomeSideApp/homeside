@@ -1,5 +1,12 @@
 <script setup lang="ts">
-import { Head, Link, router, setLayoutProps, useForm } from '@inertiajs/vue3';
+import {
+    Form,
+    Head,
+    Link,
+    router,
+    setLayoutProps,
+    useForm,
+} from '@inertiajs/vue3';
 import { Sliders } from '@lucide/vue';
 import { computed, ref, watch, watchEffect } from 'vue';
 import { useI18n } from 'vue-i18n';
@@ -42,6 +49,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { index as privateEconomyIndex } from '@/routes/economy/me';
 import { file as privateDocumentFile } from '@/routes/economy/me/documents';
 import {
+    allowAi as privateAllowAi,
     confirm as privateConfirm,
     discard as privateDiscard,
     index as privateImportsIndex,
@@ -309,6 +317,13 @@ watchEffect(() => {
                     ><Link :href="providerSettingsUrl">{{
                         t('economy.ui.configureProvider')
                     }}</Link></Button
+                ><Form
+                    v-else-if="importData.error.code === 'ai_consent_required'"
+                    v-bind="privateAllowAi.form(importData.id)"
+                    class="flex items-center gap-2"
+                    ><Button type="submit" variant="outline" size="sm">{{
+                        t('economy.ui.allowCloudAi')
+                    }}</Button></Form
                 ></AlertDescription
             ></Alert
         >
