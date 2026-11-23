@@ -4,9 +4,14 @@ namespace App\Services\Economy;
 
 use App\Contracts\ReceiptTextExtractor;
 use App\Data\Economy\ReceiptAnalysisResultData;
+use App\Exceptions\Economy\ReceiptAiConsentRequiredException;
 use App\Exceptions\IncompleteAnalysisException;
+use App\Models\User;
 use HomeSide\AiAgents\AiAgentManager;
+use HomeSide\AiAgents\Enums\PrivacyLevel;
 use HomeSide\AiAgents\Execution\AiExecutionContextData;
+use HomeSide\AiAgents\Providers\ProviderResolver;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Laravel\Ai\Files\LocalImage;
 use RuntimeException;
@@ -76,6 +81,44 @@ class TicketAnalyzer
     }
 
     /**
+     * Refuse to send a receipt to a provider that is not on the user's own server
+     * until that user has said yes.
+     *
+     * A self-hosted or local provider needs no permission: the data does not
+     * leave the installation. Anything else — including an unclassified
+     * provider, which ranks worse than cloud — requires an explicit decision,
+     * and the flow turns this exception into a one-time question.
+     */
+    private function assertCloudConsent(AiExecutionContextData $context): void
+    {
+        $provider = app(ProviderResolver::class)->resolve(
+            'economy',
+            $context->userId,
+            $context->tenantId,
+        );
+
+        if ($provider === null) {
+            return;
+        }
+
+        $level = PrivacyLevel::fromColumn($provider->privacy_level);
+
+        if ($level->isAtLeast(PrivacyLevel::SelfHosted)) {
+            return;
+        }
+
+        $consented = Auth::user()?->ai_receipt_consent_at !== null
+            || User::query()
+                ->whereKey($context->userId)
+                ->whereNotNull('ai_receipt_consent_at')
+                ->exists();
+
+        if (! $consented) {
+            throw ReceiptAiConsentRequiredException::forProvider($provider->name, $level->value);
+        }
+    }
+
+    /**
      * Analyze a receipt through the AI execution layer and return structured economic data.
      *
      * @param  string  $disk  The filesystem disk containing the source document.
@@ -96,6 +139,9 @@ class TicketAnalyzer
         AiExecutionContextData $context,
     ): TicketAnalysisResult {
         $absolutePath = Storage::disk($disk)->path($storedPath);
+
+        // Antes de mandar nada: ¿este ticket puede salir del servidor?
+        $this->assertCloudConsent($context);
 
         $result = $this->manager->run(
             agentKey: 'economy.ticket_analyzer',

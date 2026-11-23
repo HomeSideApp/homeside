@@ -5,6 +5,7 @@ namespace App\Jobs;
 use App\Contracts\EntitlementGate;
 use App\Data\Economy\ReceiptAnalysisResultData;
 use App\Enums\EconomicImportStatus;
+use App\Exceptions\Economy\ReceiptAiConsentRequiredException;
 use App\Exceptions\EntitlementQuotaExceededException;
 use App\Exceptions\IncompleteAnalysisException;
 use App\Models\EconomicImport;
@@ -144,6 +145,17 @@ class AnalyzeEconomicDocumentJob implements ShouldQueue
             $import->update([
                 'status' => EconomicImportStatus::Failed,
                 'error_code' => 'incomplete_response',
+                'error_message' => $e->getMessage(),
+                'finished_at' => now(),
+            ]);
+        } catch (ReceiptAiConsentRequiredException $e) {
+            // No es un fallo: es una pregunta pendiente. El ticket no salió del
+            // servidor y el usuario tiene que decidir si permite la IA en la nube.
+            $this->releaseUsageReservation($gate);
+
+            $import->update([
+                'status' => EconomicImportStatus::Failed,
+                'error_code' => 'ai_consent_required',
                 'error_message' => $e->getMessage(),
                 'finished_at' => now(),
             ]);

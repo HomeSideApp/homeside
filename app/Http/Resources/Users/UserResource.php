@@ -22,6 +22,8 @@ final class UserResource extends JsonResource
             'name' => $this->name,
             'email' => $this->email,
             'locale' => $this->locale,
+            // Permiso para que el análisis de tickets use IA en la nube.
+            'allow_cloud_ai' => $this->ai_receipt_consent_at !== null,
             'email_verified_at' => $this->email_verified_at?->toISOString(),
             'two_factor_enabled' => $this->hasEnabledTwoFactorAuthentication(),
             'approval_status' => $this->approval_status,

@@ -28,6 +28,9 @@ trait ProfileValidationRules
             'email' => $this->emailRules($userId),
             'locale' => ['required', Rule::enum(AppLocale::class)],
             'households_enabled' => ['sometimes', 'boolean'],
+            // Permiso para analizar un ticket con un proveedor de IA que no corre
+            // en el propio servidor. Se guarda con fecha, no como booleano suelto.
+            'allow_cloud_ai' => ['sometimes', 'boolean'],
             'shares_personal_products' => ['sometimes', 'boolean'],
             // The default economy destination may only be a household the user belongs to;
             // a null value means the private account.

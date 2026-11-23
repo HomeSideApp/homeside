@@ -109,12 +109,19 @@ PROMPT;
     }
 
     /**
-     * Receipt images carry personal data (purchases, locations, amounts):
-     * cloud providers are rejected unless the admin explicitly relaxes this.
+     * Receipt images carry personal data (purchases, locations, amounts).
+     *
+     * The level here is `Cloud` — the floor, not the policy — because the real
+     * decision belongs to the person whose receipt it is: with a provider that
+     * does not run on their server, `TicketAnalyzer` refuses to send anything
+     * until the user allows it from their profile. Keeping `SelfHosted` here
+     * would make that permission impossible to grant without a local model.
+     *
+     * `unknown` still fails: an unclassified provider satisfies nothing.
      */
     public function requiredPrivacyLevel(): ?PrivacyLevel
     {
-        return PrivacyLevel::SelfHosted;
+        return PrivacyLevel::Cloud;
     }
 
     public function label(): string

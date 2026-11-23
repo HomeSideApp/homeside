@@ -80,6 +80,7 @@ class User extends Authenticatable implements HasLocalePreference, MustVerifyEma
         return [
             'email_verified_at' => 'datetime',
             'approved_at' => 'datetime',
+            'ai_receipt_consent_at' => 'datetime',
             'two_factor_confirmed_at' => 'datetime',
             'password' => 'hashed',
             'households_enabled' => 'boolean',

@@ -21,7 +21,16 @@ final class MeAccountController extends Controller
     {
         $user = $this->authenticatedUser($request);
         $emailChanged = $user->email !== $request->validated('email');
-        $user->fill($request->validated());
+
+        // `allow_cloud_ai` no es una columna: se traduce a la fecha del permiso.
+        // Así queda cuándo lo dio, y revocarlo es ponerla en null.
+        $consent = $request->validated('allow_cloud_ai');
+        $attributes = $request->safe()->except('allow_cloud_ai');
+        $user->fill($attributes);
+
+        if (is_bool($consent)) {
+            $user->ai_receipt_consent_at = $consent ? ($user->ai_receipt_consent_at ?? now()) : null;
+        }
 
         if (! $user->households_enabled) {
             $user->active_household_id = null;
