@@ -124,11 +124,15 @@ class RecipeAiGenerateTest extends TestCase
             'prompt' => 'Espaguetis carbonara',
         ]);
 
-        $response->assertUnprocessable()
-            ->assertJsonPath(
-                'message',
-                'El proveedor IA no devolvió una receta completa y válida después de tres intentos.',
-            );
+        $response->assertUnprocessable();
+
+        // The message names the attempt count and why each attempt was rejected:
+        // a bare "it failed" is what made this path undebuggable before.
+        $message = (string) $response->json('message');
+
+        $this->assertStringContainsString('después de 3 intentos', $message);
+        $this->assertStringContainsString('Errores:', $message);
+        $this->assertStringContainsString('ingredientes y pasos', $message);
     }
 
     public function test_accepts_plain_step_descriptions_after_an_empty_first_response(): void
