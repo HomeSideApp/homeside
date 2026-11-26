@@ -6,9 +6,9 @@ use App\Models\Permission;
 use App\Models\PermissionGroup;
 use App\Models\Role;
 use App\Models\User;
-use Illuminate\Auth\Events\Registered;
+use App\Notifications\InviteUserNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
 
 class UserManagementTest extends TestCase
@@ -61,7 +61,7 @@ class UserManagementTest extends TestCase
 
         Role::create(['name' => 'user', 'slug' => 'user']);
 
-        Event::fake([Registered::class]);
+        Notification::fake();
 
         $response = $this->actingAs($admin)->post(route('admin.users.store'), [
             'name' => 'New User',
@@ -78,7 +78,7 @@ class UserManagementTest extends TestCase
         $this->assertTrue($user->hasRole('user'));
         $this->assertNotNull($user->password);
 
-        Event::assertDispatched(Registered::class, fn (Registered $event) => $event->user->id === $user->id);
+        Notification::assertSentTo($user, InviteUserNotification::class);
     }
 
     public function test_user_role_can_be_changed()

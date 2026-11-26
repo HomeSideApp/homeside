@@ -8,8 +8,8 @@ use App\Http\Requests\Admin\StoreUserRequest;
 use App\Http\Requests\Admin\UpdateUserRequest;
 use App\Models\Role;
 use App\Models\User;
+use App\Notifications\InviteUserNotification;
 use App\Support\PlatformAccess;
-use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -95,7 +95,12 @@ class AdminUserController extends Controller
 
         app(PlatformAccess::class)->assignRoles($this->authenticatedUser($request), $user, $request->validated('roles') ?? [$request->validated('role')]);
 
-        event(new Registered($user));
+        // The invitation, not the framework's verification mail: the caller
+        // never learns the random password, and `verification.verify` requires
+        // a session as that same user, so a verification link would strand the
+        // invitee. The signed `/invitation/{user}` surface is the one they can
+        // complete (set a password, which proves the mailbox).
+        $user->notify(new InviteUserNotification);
 
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Usuario creado correctamente.']);
 

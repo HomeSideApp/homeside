@@ -132,24 +132,59 @@ export function extractLinks(detail: MailpitMessageDetail): string[] {
 }
 
 /**
- * Wait for the first message to `recipient` that contains a link matching `matcher`.
+ * Wait for a link matching `matcher` in ANY message to `recipient`.
+ *
+ * Every message returned by the search is scanned, not just the newest one: a
+ * step that waits for one kind of link (an invitation, a verification link) can
+ * easily run while an unrelated, newer message (an enrolment mail) is already in
+ * the mailbox, and inspecting only `messages[0]` would silently look at the
+ * wrong mail. Polling stays deadline-bounded, and `subject` still narrows the
+ * searched messages when a caller knows exactly which mail it wants.
  */
 export async function waitForLinkTo(
     recipient: string,
     matcher: RegExp,
     options: { timeout?: number; subject?: string } = {},
 ): Promise<string> {
-    const message = await waitForMessageTo(recipient, options);
-    const detail = await messageDetail(message.ID);
-    const link = extractLinks(detail).find((url) => matcher.test(url));
+    const timeout = options.timeout ?? 30_000;
+    const deadline = Date.now() + timeout;
+    const context = await request.newContext({ baseURL: E2E_MAILPIT_URL });
+    let inspected: string[] = [];
 
-    if (! link) {
-        throw new Error(
-            `No link matching ${matcher} in the message "${message.Subject}" for ${recipient}.`,
-        );
+    try {
+        while (Date.now() < deadline) {
+            const response = await context.get('/api/v1/search', {
+                params: { query: `to:${recipient}` },
+            });
+
+            if (response.ok()) {
+                const body = (await response.json()) as MailpitListResponse;
+                const messages = (body.messages ?? []).filter(
+                    (message) => options.subject === undefined || message.Subject === options.subject,
+                );
+
+                inspected = messages.map((message) => `"${message.Subject}"`);
+
+                for (const message of messages) {
+                    const detail = await messageDetail(message.ID);
+                    const link = extractLinks(detail).find((url) => matcher.test(url));
+
+                    if (link) {
+                        return link;
+                    }
+                }
+            }
+
+            await new Promise((resolve) => setTimeout(resolve, 250));
+        }
+    } finally {
+        await context.dispose();
     }
 
-    return link;
+    throw new Error(
+        `No link matching ${matcher} for ${recipient} arrived within ${timeout}ms` +
+            (inspected.length > 0 ? ` (inspected ${inspected.join(', ')}).` : '.'),
+    );
 }
 
 /**

@@ -6,12 +6,11 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\IndexAdminUsersRequest;
 use App\Http\Requests\SaveAdminUserApiRequest;
 use App\Models\User;
-use App\Notifications\ResetPasswordNotification;
+use App\Notifications\InviteUserNotification;
 use App\Support\PlatformAccess;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Str;
 
 final class AdminUserController extends Controller
@@ -49,12 +48,9 @@ final class AdminUserController extends Controller
             'password' => Str::random(64),
         ]);
         app(PlatformAccess::class)->assignRoles($this->authenticatedUser($request), $user, $validated['roles'] ?? [$validated['role']]);
-        $token = Password::broker()->createToken($user);
-        $url = rtrim((string) config('app.mobile_url'), '/').'/set-password?'.http_build_query([
-            'token' => $token,
-            'email' => $user->email,
-        ]);
-        $user->notify(new ResetPasswordNotification($user, $url));
+        // Same mail contract as the web path: an admin-created account gets the
+        // signed invitation, which is the surface it can actually complete.
+        $user->notify(new InviteUserNotification);
 
         return response()->json(['data' => $this->resource($user->load('roles'))], 201);
     }

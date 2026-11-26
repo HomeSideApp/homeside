@@ -7,7 +7,6 @@ import { GoogleConsentPage } from '../pages/GoogleConsentPage';
 import { LoginPage } from '../pages/LoginPage';
 import { ProfilePage } from '../pages/ProfilePage';
 import { RegisterPage } from '../pages/RegisterPage';
-import { TwoFactorPage } from '../pages/TwoFactorPage';
 
 /**
  * E2E-05 — the Google edge cases, each asserting that nothing was created and
@@ -166,11 +165,10 @@ test.describe('E2E-05 Google edge cases', () => {
         await login.startGoogleLogin();
         await new GoogleConsentPage(page).approve();
 
-        await page.waitForURL(/two-factor\/challenge/);
-        await new TwoFactorPage(page).submitGeneratedCode(
-            user(FIXTURE.googleLinked).totp_secret ?? '',
-        );
-
+        // Google is the second factor by default, so a linked identity lands
+        // authenticated with no OTP submission (the same shipped behaviour
+        // E2E-04 asserts).
+        await page.waitForURL(/\/dashboard/);
         await new DashboardPage(page).expectAuthenticated();
     });
 
